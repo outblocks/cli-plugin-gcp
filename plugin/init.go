@@ -3,10 +3,10 @@ package plugin
 import (
 	"context"
 
-	comm "github.com/outblocks/outblocks-plugin-go"
+	plugin_go "github.com/outblocks/outblocks-plugin-go"
 )
 
-func (p *Plugin) Init(ctx context.Context, r *comm.InitRequest) (comm.Response, error) {
+func (p *Plugin) Init(ctx context.Context, r *plugin_go.InitRequest) (plugin_go.Response, error) {
 	p.log.Errorln("dupa")
-	return &comm.EmptyResponse{}, nil
+	return &plugin_go.EmptyResponse{}, nil
 }

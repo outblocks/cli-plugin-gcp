@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	comm "github.com/outblocks/outblocks-plugin-go"
+	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 )
@@ -22,9 +22,11 @@ func NewPlugin(log log.Logger, env env.Enver) *Plugin {
 	}
 }
 
-func (p *Plugin) Handler() *comm.ReqHandler {
-	return &comm.ReqHandler{
-		Init:  p.Init,
-		Start: p.Start,
+func (p *Plugin) Handler() *plugin_go.ReqHandler {
+	return &plugin_go.ReqHandler{
+		Init:             p.Init,
+		Start:            p.Start,
+		Plan:             p.Plan,
+		AppleInteractive: p.ApplyInteractive,
 	}
 }

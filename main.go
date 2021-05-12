@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/outblocks/cli-plugin-gcp/plugin"
-	comm "github.com/outblocks/outblocks-plugin-go"
+	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	// "google.golang.org/api/cloudresourcemanager/v1"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	// 	fmt.Println(pp.Name, pp.ProjectId)
 	// }
 
-	s := comm.NewServer()
+	s := plugin_go.NewServer()
 	p := plugin.NewPlugin(s.Log(), s.Env())
 	s.Start(p.Handler())
 }
