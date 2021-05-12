@@ -8,8 +8,6 @@ import (
 )
 
 func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_go.Response, error) {
-	p.log.Errorln("start", r.Properties, p.env.PluginDir(), p.env.ProjectPath())
-
 	res, project := validate.ValidateString(r.Properties, "project", "GCP project is required")
 	if res != nil {
 		return res, nil

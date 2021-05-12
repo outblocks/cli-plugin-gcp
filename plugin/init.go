@@ -7,6 +7,6 @@ import (
 )
 
 func (p *Plugin) Init(ctx context.Context, r *plugin_go.InitRequest) (plugin_go.Response, error) {
-	p.log.Errorln("dupa")
+	p.log.Errorln("init")
 	return &plugin_go.EmptyResponse{}, nil
 }
