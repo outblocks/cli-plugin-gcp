@@ -3,26 +3,39 @@ package plugin
 import (
 	"context"
 
+	"github.com/outblocks/cli-plugin-gcp/actions"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, in <-chan plugin_go.Request, out chan<- plugin_go.Response) error {
-	p.log.Errorln("apply", r.Apps, r.Dependencies)
+	p.log.Errorln("apply", r.DeployPlan, r.DNSPlan)
+
+	a := actions.NewApply(ctx, &p.Settings, p.log, p.env, r.PluginMap, r.AppStates, r.DependencyStates)
+
+	cb := func(a *types.ApplyAction) {
+		out <- &plugin_go.ApplyResponse{
+			Actions: []*types.ApplyAction{a},
+		}
+	}
+
+	err := a.ApplyDeploy(r.DeployPlan, cb)
+	if err != nil {
+		return err
+	}
+
+	err = a.ApplyDNS(r.DNSPlan, cb)
+	if err != nil {
+		return err
+	}
+
+	out <- &plugin_go.ApplyDoneResponse{
+		PluginMap:        a.PluginMap,
+		AppStates:        a.AppStates,
+		DependencyStates: a.DependencyStates,
+	}
 
 	close(out)
-
-	// res, project := validate.ValidateString(r.Properties, "project", "GCP project is required")
-	// if res != nil {
-	// 	return res, nil
-	// }
-
-	// res, region := validate.ValidateString(r.Properties, "region", "GCP region is required")
-	// if res != nil {
-	// 	return res, nil
-	// }
-
-	// p.Settings.Project = project
-	// p.Settings.Region = region
 
 	return nil
 }

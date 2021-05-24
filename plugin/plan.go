@@ -3,24 +3,21 @@ package plugin
 import (
 	"context"
 
+	"github.com/outblocks/cli-plugin-gcp/actions"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 )
 
 func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.Response, error) {
 	p.log.Errorln("plan", r.Apps, r.Dependencies)
 
-	// res, project := validate.ValidateString(r.Properties, "project", "GCP project is required")
-	// if res != nil {
-	// 	return res, nil
-	// }
+	a := actions.NewPlan(ctx, &p.Settings, p.log, p.env, r.PluginState, r.Verify)
 
-	// res, region := validate.ValidateString(r.Properties, "region", "GCP region is required")
-	// if res != nil {
-	// 	return res, nil
-	// }
+	deployPlan, err := a.PlanDeploy(r.Apps)
+	if err != nil {
+		return nil, err
+	}
 
-	// p.Settings.Project = project
-	// p.Settings.Region = region
-
-	return &plugin_go.EmptyResponse{}, nil
+	return &plugin_go.PlanResponse{
+		DeployPlan: deployPlan,
+	}, nil
 }
