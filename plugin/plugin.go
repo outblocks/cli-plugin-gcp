@@ -5,12 +5,14 @@ import (
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
+	"golang.org/x/oauth2/google"
 )
 
 type Plugin struct {
 	log log.Logger
 	env env.Enver
 
+	cred     *google.Credentials
 	Settings actions.Settings
 }
 

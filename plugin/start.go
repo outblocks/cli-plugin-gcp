@@ -5,6 +5,8 @@ import (
 
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/validate"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/storage/v1"
 )
 
 func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_go.Response, error) {
@@ -20,6 +22,13 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 
 	p.Settings.ProjectID = project
 	p.Settings.Region = region
+
+	cred, err := google.FindDefaultCredentials(ctx, storage.DevstorageFullControlScope)
+	if err != nil {
+		return nil, err
+	}
+
+	p.cred = cred
 
 	return &plugin_go.EmptyResponse{}, nil
 }

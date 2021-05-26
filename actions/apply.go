@@ -4,30 +4,30 @@ import (
 	"context"
 
 	"cloud.google.com/go/storage"
+	dockerclient "github.com/docker/docker/client"
+	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/cli-plugin-gcp/statetypes/deploy"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
+	"golang.org/x/oauth2/google"
 )
 
 type ApplyAction struct {
-	ctx      context.Context
-	cli      *storage.Client
-	settings *Settings
-	log      log.Logger
-	env      env.Enver
+	ctx        context.Context
+	storageCli *storage.Client
+	dockerCli  *dockerclient.Client
+	gcred      *google.Credentials
+	settings   *Settings
+	log        log.Logger
+	env        env.Enver
 
 	PluginMap        types.PluginStateMap
 	AppStates        map[string]*types.AppState
 	DependencyStates map[string]*types.DependencyState
 }
 
-func NewApply(ctx context.Context, settings *Settings, logger log.Logger, enver env.Enver, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState) *ApplyAction {
-	cli, err := storage.NewClient(ctx)
-	if err != nil {
-		panic(err)
-	}
-
+func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings, logger log.Logger, enver env.Enver, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState) (*ApplyAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -40,17 +40,29 @@ func NewApply(ctx context.Context, settings *Settings, logger log.Logger, enver 
 		depStates = make(map[string]*types.DependencyState)
 	}
 
+	storageCli, err := config.NewStorageCli(ctx, gcred)
+	if err != nil {
+		return nil, err
+	}
+
+	dockerCli, err := config.NewDockerCli()
+	if err != nil {
+		return nil, err
+	}
+
 	return &ApplyAction{
-		ctx:      ctx,
-		cli:      cli,
-		settings: settings,
-		log:      logger,
-		env:      enver,
+		ctx:        ctx,
+		storageCli: storageCli,
+		dockerCli:  dockerCli,
+		gcred:      gcred,
+		settings:   settings,
+		log:        logger,
+		env:        enver,
 
 		PluginMap:        state,
 		AppStates:        appStates,
 		DependencyStates: depStates,
-	}
+	}, nil
 }
 
 func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback func(*types.ApplyAction)) error {
@@ -66,12 +78,24 @@ func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback 
 		return err
 	}
 
+	target := app.App.TargetName()
+
 	// Apply Bucket.
 	if deployState.Bucket == nil {
 		deployState.Bucket = &deploy.GCPBucket{}
 	}
 
-	err := deployState.Bucket.Apply(p.ctx, p.cli, StaticBucketObject, app.Actions[StaticBucketObject], callback)
+	err := deployState.Bucket.Apply(p.ctx, p.storageCli, target, StaticBucketObject, app.Actions[StaticBucketObject], callback)
+	if err != nil {
+		return err
+	}
+
+	// Apply GCR.
+	if deployState.ProxyImage == nil {
+		deployState.ProxyImage = &deploy.GCPImage{}
+	}
+
+	err = deployState.ProxyImage.Apply(p.ctx, p.dockerCli, p.gcred, target, StaticProxyImage, app.Actions[StaticProxyImage], callback)
 	if err != nil {
 		return err
 	}
@@ -85,13 +109,7 @@ func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback 
 
 func (p *ApplyAction) handleDeployApps(apps []*types.AppPlanActions, callback func(*types.ApplyAction)) error {
 	for _, app := range apps {
-		p.log.Errorln("DEPLOY", app.App.Type, app.Actions)
-
 		if app.App.Type == TypeStatic {
-			for _, act := range app.Actions {
-				p.log.Errorln("ACTION", act.Description, act.Operations)
-			}
-
 			err := p.handleStaticAppDeploy(app, callback)
 			if err != nil {
 				return err
