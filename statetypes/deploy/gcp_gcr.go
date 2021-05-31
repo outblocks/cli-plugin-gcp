@@ -92,8 +92,8 @@ func (o *GCPImage) Plan(ctx context.Context, cred *google.Credentials, c *GCPIma
 		return nil, err
 	}
 
-	if verify {
-		err := o.verify(ctx, token.AccessToken)
+	if verify && c != nil {
+		err := o.verify(ctx, token.AccessToken, c)
 		if err != nil {
 			return nil, err
 		}
@@ -124,12 +124,8 @@ func decodeGCPImagePlan(p *types.PlanActionOperation) (ret *GCPImagePlan, err er
 	return
 }
 
-func (o *GCPImage) verify(ctx context.Context, token string) error {
-	if o.Name == "" {
-		return nil
-	}
-
-	names := strings.SplitN(o.ImageName(), ":", 2)
+func (o *GCPImage) verify(ctx context.Context, token string, c *GCPImageCreate) error {
+	names := strings.SplitN(c.ImageName(), ":", 2)
 	if len(names) < 2 {
 		return nil
 	}
@@ -149,7 +145,14 @@ func (o *GCPImage) verify(ctx context.Context, token string) error {
 	_, err = gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
 	if err != nil {
 		o.Name = ""
+
+		return nil
 	}
+
+	o.Name = c.Name
+	o.GCR = c.GCR
+	o.ProjectID = c.ProjectID
+	o.Source = c.Source
 
 	return nil
 }
@@ -233,7 +236,7 @@ func (o *GCPImage) applyCreatePlan(ctx context.Context, cli *dockerclient.Client
 	return reader.Close()
 }
 
-func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials, target, obj string, a *types.PlanAction, callback func(*types.ApplyAction)) error {
+func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials, obj string, a *types.PlanAction, callback func(desc string)) error {
 	if a == nil {
 		return nil
 	}
@@ -250,20 +253,20 @@ func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *go
 	}
 
 	applyAction := &types.ApplyAction{
-		Target:      target,
 		Object:      obj,
 		Description: a.Description,
 		Progress:    0,
 		Total:       total,
 	}
-	callback(applyAction)
 
 	// Process operations.
-	for _, p := range a.Operations {
+	for i, p := range a.Operations {
 		plan, err := decodeGCPImagePlan(p)
 		if err != nil {
 			return err
 		}
+
+		applyAction = applyAction.WithProgress(i + 1)
 
 		switch p.Operation {
 		case types.PlanOpDelete:
@@ -273,16 +276,17 @@ func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *go
 				return err
 			}
 
+			callback(plugin_util.DeleteDesc("gcr", o.ImageName()))
+
 		case types.PlanOpUpdate, types.PlanOpAdd:
 			// Creation.
 			err = o.applyCreatePlan(ctx, cli, token.AccessToken, plan)
 			if err != nil {
 				return err
 			}
-		}
 
-		applyAction = applyAction.ProgressInc()
-		callback(applyAction)
+			callback(plugin_util.AddDesc("gcr", o.ImageName()))
+		}
 	}
 
 	return nil

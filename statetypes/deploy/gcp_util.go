@@ -7,8 +7,8 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/util"
 )
 
-func BucketName(project, gcpProject, app string) string {
-	return fmt.Sprintf("%s-%s-%s", util.LimitString(util.SanitizeName(app), 44), util.LimitString(util.SHAString(project), 8), util.LimitString(util.SHAString(gcpProject), 8))
+func BucketName(project, gcpProject, id string) string {
+	return fmt.Sprintf("%s-%s", util.LimitString(util.SanitizeName(id), 44), util.LimitString(util.SHAString(gcpProject+project), 8))
 }
 
 func RegionToGCR(region string) string {

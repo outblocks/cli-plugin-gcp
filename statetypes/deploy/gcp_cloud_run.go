@@ -3,7 +3,7 @@ package deploy
 import "encoding/json"
 
 type GCPCloudRun struct {
-	ID string
+	ID string `json:"id"`
 }
 
 func (r *GCPCloudRun) MarshalJSON() ([]byte, error) {

@@ -43,6 +43,7 @@ archives:
         format: zip
     files:
       - LICENSE
+      - plugin.yaml
 
 checksum:
   name_template: '{{ .ProjectName }}-{{ .Version }}-checksums.txt'

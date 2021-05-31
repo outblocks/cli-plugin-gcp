@@ -166,7 +166,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 	}
 
 	// Decode state.
-	var stateData *types.StateData
+	stateData := &types.StateData{}
 	if len(state) > 0 {
 		if err := json.Unmarshal(state, &stateData); err != nil {
 			return nil, fmt.Errorf("cannot decode state file: %w", err)

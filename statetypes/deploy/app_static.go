@@ -14,6 +14,15 @@ type StaticApp struct {
 	Other map[string]interface{} `json:"-" mapstructure:",remain"`
 }
 
+func NewStaticApp() *StaticApp {
+	return &StaticApp{
+		ProxyImage:   &GCPImage{},
+		Bucket:       &GCPBucket{},
+		CloudRun:     &GCPCloudRun{},
+		LoadBalancer: &GCPLoadBalancer{},
+	}
+}
+
 func (s *StaticApp) Decode(in interface{}) error {
 	return mapstructure.Decode(in, s)
 }

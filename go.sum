@@ -532,12 +532,8 @@ github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d/go.m
 github.com/opencontainers/runtime-tools v0.0.0-20181011054405-1d69bd0f9c39/go.mod h1:r3f7wjNzSs2extwzU3Y+6pKfobzPh+kKFJ3ofN+3nfs=
 github.com/opencontainers/selinux v1.6.0/go.mod h1:VVGKuOLlE7v4PJyT6h7mNWvq1rzqiriPsEqVhc+svHE=
 github.com/opencontainers/selinux v1.8.0/go.mod h1:RScLhm78qiWa2gbVCcGkC7tCGdgk3ogry1nUQF8Evvo=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210525204429-0fc30a0025c8 h1:NL5D4GA+8AdRZkRo/lAwc1nOC06WFps9bhsHIQNqO4Q=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210525204429-0fc30a0025c8/go.mod h1:vAn4Vv7fXTyrjNEvAVcKtKJ2Bwaqk3Oy63lqnBRIct4=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210526161933-23dca3513a8f h1:dakicKSMd+ASP8NXDVRtPQX2B8c1Xb2h/KrEj3O+W88=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210526161933-23dca3513a8f/go.mod h1:vAn4Vv7fXTyrjNEvAVcKtKJ2Bwaqk3Oy63lqnBRIct4=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210526162241-f6d758c2daaf h1:ZNEKO4IeRynqpwVl3NCjo0XADYLOUqjT8i5jk8nCN+A=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20210526162241-f6d758c2daaf/go.mod h1:vAn4Vv7fXTyrjNEvAVcKtKJ2Bwaqk3Oy63lqnBRIct4=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20210527001754-85ef09f0a3ae h1:RCkQ5uI4DG5MQtRpPmGAq5V29OnBYNsKBhDrkX44PSA=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20210527001754-85ef09f0a3ae/go.mod h1:vAn4Vv7fXTyrjNEvAVcKtKJ2Bwaqk3Oy63lqnBRIct4=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.8.1/go.mod h1:T2/BmBdy8dvIRq1a/8aqjN41wvWlN4lrapLU/GW4pbc=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=

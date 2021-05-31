@@ -1,0 +1,17 @@
+name: gcp
+author: outblocks
+usage: Preview helm upgrade changes as a diff
+description: Preview helm upgrade changes as a diff
+run: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin
+actions:
+  - deploy
+  - dns
+state_types:
+  - gcp
+supports:
+  - function
+  - service
+  - static
+supported_types:
+  - type: postgresql
+  - type: storage

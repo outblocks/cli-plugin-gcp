@@ -3,7 +3,7 @@ package deploy
 import "encoding/json"
 
 type GCPLoadBalancer struct {
-	ID string
+	ID string `json:"id"`
 }
 
 func (lb *GCPLoadBalancer) MarshalJSON() ([]byte, error) {

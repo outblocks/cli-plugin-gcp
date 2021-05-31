@@ -8,7 +8,7 @@ import (
 )
 
 func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.Response, error) {
-	a, err := actions.NewPlan(ctx, p.cred, &p.Settings, p.log, p.env, r.PluginState, r.Verify)
+	a, err := actions.NewPlan(ctx, p.cred, &p.Settings, p.log, p.env, r.PluginMap, r.AppStates, r.DependencyStates, r.Verify)
 	if err != nil {
 		return nil, err
 	}
@@ -20,5 +20,9 @@ func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.
 
 	return &plugin_go.PlanResponse{
 		DeployPlan: deployPlan,
+
+		PluginMap:        a.PluginMap,
+		AppStates:        a.AppStates,
+		DependencyStates: a.DependencyStates,
 	}, nil
 }

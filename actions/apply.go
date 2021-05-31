@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"sync"
 
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
@@ -65,37 +66,58 @@ func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings
 	}, nil
 }
 
-func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback func(*types.ApplyAction)) error {
-	var deployState deploy.StaticApp
+func (p *ApplyAction) applyObject(i interface{}, actions map[string]*types.PlanAction, obj string, callback func(obj, desc string, progress, total int)) error {
+	action := actions[obj]
 
-	state := p.AppStates[app.App.Name]
+	if action == nil {
+		return nil
+	}
+
+	var mu sync.Mutex
+
+	progress := 0
+	total := action.TotalSteps()
+
+	cb := func(desc string) {
+		mu.Lock()
+		progress++
+		callback(obj, desc, progress, total)
+		mu.Unlock()
+	}
+
+	var err error
+
+	switch o := i.(type) {
+	case *deploy.GCPImage:
+		err = o.Apply(p.ctx, p.dockerCli, p.gcred, obj, action, cb)
+	case *deploy.GCPBucket:
+		err = o.Apply(p.ctx, p.storageCli, obj, action, cb)
+	}
+
+	return err
+}
+
+func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback func(obj, desc string, progress, total int)) error {
+	deployState := deploy.NewStaticApp()
+
+	state := p.AppStates[app.App.ID]
 	if state == nil {
 		state = types.NewAppState()
-		p.AppStates[app.App.Name] = state
+		p.AppStates[app.App.ID] = state
 	}
 
 	if err := deployState.Decode(state.DeployState[PluginName]); err != nil {
 		return err
 	}
 
-	target := app.App.TargetName()
-
 	// Apply Bucket.
-	if deployState.Bucket == nil {
-		deployState.Bucket = &deploy.GCPBucket{}
-	}
-
-	err := deployState.Bucket.Apply(p.ctx, p.storageCli, target, StaticBucketObject, app.Actions[StaticBucketObject], callback)
+	err := p.applyObject(deployState.Bucket, app.Actions, StaticBucketObject, callback)
 	if err != nil {
 		return err
 	}
 
 	// Apply GCR.
-	if deployState.ProxyImage == nil {
-		deployState.ProxyImage = &deploy.GCPImage{}
-	}
-
-	err = deployState.ProxyImage.Apply(p.ctx, p.dockerCli, p.gcred, target, StaticProxyImage, app.Actions[StaticProxyImage], callback)
+	err = p.applyObject(deployState.ProxyImage, app.Actions, StaticProxyImage, callback)
 	if err != nil {
 		return err
 	}
@@ -109,8 +131,19 @@ func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback 
 
 func (p *ApplyAction) handleDeployApps(apps []*types.AppPlanActions, callback func(*types.ApplyAction)) error {
 	for _, app := range apps {
+		cb := func(obj, desc string, progress, total int) {
+			callback(&types.ApplyAction{
+				TargetID:    app.App.ID,
+				TargetType:  types.TargetTypeApp,
+				Object:      obj,
+				Description: desc,
+				Progress:    progress,
+				Total:       total,
+			})
+		}
+
 		if app.App.Type == TypeStatic {
-			err := p.handleStaticAppDeploy(app, callback)
+			err := p.handleStaticAppDeploy(app, cb)
 			if err != nil {
 				return err
 			}
