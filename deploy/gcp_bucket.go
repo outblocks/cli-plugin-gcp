@@ -21,7 +21,7 @@ import (
 type GCPBucket struct {
 	Name       string               `json:"name"`
 	ProjectID  string               `json:"project_id" mapstructure:"project_id"`
-	Location   *string              `json:"location"`
+	Location   string               `json:"location"`
 	Versioning *bool                `json:"versioning"`
 	IsPublic   *bool                `json:"is_public" mapstructure:"is_public"`
 	Files      map[string]*FileInfo `json:"files"`
@@ -50,7 +50,7 @@ type GCPBucketPlan struct {
 	Name        string               `json:"name"`
 	ProjectID   string               `json:"project_id"`
 	Path        string               `json:"path"`
-	Location    *string              `json:"location,omitempty"`
+	Location    string               `json:"location,omitempty"`
 	Versioning  *bool                `json:"versioning,omitempty"`
 	IsPublic    *bool                `json:"is_public,omitempty"`
 	FilesAdd    map[string]*FileInfo `json:"files_add,omitempty"`
@@ -67,7 +67,12 @@ func (o *GCPBucketPlan) Encode() []byte {
 	return d
 }
 
-func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, name string) error {
+func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, c *GCPBucketCreate) error {
+	name := o.Name
+	if name == "" && c != nil {
+		name = c.Name
+	}
+
 	if name == "" {
 		return nil
 	}
@@ -82,7 +87,7 @@ func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, name string
 	}
 
 	o.Name = name
-	o.Location = &cur.Location
+	o.Location = cur.Location
 	o.Versioning = &cur.VersioningEnabled
 	o.Files = make(map[string]*FileInfo)
 
@@ -108,7 +113,7 @@ func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, name string
 	return nil
 }
 
-func deleteGCPBucketOperation(o *GCPBucket) *types.PlanActionOperation {
+func deleteGCPBucketOp(o *GCPBucket) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1,
 		Operation: types.PlanOpDelete,
@@ -119,7 +124,7 @@ func deleteGCPBucketOperation(o *GCPBucket) *types.PlanActionOperation {
 	}
 }
 
-func createGCPBucketPlan(c *GCPBucketCreate, files map[string]*FileInfo) *types.PlanActionOperation {
+func createGCPBucketOp(c *GCPBucketCreate, files map[string]*FileInfo) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1 + len(files),
 		Operation: types.PlanOpAdd,
@@ -127,7 +132,7 @@ func createGCPBucketPlan(c *GCPBucketCreate, files map[string]*FileInfo) *types.
 			Name:       c.Name,
 			ProjectID:  c.ProjectID,
 			Path:       c.Path,
-			Location:   &c.Location,
+			Location:   c.Location,
 			Versioning: &c.Versioning,
 			IsPublic:   &c.IsPublic,
 			FilesAdd:   files,
@@ -140,12 +145,7 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 
 	// Fetch current state if needed.
 	if verify {
-		name := o.Name
-		if name == "" && c != nil {
-			name = c.Name
-		}
-
-		err := o.verify(ctx, cli, name)
+		err := o.verify(ctx, cli, c)
 		if err != nil {
 			return nil, err
 		}
@@ -154,7 +154,7 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
-			return types.NewPlanActionDelete(plugin_util.DeleteDesc("bucket", o.Name), append(ops, deleteGCPBucketOperation(o))), nil
+			return types.NewPlanActionDelete(plugin_util.DeleteDesc("bucket", o.Name), append(ops, deleteGCPBucketOp(o))), nil
 		}
 
 		return nil, nil
@@ -171,7 +171,7 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 	dest := &GCPBucket{
 		Name:       c.Name,
 		ProjectID:  c.ProjectID,
-		Location:   &c.Location,
+		Location:   c.Location,
 		Versioning: &c.Versioning,
 		IsPublic:   &c.IsPublic,
 		Files:      files,
@@ -180,13 +180,13 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 	// Check for fresh create.
 	if o.Name == "" {
 		return types.NewPlanActionCreate(plugin_util.AddDesc("bucket", c.Name, "%d file(s)", len(files)),
-			append(ops, createGCPBucketPlan(c, files))), nil
+			append(ops, createGCPBucketOp(c, files))), nil
 	}
 
 	// Check for conflicting updates.
-	if !util.CompareIStringPtr(o.Location, dest.Location) {
+	if !strings.EqualFold(o.Location, dest.Location) {
 		return types.NewPlanActionRecreate(plugin_util.UpdateDesc("bucket", o.Name, "forces recreate, %d file(s)", len(files)),
-			append(ops, deleteGCPBucketOperation(o), createGCPBucketPlan(c, files))), nil
+			append(ops, deleteGCPBucketOp(o), createGCPBucketOp(c, files))), nil
 	}
 
 	// Check for partial updates.
@@ -361,12 +361,17 @@ func (o *GCPBucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, pl
 	attrs := storage.BucketAttrsToUpdate{}
 
 	if plan.Versioning != nil {
-		attrs.VersioningEnabled = true
+		attrs.VersioningEnabled = *plan.Versioning
 		update = true
 	}
 
 	if plan.IsPublic != nil {
-		attrs.PredefinedACL = ACLPublicRead
+		if *plan.IsPublic {
+			attrs.PredefinedACL = ACLPublicRead
+		} else {
+			attrs.PredefinedACL = ACLProjectPrivate
+		}
+
 		update = true
 	}
 
@@ -397,7 +402,7 @@ func (o *GCPBucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, pl
 func (o *GCPBucket) applyCreatePlan(ctx context.Context, cli *storage.Client, plan *GCPBucketPlan, callback func(op string)) error {
 	bucket := cli.Bucket(plan.Name)
 
-	attrs := &storage.BucketAttrs{Location: *plan.Location, VersioningEnabled: *plan.Versioning}
+	attrs := &storage.BucketAttrs{Location: plan.Location, VersioningEnabled: *plan.Versioning}
 
 	if plan.IsPublic != nil && *plan.IsPublic {
 		attrs.PredefinedACL = ACLPublicRead
@@ -425,18 +430,8 @@ func (o *GCPBucket) applyCreatePlan(ctx context.Context, cli *storage.Client, pl
 }
 
 func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, obj string, a *types.PlanAction, callback func(desc string)) error {
-	if a == nil {
-		return nil
-	}
-
 	if o.Files == nil {
 		o.Files = make(map[string]*FileInfo)
-	}
-
-	// Calculate total.
-	total := a.TotalSteps()
-	if total == 0 {
-		return nil
 	}
 
 	// Process operations.

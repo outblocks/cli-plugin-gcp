@@ -133,7 +133,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		return res, nil
 	}
 
-	cli, err := config.NewStorageCli(ctx, p.cred)
+	cli, err := config.NewStorageClient(ctx, p.cred)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 		return res, nil
 	}
 
-	cli, err := config.NewStorageCli(ctx, p.cred)
+	cli, err := config.NewStorageClient(ctx, p.cred)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,7 @@ func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockReques
 		return res, nil
 	}
 
-	cli, err := config.NewStorageCli(ctx, p.cred)
+	cli, err := config.NewStorageClient(ctx, p.cred)
 	if err != nil {
 		return nil, err
 	}

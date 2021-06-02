@@ -7,7 +7,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/util"
 )
 
-func BucketName(project, gcpProject, id string) string {
+func ID(project, gcpProject, id string) string {
 	return fmt.Sprintf("%s-%s", util.LimitString(util.SanitizeName(id), 44), util.LimitString(util.SHAString(gcpProject+project), 8))
 }
 

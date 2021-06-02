@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-var sanitizeRegex = regexp.MustCompile("[^a-zA-Z0-9-_]+")
+var sanitizeRegex = regexp.MustCompile("[^a-zA-Z0-9-]+")
 
 func SanitizeName(n string) string {
-	return sanitizeRegex.ReplaceAllString(n, "")
+	return sanitizeRegex.ReplaceAllString(strings.ReplaceAll(n, "_", "-"), "")
 }
 
 func SHAString(n string) string {
@@ -51,4 +51,23 @@ func CompareBoolPtr(a, b *bool) bool {
 	}
 
 	return a != nil && *a == *b
+}
+
+func PartialMapCompare(m1, m2 map[string]string, keys []string) bool {
+	for _, k := range keys {
+		v, ok := m1[k]
+		if !ok {
+			continue
+		}
+
+		if m2[k] != v {
+			return true
+		}
+	}
+
+	return false
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }

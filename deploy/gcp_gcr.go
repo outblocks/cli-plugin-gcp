@@ -26,6 +26,10 @@ type GCPImage struct {
 }
 
 func (o *GCPImage) ImageName() string {
+	if o.Name == "" {
+		return ""
+	}
+
 	return fmt.Sprintf("%s/%s/%s", o.GCR, o.ProjectID, o.Name)
 }
 
@@ -60,7 +64,7 @@ func (o *GCPImagePlan) Encode() []byte {
 	return d
 }
 
-func deleteGCPImageOperation(o *GCPImage) *types.PlanActionOperation {
+func deleteGCPImageOp(o *GCPImage) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1,
 		Operation: types.PlanOpDelete,
@@ -71,7 +75,7 @@ func deleteGCPImageOperation(o *GCPImage) *types.PlanActionOperation {
 	}
 }
 
-func createGCPImagePlan(c *GCPImageCreate) *types.PlanActionOperation {
+func createGCPImageOp(c *GCPImageCreate) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1,
 		Operation: types.PlanOpAdd,
@@ -92,7 +96,7 @@ func (o *GCPImage) Plan(ctx context.Context, cred *google.Credentials, c *GCPIma
 		return nil, err
 	}
 
-	if verify && c != nil {
+	if verify {
 		err := o.verify(ctx, token.AccessToken, c)
 		if err != nil {
 			return nil, err
@@ -103,7 +107,7 @@ func (o *GCPImage) Plan(ctx context.Context, cred *google.Credentials, c *GCPIma
 	if c == nil {
 		if o.Name != "" {
 			return types.NewPlanActionDelete(plugin_util.DeleteDesc("gcr", o.ImageName()),
-				append(ops, deleteGCPImageOperation(o))), nil
+				append(ops, deleteGCPImageOp(o))), nil
 		}
 
 		return nil, nil
@@ -112,7 +116,13 @@ func (o *GCPImage) Plan(ctx context.Context, cred *google.Credentials, c *GCPIma
 	// Check for fresh create.
 	if o.Name == "" {
 		return types.NewPlanActionCreate(plugin_util.AddDesc("gcr", c.ImageName()),
-			append(ops, createGCPImagePlan(c))), nil
+			append(ops, createGCPImageOp(c))), nil
+	}
+
+	// Check for conflicting updates.
+	if o.ProjectID != c.ProjectID {
+		return types.NewPlanActionRecreate(plugin_util.UpdateDesc("gcr", c.ImageName(), "forces recreate"),
+			append(ops, deleteGCPImageOp(o), createGCPImageOp(c))), nil
 	}
 
 	return nil, nil
@@ -125,6 +135,15 @@ func decodeGCPImagePlan(p *types.PlanActionOperation) (ret *GCPImagePlan, err er
 }
 
 func (o *GCPImage) verify(ctx context.Context, token string, c *GCPImageCreate) error {
+	imageName := o.ImageName()
+	if imageName == "" && c != nil {
+		imageName = c.ImageName()
+	}
+
+	if imageName == "" {
+		return nil
+	}
+
 	names := strings.SplitN(c.ImageName(), ":", 2)
 	if len(names) < 2 {
 		return nil
@@ -237,36 +256,17 @@ func (o *GCPImage) applyCreatePlan(ctx context.Context, cli *dockerclient.Client
 }
 
 func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials, obj string, a *types.PlanAction, callback func(desc string)) error {
-	if a == nil {
-		return nil
-	}
-
-	// Calculate total.
-	total := a.TotalSteps()
-	if total == 0 {
-		return nil
-	}
-
 	token, err := cred.TokenSource.Token()
 	if err != nil {
 		return err
 	}
 
-	applyAction := &types.ApplyAction{
-		Object:      obj,
-		Description: a.Description,
-		Progress:    0,
-		Total:       total,
-	}
-
 	// Process operations.
-	for i, p := range a.Operations {
+	for _, p := range a.Operations {
 		plan, err := decodeGCPImagePlan(p)
 		if err != nil {
 			return err
 		}
-
-		applyAction = applyAction.WithProgress(i + 1)
 
 		switch p.Operation {
 		case types.PlanOpDelete:

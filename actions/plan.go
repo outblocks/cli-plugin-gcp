@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"cloud.google.com/go/storage"
+	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/cli-plugin-gcp/statetypes/deploy"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
@@ -30,7 +30,7 @@ type PlanAction struct {
 }
 
 func NewPlan(ctx context.Context, gcred *google.Credentials, settings *Settings, logger log.Logger, enver env.Enver, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify bool) (*PlanAction, error) {
-	storageCli, err := config.NewStorageCli(ctx, gcred)
+	storageCli, err := config.NewStorageClient(ctx, gcred)
 	if err != nil {
 		return nil, err
 	}
@@ -84,10 +84,15 @@ func (p *PlanAction) handleStaticAppDeploy(app *types.App) (*types.AppPlanAction
 		return nil, err
 	}
 
+	opts := &deploy.StaticAppOptions{}
+	if err := opts.Decode(app.Properties); err != nil {
+		return nil, err
+	}
+
 	// Plan Bucket.
 	err := p.planObject(deployState.Bucket, plan.Actions, StaticBucketObject,
 		&deploy.GCPBucketCreate{
-			Name:       deploy.BucketName(p.env.ProjectName(), p.settings.ProjectID, app.ID),
+			Name:       deploy.ID(p.env.ProjectName(), p.settings.ProjectID, app.ID),
 			ProjectID:  p.settings.ProjectID,
 			Location:   p.settings.Region,
 			Versioning: false,
@@ -110,7 +115,32 @@ func (p *PlanAction) handleStaticAppDeploy(app *types.App) (*types.AppPlanAction
 		return nil, err
 	}
 
-	// TODO: plan cloud run and LB
+	// Plan Cloud Run.
+	envVars := map[string]string{
+		"GCS_BUCKET": deployState.Bucket.Name,
+	}
+
+	if opts.IsReactRouting() {
+		envVars["ERROR404"] = "index.html"
+		envVars["ERROR404_CODE"] = "200"
+	}
+
+	err = p.planObject(deployState.ProxyCloudRun, plan.Actions, StaticCloudRun,
+		&deploy.GCPCloudRunCreate{
+			Name:      deploy.ID(p.env.ProjectName(), p.settings.ProjectID, app.ID),
+			Image:     deployState.ProxyImage.ImageName(),
+			ProjectID: p.settings.ProjectID,
+			Region:    p.settings.Region,
+			IsPublic:  true,
+			Options: &deploy.RunServiceOptions{
+				EnvVars: envVars,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: plan LB
 
 	if p.verify {
 		state.DeployState[PluginName] = deployState
@@ -130,6 +160,8 @@ func (p *PlanAction) planObject(i interface{}, actions map[string]*types.PlanAct
 		action, err = o.Plan(p.ctx, p.storageCli, c.(*deploy.GCPBucketCreate), p.verify)
 	case *deploy.GCPImage:
 		action, err = o.Plan(p.ctx, p.gcred, c.(*deploy.GCPImageCreate), p.verify)
+	case *deploy.GCPCloudRun:
+		action, err = o.Plan(p.ctx, p.gcred, c.(*deploy.GCPCloudRunCreate), p.verify)
 	}
 
 	if err != nil {

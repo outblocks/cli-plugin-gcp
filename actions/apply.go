@@ -6,8 +6,8 @@ import (
 
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
+	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/cli-plugin-gcp/statetypes/deploy"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
@@ -41,12 +41,12 @@ func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings
 		depStates = make(map[string]*types.DependencyState)
 	}
 
-	storageCli, err := config.NewStorageCli(ctx, gcred)
+	storageCli, err := config.NewStorageClient(ctx, gcred)
 	if err != nil {
 		return nil, err
 	}
 
-	dockerCli, err := config.NewDockerCli()
+	dockerCli, err := config.NewDockerClient()
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +73,16 @@ func (p *ApplyAction) applyObject(i interface{}, actions map[string]*types.PlanA
 		return nil
 	}
 
-	var mu sync.Mutex
-
 	progress := 0
 	total := action.TotalSteps()
+
+	if total == 0 {
+		return nil
+	}
+
+	var mu sync.Mutex
+
+	callback(obj, "start", 0, total)
 
 	cb := func(desc string) {
 		mu.Lock()
@@ -90,6 +96,8 @@ func (p *ApplyAction) applyObject(i interface{}, actions map[string]*types.PlanA
 	switch o := i.(type) {
 	case *deploy.GCPImage:
 		err = o.Apply(p.ctx, p.dockerCli, p.gcred, obj, action, cb)
+	case *deploy.GCPCloudRun:
+		err = o.Apply(p.ctx, p.gcred, obj, action, cb)
 	case *deploy.GCPBucket:
 		err = o.Apply(p.ctx, p.storageCli, obj, action, cb)
 	}
@@ -122,7 +130,13 @@ func (p *ApplyAction) handleStaticAppDeploy(app *types.AppPlanActions, callback 
 		return err
 	}
 
-	// TODO: apply cloud run and LB
+	// Apply Cloud Run.
+	err = p.applyObject(deployState.ProxyCloudRun, app.Actions, StaticCloudRun, callback)
+	if err != nil {
+		return err
+	}
+
+	// TODO: apply LB
 
 	state.DeployState[PluginName] = deployState
 
