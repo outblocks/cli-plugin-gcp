@@ -6,7 +6,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/validate"
-	"google.golang.org/api/storage/v1"
+	"google.golang.org/api/compute/v1"
 )
 
 func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_go.Response, error) {
@@ -23,7 +23,7 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 	p.Settings.ProjectID = project
 	p.Settings.Region = region
 
-	cred, err := config.GoogleCredentials(ctx, storage.DevstorageFullControlScope)
+	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
 		return nil, err
 	}

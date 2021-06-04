@@ -2,8 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
-	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/outblocks/cli-plugin-gcp/deploy"
@@ -11,17 +9,20 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	"github.com/outblocks/outblocks-plugin-go/util"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/compute/v1"
 )
 
 type PlanAction struct {
 	ctx        context.Context
 	storageCli *storage.Client
+	computeCli *compute.Service
 	gcred      *google.Credentials
 	settings   *Settings
 	log        log.Logger
 	env        env.Enver
+
+	common *deploy.Common
 
 	PluginMap        types.PluginStateMap
 	AppStates        map[string]*types.AppState
@@ -47,13 +48,28 @@ func NewPlan(ctx context.Context, gcred *google.Credentials, settings *Settings,
 		depStates = make(map[string]*types.DependencyState)
 	}
 
+	common := deploy.NewCommon()
+
+	computeCli, err := config.NewGCPComputeClient(ctx, gcred)
+	if err != nil {
+		return nil, err
+	}
+
+	err = common.Decode(state[PluginCommonState])
+	if err != nil {
+		return nil, err
+	}
+
 	return &PlanAction{
 		ctx:        ctx,
 		storageCli: storageCli,
+		computeCli: computeCli,
 		gcred:      gcred,
 		settings:   settings,
 		log:        logger,
 		env:        enver,
+
+		common: common,
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -62,146 +78,115 @@ func NewPlan(ctx context.Context, gcred *google.Credentials, settings *Settings,
 	}, nil
 }
 
-func (p *PlanAction) handleStaticAppDeploy(app *types.App) (*types.AppPlanActions, error) {
-	build := app.Properties["build"].(map[string]interface{})
-	buildDir := filepath.Join(app.Path, build["dir"].(string))
-
-	buildPath, ok := util.CheckDir(buildDir)
-	if !ok {
-		return nil, fmt.Errorf("app '%s' build dir '%s' does not exist", app.Name, buildDir)
+func (p *PlanAction) handleStaticAppDeploy(state *types.AppState, app *types.App) (*deploy.StaticApp, *types.AppPlanActions, error) {
+	appDeploy := deploy.NewStaticApp()
+	if err := appDeploy.Decode(state.DeployState[PluginName]); err != nil {
+		return nil, nil, err
 	}
 
-	plan := types.NewAppPlanActions(app)
-	deployState := deploy.NewStaticApp()
-
-	state := p.AppStates[app.ID]
-	if state == nil {
-		state = types.NewAppState()
-		p.AppStates[app.ID] = state
-	}
-
-	if err := deployState.Decode(state.DeployState[PluginName]); err != nil {
-		return nil, err
-	}
-
-	opts := &deploy.StaticAppOptions{}
-	if err := opts.Decode(app.Properties); err != nil {
-		return nil, err
-	}
-
-	// Plan Bucket.
-	err := p.planObject(deployState.Bucket, plan.Actions, StaticBucketObject,
-		&deploy.GCPBucketCreate{
-			Name:       deploy.ID(p.env.ProjectName(), p.settings.ProjectID, app.ID),
-			ProjectID:  p.settings.ProjectID,
-			Location:   p.settings.Region,
-			Versioning: false,
-			IsPublic:   true,
-			Path:       buildPath,
-		})
+	actions, err := appDeploy.Plan(p.ctx, p.storageCli, p.gcred, app, p.env, &deploy.StaticAppCreate{
+		ProjectID: p.settings.ProjectID,
+		Region:    p.settings.Region,
+	}, p.verify)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// Plan GCR Proxy Image.
-	err = p.planObject(deployState.ProxyImage, plan.Actions, StaticProxyImage,
-		&deploy.GCPImageCreate{
-			Name:      deploy.GCSProxyImageName,
-			ProjectID: p.settings.ProjectID,
-			Source:    deploy.GCSProxyDockerImage,
-			GCR:       deploy.RegionToGCR(p.settings.Region),
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	// Plan Cloud Run.
-	envVars := map[string]string{
-		"GCS_BUCKET": deployState.Bucket.Name,
-	}
-
-	if opts.IsReactRouting() {
-		envVars["ERROR404"] = "index.html"
-		envVars["ERROR404_CODE"] = "200"
-	}
-
-	err = p.planObject(deployState.ProxyCloudRun, plan.Actions, StaticCloudRun,
-		&deploy.GCPCloudRunCreate{
-			Name:      deploy.ID(p.env.ProjectName(), p.settings.ProjectID, app.ID),
-			Image:     deployState.ProxyImage.ImageName(),
-			ProjectID: p.settings.ProjectID,
-			Region:    p.settings.Region,
-			IsPublic:  true,
-			Options: &deploy.RunServiceOptions{
-				EnvVars: envVars,
-			},
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: plan LB
-
-	if p.verify {
-		state.DeployState[PluginName] = deployState
-	}
-
-	return plan, nil
+	return appDeploy, actions, nil
 }
 
-func (p *PlanAction) planObject(i interface{}, actions map[string]*types.PlanAction, obj string, c interface{}) error {
-	var (
-		action *types.PlanAction
-		err    error
-	)
+func (p *PlanAction) handleStaticAppsDeploy(appPlans []*types.AppPlan) (apps []*deploy.StaticApp, appPlan []*types.AppPlanActions, err error) {
+	for _, plan := range appPlans {
+		state := p.AppStates[plan.App.ID]
+		if state == nil {
+			state = types.NewAppState()
+			p.AppStates[plan.App.ID] = state
+		}
 
-	switch o := i.(type) {
-	case *deploy.GCPBucket:
-		action, err = o.Plan(p.ctx, p.storageCli, c.(*deploy.GCPBucketCreate), p.verify)
-	case *deploy.GCPImage:
-		action, err = o.Plan(p.ctx, p.gcred, c.(*deploy.GCPImageCreate), p.verify)
-	case *deploy.GCPCloudRun:
-		action, err = o.Plan(p.ctx, p.gcred, c.(*deploy.GCPCloudRunCreate), p.verify)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if action != nil {
-		actions[obj] = action
-	}
-
-	return nil
-}
-
-func (p *PlanAction) handleStaticAppsDeploy(apps []*types.AppPlan) (appPlan []*types.AppPlanActions, err error) {
-	for _, app := range apps {
-		aa, e := p.handleStaticAppDeploy(app.App)
+		sa, aa, e := p.handleStaticAppDeploy(state, plan.App)
 		if e != nil {
-			return nil, e
+			return nil, nil, e
+		}
+
+		if p.verify {
+			state.DeployState[PluginName] = sa
+			state.App = plan.App
 		}
 
 		if aa != nil && len(aa.Actions) > 0 {
 			appPlan = append(appPlan, aa)
 		}
+
+		apps = append(apps, sa)
 	}
 
 	return
 }
 
+func (p *PlanAction) handleCleanupApp(state *types.AppState) (appPlan *types.AppPlanActions, err error) {
+	deployState := state.DeployState[PluginName]
+	if deployState == nil {
+		return nil, nil
+	}
+
+	app, err := deploy.DetectAppType(deployState)
+	if err != nil {
+		return nil, err
+	}
+
+	switch appDeploy := app.(type) { // nolint: gocritic // - more app types will be supported
+	case *deploy.StaticApp:
+		appPlan, err = appDeploy.Plan(p.ctx, p.storageCli, p.gcred, state.App, p.env, nil, p.verify)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return appPlan, nil
+}
+
+func (p *PlanAction) planDeployCommon(static []*deploy.StaticApp, staticPlan []*types.AppPlan) (*types.PluginPlanActions, error) {
+	actions, err := p.common.Plan(p.ctx, p.computeCli, p.env, &deploy.CommonCreate{
+		Name:      PluginCommonState,
+		ProjectID: p.settings.ProjectID,
+		Region:    p.settings.Region,
+	}, static, staticPlan,
+		p.verify)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.verify {
+		p.PluginMap[PluginCommonState] = p.common
+	}
+
+	if len(actions) == 0 {
+		return nil, nil
+	}
+
+	plan := types.NewPluginPlanActions(PluginCommonState)
+	plan.Actions = actions
+
+	return plan, nil
+}
+
 func (p *PlanAction) PlanDeploy(apps []*types.AppPlan) (*types.Plan, error) {
 	var (
-		staticApps []*types.AppPlan
+		staticAppsPlan []*types.AppPlan
+		pluginPlan     []*types.PluginPlanActions
 	)
 
+	appIDs := make(map[string]struct{})
+
 	for _, app := range apps {
+		appIDs[app.App.ID] = struct{}{}
+
 		if !app.IsDeploy {
 			continue
 		}
 
 		if app.App.Type == TypeStatic {
-			staticApps = append(staticApps, app)
+			staticAppsPlan = append(staticAppsPlan, app)
 		}
 	}
 
@@ -210,14 +195,39 @@ func (p *PlanAction) PlanDeploy(apps []*types.AppPlan) (*types.Plan, error) {
 	)
 
 	// Plan static app deployment.
-	staticAppDeployPlan, err := p.handleStaticAppsDeploy(staticApps)
+	staticApps, staticAppDeployPlan, err := p.handleStaticAppsDeploy(staticAppsPlan)
 	if err != nil {
 		return nil, err
 	}
 
 	appPlan = append(appPlan, staticAppDeployPlan...)
 
+	// Plan cleanup.
+	for appID, appState := range p.AppStates {
+		if _, ok := appIDs[appID]; !ok {
+			cleanupPlan, err := p.handleCleanupApp(appState)
+			if err != nil {
+				return nil, err
+			}
+
+			if cleanupPlan != nil {
+				appPlan = append(appPlan, cleanupPlan)
+			}
+		}
+	}
+
+	// Plan common part.
+	pluginAction, err := p.planDeployCommon(staticApps, staticAppsPlan)
+	if err != nil {
+		return nil, err
+	}
+
+	if pluginAction != nil {
+		pluginPlan = append(pluginPlan, pluginAction)
+	}
+
 	return &types.Plan{
-		Apps: appPlan,
+		Apps:   appPlan,
+		Plugin: pluginPlan,
 	}, nil
 }

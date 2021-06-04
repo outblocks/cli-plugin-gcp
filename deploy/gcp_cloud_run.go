@@ -257,8 +257,12 @@ func (o *GCPCloudRun) verify(ctx context.Context, cred *google.Credentials, c *G
 	}
 
 	_, err = getRunService(cli, project, name)
-	if err != nil {
+	if ErrIs404(err) {
+		o.Name = ""
+
 		return nil
+	} else if err != nil {
+		return err
 	}
 
 	o.Name = name
@@ -358,7 +362,7 @@ func (o *GCPCloudRun) Plan(ctx context.Context, cred *google.Credentials, c *GCP
 	return nil, nil
 }
 
-func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, obj string, a *types.PlanAction, callback func(desc string)) error {
+func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *types.PlanAction, callback func(desc string)) error {
 	regionCli := make(map[string]*run.APIService)
 
 	// Process operations.
@@ -386,7 +390,7 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, obj s
 				return err
 			}
 
-			callback(plugin_util.DeleteDesc("cloud run", o.Name))
+			callback(plugin_util.DeleteDesc("cloud run", plan.Name))
 
 		case types.PlanOpUpdate:
 			// Update.
@@ -456,4 +460,16 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, obj s
 	}
 
 	return nil
+}
+
+func (o *GCPCloudRun) planner(ctx context.Context, cred *google.Credentials, c *GCPCloudRunCreate, verify bool) func() (*types.PlanAction, error) {
+	return func() (*types.PlanAction, error) {
+		return o.Plan(ctx, cred, c, verify)
+	}
+}
+
+func (o *GCPCloudRun) applier(ctx context.Context, cred *google.Credentials) func(*types.PlanAction, util.ApplyCallbackFunc) error {
+	return func(a *types.PlanAction, cb util.ApplyCallbackFunc) error {
+		return o.Apply(ctx, cred, a, cb)
+	}
 }

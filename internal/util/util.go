@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"regexp"
 	"strings"
+	"sync"
+
+	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 var sanitizeRegex = regexp.MustCompile("[^a-zA-Z0-9-]+")
@@ -70,4 +73,50 @@ func PartialMapCompare(m1, m2 map[string]string, keys []string) bool {
 
 func BoolPtr(b bool) *bool {
 	return &b
+}
+
+func PlanObject(actions map[string]*types.PlanAction, obj string, planner func() (*types.PlanAction, error)) error {
+	action, err := planner()
+
+	if err != nil {
+		return err
+	}
+
+	if action != nil {
+		actions[obj] = action
+	}
+
+	return nil
+}
+
+type ApplyCallbackFunc func(desc string)
+
+func ApplyObject(actions map[string]*types.PlanAction, obj string, callback func(obj, desc string, progress, total int), applier func(*types.PlanAction, ApplyCallbackFunc) error) error {
+	action := actions[obj]
+
+	if action == nil {
+		return nil
+	}
+
+	progress := 0
+	total := action.TotalSteps()
+
+	if total == 0 {
+		return nil
+	}
+
+	var mu sync.Mutex
+
+	callback(obj, "start", 0, total)
+
+	cb := func(desc string) {
+		mu.Lock()
+		progress++
+		callback(obj, desc, progress, total)
+		mu.Unlock()
+	}
+
+	err := applier(action, cb)
+
+	return err
 }

@@ -429,7 +429,7 @@ func (o *GCPBucket) applyCreatePlan(ctx context.Context, cli *storage.Client, pl
 	return err
 }
 
-func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, obj string, a *types.PlanAction, callback func(desc string)) error {
+func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, a *types.PlanAction, callback util.ApplyCallbackFunc) error {
 	if o.Files == nil {
 		o.Files = make(map[string]*FileInfo)
 	}
@@ -468,4 +468,16 @@ func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, obj string, 
 	}
 
 	return nil
+}
+
+func (o *GCPBucket) planner(ctx context.Context, storageCli *storage.Client, c *GCPBucketCreate, verify bool) func() (*types.PlanAction, error) {
+	return func() (*types.PlanAction, error) {
+		return o.Plan(ctx, storageCli, c, verify)
+	}
+}
+
+func (o *GCPBucket) applier(ctx context.Context, cli *storage.Client) func(*types.PlanAction, util.ApplyCallbackFunc) error {
+	return func(a *types.PlanAction, cb util.ApplyCallbackFunc) error {
+		return o.Apply(ctx, cli, a, cb)
+	}
 }

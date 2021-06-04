@@ -13,6 +13,7 @@ import (
 	gcrauthn "github.com/google/go-containerregistry/pkg/authn"
 	gcrname "github.com/google/go-containerregistry/pkg/name"
 	gcrremote "github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"golang.org/x/oauth2/google"
@@ -162,16 +163,20 @@ func (o *GCPImage) verify(ctx context.Context, token string, c *GCPImageCreate) 
 	}
 
 	_, err = gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
-	if err != nil {
+	if ErrIs404(err) {
 		o.Name = ""
 
 		return nil
+	} else if err != nil {
+		return err
 	}
 
-	o.Name = c.Name
-	o.GCR = c.GCR
-	o.ProjectID = c.ProjectID
-	o.Source = c.Source
+	if c != nil {
+		o.Name = c.Name
+		o.GCR = c.GCR
+		o.ProjectID = c.ProjectID
+		o.Source = c.Source
+	}
 
 	return nil
 }
@@ -255,7 +260,7 @@ func (o *GCPImage) applyCreatePlan(ctx context.Context, cli *dockerclient.Client
 	return reader.Close()
 }
 
-func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials, obj string, a *types.PlanAction, callback func(desc string)) error {
+func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials, a *types.PlanAction, callback util.ApplyCallbackFunc) error {
 	token, err := cred.TokenSource.Token()
 	if err != nil {
 		return err
@@ -290,4 +295,16 @@ func (o *GCPImage) Apply(ctx context.Context, cli *dockerclient.Client, cred *go
 	}
 
 	return nil
+}
+
+func (o *GCPImage) planner(ctx context.Context, cred *google.Credentials, c *GCPImageCreate, verify bool) func() (*types.PlanAction, error) {
+	return func() (*types.PlanAction, error) {
+		return o.Plan(ctx, cred, c, verify)
+	}
+}
+
+func (o *GCPImage) applier(ctx context.Context, cli *dockerclient.Client, cred *google.Credentials) func(*types.PlanAction, util.ApplyCallbackFunc) error {
+	return func(a *types.PlanAction, cb util.ApplyCallbackFunc) error {
+		return o.Apply(ctx, cli, cred, a, cb)
+	}
 }

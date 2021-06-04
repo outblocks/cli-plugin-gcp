@@ -93,9 +93,11 @@ func diffFiles(cur, dest map[string]*FileInfo) (add, update, del map[string]*Fil
 	update = make(map[string]*FileInfo)
 	del = make(map[string]*FileInfo)
 
+	skip := make(map[string]struct{})
+
 	for name, f := range dest {
 		if c, ok := cur[name]; ok {
-			delete(cur, name)
+			skip[name] = struct{}{}
 
 			if c.Hash != f.Hash {
 				update[name] = f
@@ -106,6 +108,10 @@ func diffFiles(cur, dest map[string]*FileInfo) (add, update, del map[string]*Fil
 	}
 
 	for name, f := range cur {
+		if _, ok := skip[name]; ok {
+			continue
+		}
+
 		del[name] = f
 	}
 
