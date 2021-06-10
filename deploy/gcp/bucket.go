@@ -1,4 +1,4 @@
-package deploy
+package gcp
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
@@ -18,26 +19,30 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-type GCPBucket struct {
+const BucketName = "bucket"
+
+type Bucket struct {
 	Name       string               `json:"name"`
 	ProjectID  string               `json:"project_id" mapstructure:"project_id"`
 	Location   string               `json:"location"`
 	Versioning *bool                `json:"versioning"`
 	IsPublic   *bool                `json:"is_public" mapstructure:"is_public"`
 	Files      map[string]*FileInfo `json:"files"`
+
+	Planned *BucketCreate `json:"-"`
 }
 
-func (o *GCPBucket) MarshalJSON() ([]byte, error) {
+func (o *Bucket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		GCPBucket
+		Bucket
 		Type string `json:"type"`
 	}{
-		GCPBucket: *o,
-		Type:      "gcp_bucket",
+		Bucket: *o,
+		Type:   "gcp_bucket",
 	})
 }
 
-type GCPBucketCreate struct {
+type BucketCreate struct {
 	Name       string
 	ProjectID  string
 	Location   string
@@ -46,7 +51,7 @@ type GCPBucketCreate struct {
 	Path       string
 }
 
-type GCPBucketPlan struct {
+type BucketPlan struct {
 	Name        string               `json:"name"`
 	ProjectID   string               `json:"project_id"`
 	Path        string               `json:"path"`
@@ -58,7 +63,7 @@ type GCPBucketPlan struct {
 	FilesDelete map[string]*FileInfo `json:"files_delete,omitempty"`
 }
 
-func (o *GCPBucketPlan) Encode() []byte {
+func (o *BucketPlan) Encode() []byte {
 	d, err := json.Marshal(o)
 	if err != nil {
 		panic(err)
@@ -67,7 +72,7 @@ func (o *GCPBucketPlan) Encode() []byte {
 	return d
 }
 
-func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, c *GCPBucketCreate) error {
+func (o *Bucket) verify(ctx context.Context, cli *storage.Client, c *BucketCreate) error {
 	name := o.Name
 	if name == "" && c != nil {
 		name = c.Name
@@ -79,7 +84,7 @@ func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, c *GCPBucke
 
 	cur, err := cli.Bucket(name).Attrs(ctx)
 	if err == storage.ErrBucketNotExist {
-		o.Name = ""
+		*o = Bucket{}
 
 		return nil
 	} else if err != nil {
@@ -113,22 +118,22 @@ func (o *GCPBucket) verify(ctx context.Context, cli *storage.Client, c *GCPBucke
 	return nil
 }
 
-func deleteGCPBucketOp(o *GCPBucket) *types.PlanActionOperation {
+func deleteBucketOp(o *Bucket) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1,
 		Operation: types.PlanOpDelete,
-		Data: (&GCPBucketPlan{
+		Data: (&BucketPlan{
 			Name:      o.Name,
 			ProjectID: o.ProjectID,
 		}).Encode(),
 	}
 }
 
-func createGCPBucketOp(c *GCPBucketCreate, files map[string]*FileInfo) *types.PlanActionOperation {
+func createBucketOp(c *BucketCreate, files map[string]*FileInfo) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1 + len(files),
 		Operation: types.PlanOpAdd,
-		Data: (&GCPBucketPlan{
+		Data: (&BucketPlan{
 			Name:       c.Name,
 			ProjectID:  c.ProjectID,
 			Path:       c.Path,
@@ -140,35 +145,49 @@ func createGCPBucketOp(c *GCPBucketCreate, files map[string]*FileInfo) *types.Pl
 	}
 }
 
-func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketCreate, verify bool) (*types.PlanAction, error) {
-	var ops []*types.PlanActionOperation
+func (o *Bucket) Plan(ctx context.Context, key string, dest interface{}, verify bool) (*types.PlanAction, error) {
+	var (
+		ops []*types.PlanActionOperation
+		c   *BucketCreate
+	)
+
+	if dest != nil {
+		c = dest.(*BucketCreate)
+	}
+
+	pctx := ctx.(*config.PluginContext)
+
+	cli, err := pctx.StorageClient()
+	if err != nil {
+		return nil, err
+	}
 
 	// Fetch current state if needed.
 	if verify {
-		err := o.verify(ctx, cli, c)
+		err := o.verify(pctx, cli, c)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	o.Planned = c
+
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
-			return types.NewPlanActionDelete(plugin_util.DeleteDesc("bucket", o.Name), append(ops, deleteGCPBucketOp(o))), nil
+			return types.NewPlanActionDelete(key, plugin_util.DeleteDesc(BucketName, o.Name), append(ops, deleteBucketOp(o))), nil
 		}
 
 		return nil, nil
 	}
 
 	// Compute desired state.
-	var files map[string]*FileInfo
-
 	files, err := findFiles(c.Path)
 	if err != nil {
 		return nil, err
 	}
 
-	dest := &GCPBucket{
+	wants := &Bucket{
 		Name:       c.Name,
 		ProjectID:  c.ProjectID,
 		Location:   c.Location,
@@ -179,43 +198,43 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 
 	// Check for fresh create.
 	if o.Name == "" {
-		return types.NewPlanActionCreate(plugin_util.AddDesc("bucket", c.Name, "%d file(s)", len(files)),
-			append(ops, createGCPBucketOp(c, files))), nil
+		return types.NewPlanActionCreate(key, plugin_util.AddDesc(BucketName, c.Name, "%d file(s)", len(files)),
+			append(ops, createBucketOp(c, files))), nil
 	}
 
 	// Check for conflicting updates.
-	if !strings.EqualFold(o.Location, dest.Location) {
-		return types.NewPlanActionRecreate(plugin_util.UpdateDesc("bucket", o.Name, "forces recreate, %d file(s)", len(files)),
-			append(ops, deleteGCPBucketOp(o), createGCPBucketOp(c, files))), nil
+	if !strings.EqualFold(o.Location, wants.Location) {
+		return types.NewPlanActionRecreate(key, plugin_util.UpdateDesc(BucketName, o.Name, "forces recreate, %d file(s)", len(files)),
+			append(ops, deleteBucketOp(o), createBucketOp(c, files))), nil
 	}
 
 	// Check for partial updates.
 	steps := 0
 
-	plan := &GCPBucketPlan{
+	plan := &BucketPlan{
 		Name:      c.Name,
 		ProjectID: c.ProjectID,
 		Path:      c.Path,
 	}
 
-	if !util.CompareBoolPtr(o.Versioning, dest.Versioning) {
-		plan.Versioning = dest.Versioning
+	if !util.CompareBoolPtr(o.Versioning, wants.Versioning) {
+		plan.Versioning = wants.Versioning
 		steps = 1
 	}
 
-	if !util.CompareBoolPtr(o.IsPublic, dest.IsPublic) {
-		plan.IsPublic = dest.IsPublic
+	if !util.CompareBoolPtr(o.IsPublic, wants.IsPublic) {
+		plan.IsPublic = wants.IsPublic
 		steps = 1
 	}
 
 	var desc []string
 
 	if steps != 0 {
-		desc = append(desc, plugin_util.UpdateDesc("bucket", o.Name, "in-place"))
+		desc = append(desc, plugin_util.UpdateDesc(BucketName, o.Name, "in-place"))
 	}
 
 	// File updates.
-	addF, updateF, delF := diffFiles(o.Files, dest.Files)
+	addF, updateF, delF := diffFiles(o.Files, wants.Files)
 
 	if len(addF) != 0 {
 		plan.FilesAdd = addF
@@ -239,20 +258,20 @@ func (o *GCPBucket) Plan(ctx context.Context, cli *storage.Client, c *GCPBucketC
 	}
 
 	if steps > 0 {
-		return types.NewPlanActionUpdate(strings.Join(desc, ", "),
+		return types.NewPlanActionUpdate(key, strings.Join(desc, ", "),
 			append(ops, &types.PlanActionOperation{Operation: types.PlanOpUpdate, Steps: steps, Data: plan.Encode()})), nil
 	}
 
 	return nil, nil
 }
 
-func decodeGCPBucketPlan(p *types.PlanActionOperation) (ret *GCPBucketPlan, err error) {
+func decodeBucketPlan(p *types.PlanActionOperation) (ret *BucketPlan, err error) {
 	err = json.Unmarshal(p.Data, &ret)
 
 	return
 }
 
-func applyGCPBucketFiles(ctx context.Context, b *storage.BucketHandle, cur map[string]*FileInfo, path string, add, upd, del map[string]*FileInfo, callback func(f string)) error {
+func applyBucketFiles(ctx context.Context, b *storage.BucketHandle, cur map[string]*FileInfo, path string, add, upd, del map[string]*FileInfo, callback func(f string)) error {
 	for k, v := range upd {
 		add[k] = v
 	}
@@ -310,7 +329,7 @@ func applyGCPBucketFiles(ctx context.Context, b *storage.BucketHandle, cur map[s
 	return g.Wait()
 }
 
-func (o *GCPBucket) applyDeletePlan(ctx context.Context, cli *storage.Client, plan *GCPBucketPlan) error {
+func (o *Bucket) applyDeletePlan(ctx context.Context, cli *storage.Client, plan *BucketPlan) error {
 	bucket := cli.Bucket(plan.Name)
 
 	iter := bucket.Objects(ctx, nil)
@@ -354,7 +373,7 @@ func (o *GCPBucket) applyDeletePlan(ctx context.Context, cli *storage.Client, pl
 	return nil
 }
 
-func (o *GCPBucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, plan *GCPBucketPlan, callback func(op string)) error {
+func (o *Bucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, plan *BucketPlan, callback func(op string)) error {
 	bucket := cli.Bucket(plan.Name)
 
 	update := false
@@ -380,7 +399,7 @@ func (o *GCPBucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, pl
 			return err
 		}
 
-		callback(plugin_util.UpdateDesc("bucket", o.Name, "in-place"))
+		callback(plugin_util.UpdateDesc(BucketName, o.Name, "in-place"))
 	}
 
 	if plan.Versioning != nil {
@@ -392,14 +411,14 @@ func (o *GCPBucket) applyUpdatePlan(ctx context.Context, cli *storage.Client, pl
 	}
 
 	// Apply files if needed.
-	err := applyGCPBucketFiles(ctx, bucket, o.Files, plan.Path, plan.FilesAdd, plan.FilesUpdate, plan.FilesDelete, func(f string) {
+	err := applyBucketFiles(ctx, bucket, o.Files, plan.Path, plan.FilesAdd, plan.FilesUpdate, plan.FilesDelete, func(f string) {
 		callback(plugin_util.UpdateDesc("files in bucket", o.Name, fmt.Sprintf("file: %s", f)))
 	})
 
 	return err
 }
 
-func (o *GCPBucket) applyCreatePlan(ctx context.Context, cli *storage.Client, plan *GCPBucketPlan, callback func(op string)) error {
+func (o *Bucket) applyCreatePlan(ctx context.Context, cli *storage.Client, plan *BucketPlan, callback func(op string)) error {
 	bucket := cli.Bucket(plan.Name)
 
 	attrs := &storage.BucketAttrs{Location: plan.Location, VersioningEnabled: *plan.Versioning}
@@ -418,49 +437,56 @@ func (o *GCPBucket) applyCreatePlan(ctx context.Context, cli *storage.Client, pl
 	o.Versioning = plan.Versioning
 	o.IsPublic = plan.IsPublic
 
-	callback(plugin_util.AddDesc("bucket", o.Name))
+	callback(plugin_util.AddDesc(BucketName, o.Name))
 
 	// Apply files if needed.
 
-	err := applyGCPBucketFiles(ctx, bucket, o.Files, plan.Path, plan.FilesAdd, plan.FilesUpdate, plan.FilesDelete, func(f string) {
+	err := applyBucketFiles(ctx, bucket, o.Files, plan.Path, plan.FilesAdd, plan.FilesUpdate, plan.FilesDelete, func(f string) {
 		callback(plugin_util.UpdateDesc("files in bucket", o.Name, f))
 	})
 
 	return err
 }
 
-func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, a *types.PlanAction, callback util.ApplyCallbackFunc) error {
+func (o *Bucket) Apply(ctx context.Context, ops []*types.PlanActionOperation, callback types.ApplyCallbackFunc) error {
+	pctx := ctx.(*config.PluginContext)
+
 	if o.Files == nil {
 		o.Files = make(map[string]*FileInfo)
 	}
 
+	cli, err := pctx.StorageClient()
+	if err != nil {
+		return err
+	}
+
 	// Process operations.
-	for _, p := range a.Operations {
-		plan, err := decodeGCPBucketPlan(p)
+	for _, op := range ops {
+		plan, err := decodeBucketPlan(op)
 		if err != nil {
 			return err
 		}
 
-		switch p.Operation {
+		switch op.Operation {
 		case types.PlanOpDelete:
 			// Deletion.
-			err = o.applyDeletePlan(ctx, cli, plan)
+			err = o.applyDeletePlan(pctx, cli, plan)
 			if err != nil {
 				return err
 			}
 
-			callback(plugin_util.DeleteDesc("bucket", o.Name))
+			callback(plugin_util.DeleteDesc(BucketName, o.Name))
 
 		case types.PlanOpUpdate:
 			// Updates.
-			err = o.applyUpdatePlan(ctx, cli, plan, callback)
+			err = o.applyUpdatePlan(pctx, cli, plan, callback)
 			if err != nil {
 				return err
 			}
 
 		case types.PlanOpAdd:
 			// Creation.
-			err = o.applyCreatePlan(ctx, cli, plan, callback)
+			err = o.applyCreatePlan(pctx, cli, plan, callback)
 			if err != nil {
 				return err
 			}
@@ -468,16 +494,4 @@ func (o *GCPBucket) Apply(ctx context.Context, cli *storage.Client, a *types.Pla
 	}
 
 	return nil
-}
-
-func (o *GCPBucket) planner(ctx context.Context, storageCli *storage.Client, c *GCPBucketCreate, verify bool) func() (*types.PlanAction, error) {
-	return func() (*types.PlanAction, error) {
-		return o.Plan(ctx, storageCli, c, verify)
-	}
-}
-
-func (o *GCPBucket) applier(ctx context.Context, cli *storage.Client) func(*types.PlanAction, util.ApplyCallbackFunc) error {
-	return func(a *types.PlanAction, cb util.ApplyCallbackFunc) error {
-		return o.Apply(ctx, cli, a, cb)
-	}
 }

@@ -1,29 +1,14 @@
 package deploy
 
 import (
-	"context"
 	"encoding/json"
+	"strings"
 
-	"github.com/outblocks/cli-plugin-gcp/internal/util"
-	"github.com/outblocks/outblocks-plugin-go/env"
+	"github.com/mitchellh/mapstructure"
+	"github.com/outblocks/cli-plugin-gcp/deploy/gcp"
+	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	"google.golang.org/api/compute/v1"
 )
-
-const (
-	LBAddress = "address"
-)
-
-type GCPManagedSSL struct {
-	ID string `json:"id"`
-}
-
-type GCPNetworkEndpointGroup struct{}
-type GCPBackendService struct{}
-type GCPURLMap struct{}
-type GCPTargetHTTPSProxy struct{}
-type GCPTargetHTTPProxy struct{}
-type GCPForwardingRules struct{}
 
 type LoadBalancerCreate struct {
 	Name      string
@@ -32,21 +17,30 @@ type LoadBalancerCreate struct {
 }
 
 type LoadBalancer struct {
-	Address      *GCPAddress      `json:"address"`
-	Certificates []*GCPManagedSSL `json:"managed_ssl" mapstructure:"managed_ssl"`
+	Address      *gcp.Address      `json:"address"`
+	Certificates []*gcp.ManagedSSL `json:"managed_ssl" mapstructure:"managed_ssl"`
 
-	NetworkEndpointGroups []*GCPNetworkEndpointGroup `json:"network_endpoint_groups" mapstructure:"network_endpoint_groups"`
-	BackendServices       []*GCPBackendService       `json:"backend_services" mapstructure:"backend_services"`
-	URLMaps               []*GCPURLMap               `json:"url_maps" mapstructure:"url_maps"`
-	TargetHTTPSProxies    []*GCPTargetHTTPSProxy     `json:"target_https_proxies" mapstructure:"target_https_proxies"`
-	TargetHTTPProxies     []*GCPTargetHTTPProxy      `json:"target_http_proxies" mapstructure:"target_http_proxies"`
-	ForwardingRules       []*GCPForwardingRules      `json:"forwarding_rules" mapstructure:"forwarding_rules"`
+	NetworkEndpointGroups []*gcp.ServerlessNEG    `json:"network_endpoint_groups" mapstructure:"network_endpoint_groups"`
+	BackendServices       []*gcp.BackendService   `json:"backend_services" mapstructure:"backend_services"`
+	URLMaps               []*gcp.URLMap           `json:"url_maps" mapstructure:"url_maps"`
+	TargetHTTPSProxies    []*gcp.TargetHTTPSProxy `json:"target_https_proxies" mapstructure:"target_https_proxies"`
+	TargetHTTPProxies     []*gcp.TargetHTTPProxy  `json:"target_http_proxies" mapstructure:"target_http_proxies"`
+	ForwardingRules       []*gcp.ForwardingRules  `json:"forwarding_rules" mapstructure:"forwarding_rules"`
 }
 
 func NewLoadBalancer() *LoadBalancer {
 	return &LoadBalancer{
-		Address: &GCPAddress{},
+		Address: &gcp.Address{},
 	}
+}
+
+func (o *LoadBalancer) Decode(in interface{}) error {
+	err := mapstructure.Decode(in, o)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *LoadBalancer) MarshalJSON() ([]byte, error) {
@@ -59,31 +53,77 @@ func (o *LoadBalancer) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (o *LoadBalancer) Plan(ctx context.Context, cli *compute.Service, e env.Enver, c *LoadBalancerCreate, static []*StaticApp, staticPlan []*types.AppPlan, verify bool) (map[string]*types.PlanAction, error) {
+func (o *LoadBalancer) Plan(pctx *config.PluginContext, plan *types.PluginPlanActions, c *LoadBalancerCreate, static []*StaticApp, staticPlan []*types.AppPlan, verify bool) error {
 	var (
-		addressCreate *GCPAddressCreate
+		addressCreate         *gcp.AddressCreate
+		certsCreate           []*gcp.ManagedSSLCreate
+		negCreate             []*gcp.ServerlessNEGCreate
+		backendServicesCreate []*gcp.BackendServiceCreate
 	)
 
-	actions := make(map[string]*types.PlanAction)
+	if len(static) == 0 {
+		c = nil
+	}
 
 	if c != nil {
-		addressCreate = &GCPAddressCreate{
-			Name:      ID(e.ProjectName(), c.ProjectID, c.Name),
+		addressCreate = &gcp.AddressCreate{
+			Name:      gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name),
 			ProjectID: c.ProjectID,
+		}
+
+		for _, app := range staticPlan {
+			domain := strings.SplitN(app.App.URL, "/", 2)[0]
+
+			certsCreate = append(certsCreate, &gcp.ManagedSSLCreate{
+				Name:      gcp.ID(pctx.Env().ProjectName(), c.ProjectID, domain),
+				Domain:    domain,
+				ProjectID: c.ProjectID,
+			})
+		}
+
+		for _, app := range static {
+			negC := &gcp.ServerlessNEGCreate{
+				Name:      app.ProxyCloudRun.Planned.Name,
+				Region:    app.ProxyCloudRun.Planned.Region,
+				ProjectID: app.ProxyCloudRun.Planned.ProjectID,
+				CloudRun:  app.ProxyCloudRun.Planned.Name,
+			}
+
+			negCreate = append(negCreate, negC)
+
+			backendServicesCreate = append(backendServicesCreate, &gcp.BackendServiceCreate{
+				Name:      negC.Name,
+				ProjectID: negC.ProjectID,
+				NEG:       negC.ID(),
+				Options: &gcp.BackendServiceOptions{
+					CDN: gcp.BackendServiceOptionsCDN{
+						Enabled: true,
+					},
+				},
+			})
 		}
 	}
 
-	err := util.PlanObject(actions, LBAddress, o.Address.planner(ctx, cli, addressCreate, verify))
+	// Plan Address.
+	err := plan.PlanObject(pctx, o, "Address", addressCreate, verify)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return actions, nil
-}
+	// Plan Certificates.
+	err = plan.PlanObjectList(pctx, o, "Certificates", certsCreate, verify)
+	if err != nil {
+		return err
+	}
 
-func (o *LoadBalancer) Apply(ctx context.Context, cli *compute.Service, actions map[string]*types.PlanAction, callback func(obj, desc string, progress, total int)) error {
-	// Apply Address.
-	err := util.ApplyObject(actions, LBAddress, callback, o.Address.applier(ctx, cli))
+	// Plan NEG.
+	err = plan.PlanObjectList(pctx, o, "NetworkEndpointGroups", negCreate, verify)
+	if err != nil {
+		return err
+	}
+
+	// Plan Backend Services.
+	err = plan.PlanObjectList(pctx, o, "BackendServices", backendServicesCreate, verify)
 	if err != nil {
 		return err
 	}

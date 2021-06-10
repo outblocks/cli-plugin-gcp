@@ -1,4 +1,4 @@
-package deploy
+package gcp
 
 import (
 	"context"
@@ -13,30 +13,33 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/run/v1"
 )
 
-type GCPCloudRun struct {
+const CloudRunName = "cloud run"
+
+type CloudRun struct {
 	Name      string             `json:"name"`
 	ProjectID string             `json:"project_id" mapstructure:"project_id"`
 	Region    string             `json:"region"`
 	Image     string             `json:"image"`
 	IsPublic  *bool              `json:"is_public" mapstructure:"is_public"`
 	Options   *RunServiceOptions `json:"options"`
+
+	Planned *CloudRunCreate `json:"-"`
 }
 
-func (o *GCPCloudRun) MarshalJSON() ([]byte, error) {
+func (o *CloudRun) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		GCPCloudRun
+		CloudRun
 		Type string `json:"type"`
 	}{
-		GCPCloudRun: *o,
-		Type:        "gcp_cloud_run",
+		CloudRun: *o,
+		Type:     "gcp_cloud_run",
 	})
 }
 
-type GCPCloudRunCreate struct {
+type CloudRunCreate struct {
 	Name      string
 	Image     string
 	ProjectID string
@@ -45,9 +48,9 @@ type GCPCloudRunCreate struct {
 	Options   *RunServiceOptions
 }
 
-type GCPCloudRunPlan GCPCloudRun
+type CloudRunPlan CloudRun
 
-func (o *GCPCloudRunPlan) Encode() []byte {
+func (o *CloudRunPlan) Encode() []byte {
 	d, err := json.Marshal(o)
 	if err != nil {
 		panic(err)
@@ -56,7 +59,7 @@ func (o *GCPCloudRunPlan) Encode() []byte {
 	return d
 }
 
-func decodeGCPCloudRunPlan(p *types.PlanActionOperation) (ret *GCPCloudRunPlan, err error) {
+func decodeCloudRunPlan(p *types.PlanActionOperation) (ret *CloudRunPlan, err error) {
 	err = json.Unmarshal(p.Data, &ret)
 
 	return
@@ -236,7 +239,7 @@ func runServiceRequiresUpdate(s1, s2 *run.Service) bool {
 	return !reflect.DeepEqual(env1, env2)
 }
 
-func (o *GCPCloudRun) verify(ctx context.Context, cred *google.Credentials, c *GCPCloudRunCreate) error {
+func (o *CloudRun) verify(pctx *config.PluginContext, c *CloudRunCreate) error {
 	name := o.Name
 	region := o.Region
 	project := o.ProjectID
@@ -251,14 +254,14 @@ func (o *GCPCloudRun) verify(ctx context.Context, cred *google.Credentials, c *G
 		return nil
 	}
 
-	cli, err := config.NewGCPRunClient(ctx, cred, region)
+	cli, err := pctx.GCPRunClient(region)
 	if err != nil {
 		return err
 	}
 
 	_, err = getRunService(cli, project, name)
 	if ErrIs404(err) {
-		o.Name = ""
+		*o = CloudRun{}
 
 		return nil
 	} else if err != nil {
@@ -272,11 +275,11 @@ func (o *GCPCloudRun) verify(ctx context.Context, cred *google.Credentials, c *G
 	return nil
 }
 
-func deleteGCPCloudRunOp(o *GCPCloudRun) *types.PlanActionOperation {
+func deleteCloudRunOp(o *CloudRun) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     1,
 		Operation: types.PlanOpDelete,
-		Data: (&GCPCloudRunPlan{
+		Data: (&CloudRunPlan{
 			Name:      o.Name,
 			ProjectID: o.ProjectID,
 			Region:    o.Region,
@@ -284,11 +287,11 @@ func deleteGCPCloudRunOp(o *GCPCloudRun) *types.PlanActionOperation {
 	}
 }
 
-func createGCPCloudRunOp(c *GCPCloudRunCreate) *types.PlanActionOperation {
+func createCloudRunOp(c *CloudRunCreate) *types.PlanActionOperation {
 	return &types.PlanActionOperation{
 		Steps:     3,
 		Operation: types.PlanOpAdd,
-		Data: (&GCPCloudRunPlan{
+		Data: (&CloudRunPlan{
 			Name:      c.Name,
 			ProjectID: c.ProjectID,
 			Region:    c.Region,
@@ -299,21 +302,33 @@ func createGCPCloudRunOp(c *GCPCloudRunCreate) *types.PlanActionOperation {
 	}
 }
 
-func (o *GCPCloudRun) Plan(ctx context.Context, cred *google.Credentials, c *GCPCloudRunCreate, verify bool) (*types.PlanAction, error) {
-	var ops []*types.PlanActionOperation
+func (o *CloudRun) Plan(ctx context.Context, key string, dest interface{}, verify bool) (*types.PlanAction, error) {
+	var (
+		ops []*types.PlanActionOperation
+		c   *CloudRunCreate
+	)
 
+	if dest != nil {
+		c = dest.(*CloudRunCreate)
+	}
+
+	pctx := ctx.(*config.PluginContext)
+
+	// Fetch current state if needed.
 	if verify {
-		err := o.verify(ctx, cred, c)
+		err := o.verify(pctx, c)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	o.Planned = c
+
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
-			return types.NewPlanActionDelete(plugin_util.DeleteDesc("cloud run", o.Name),
-				append(ops, deleteGCPCloudRunOp(o))), nil
+			return types.NewPlanActionDelete(key, plugin_util.DeleteDesc(CloudRunName, o.Name),
+				append(ops, deleteCloudRunOp(o))), nil
 		}
 
 		return nil, nil
@@ -321,20 +336,20 @@ func (o *GCPCloudRun) Plan(ctx context.Context, cred *google.Credentials, c *GCP
 
 	// Check for fresh create.
 	if o.Name == "" {
-		return types.NewPlanActionCreate(plugin_util.AddDesc("cloud run", c.Name),
-			append(ops, createGCPCloudRunOp(c))), nil
+		return types.NewPlanActionCreate(key, plugin_util.AddDesc(CloudRunName, c.Name),
+			append(ops, createCloudRunOp(c))), nil
 	}
 
 	// Check for conflicting updates.
 	if o.ProjectID != c.ProjectID || o.Region != c.Region {
-		return types.NewPlanActionRecreate(plugin_util.UpdateDesc("cloud run", c.Name, "forces recreate"),
-			append(ops, deleteGCPCloudRunOp(o), createGCPCloudRunOp(c))), nil
+		return types.NewPlanActionRecreate(key, plugin_util.UpdateDesc(CloudRunName, c.Name, "forces recreate"),
+			append(ops, deleteCloudRunOp(o), createCloudRunOp(c))), nil
 	}
 
 	// Check for partial updates.
 	steps := 0
 
-	plan := &GCPCloudRunPlan{
+	plan := &CloudRunPlan{
 		Name:      c.Name,
 		ProjectID: c.ProjectID,
 		Region:    c.Region,
@@ -352,7 +367,7 @@ func (o *GCPCloudRun) Plan(ctx context.Context, cred *google.Credentials, c *GCP
 	}
 
 	if steps > 0 {
-		return types.NewPlanActionRecreate(plugin_util.UpdateDesc("cloud run", c.Name, "in-place"),
+		return types.NewPlanActionRecreate(key, plugin_util.UpdateDesc(CloudRunName, c.Name, "in-place"),
 			append(ops, &types.PlanActionOperation{
 				Steps:     steps,
 				Operation: types.PlanOpUpdate,
@@ -362,27 +377,22 @@ func (o *GCPCloudRun) Plan(ctx context.Context, cred *google.Credentials, c *GCP
 	return nil, nil
 }
 
-func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *types.PlanAction, callback func(desc string)) error {
-	regionCli := make(map[string]*run.APIService)
+func (o *CloudRun) Apply(ctx context.Context, ops []*types.PlanActionOperation, callback types.ApplyCallbackFunc) error {
+	pctx := ctx.(*config.PluginContext)
 
 	// Process operations.
-	for _, p := range a.Operations {
-		plan, err := decodeGCPCloudRunPlan(p)
+	for _, op := range ops {
+		plan, err := decodeCloudRunPlan(op)
 		if err != nil {
 			return err
 		}
 
-		cli, ok := regionCli[plan.Region]
-		if !ok {
-			cli, err = config.NewGCPRunClient(ctx, cred, plan.Region)
-			if err != nil {
-				return err
-			}
-
-			regionCli[plan.Region] = cli
+		cli, err := pctx.GCPRunClient(plan.Region)
+		if err != nil {
+			return err
 		}
 
-		switch p.Operation {
+		switch op.Operation {
 		case types.PlanOpDelete:
 			// Deletion.
 			_, err = deleteRunService(cli, plan.ProjectID, plan.Name)
@@ -390,7 +400,7 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 				return err
 			}
 
-			callback(plugin_util.DeleteDesc("cloud run", plan.Name))
+			callback(plugin_util.DeleteDesc(CloudRunName, plan.Name))
 
 		case types.PlanOpUpdate:
 			// Update.
@@ -403,14 +413,14 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 				o.Image = plan.Image
 				o.Options = plan.Options
 
-				callback(plugin_util.UpdateDesc("cloud run", o.Name))
+				callback(plugin_util.UpdateDesc(CloudRunName, o.Name))
 
-				err = waitForRunServiceReady(ctx, cli, plan.ProjectID, plan.Name)
+				err = waitForRunServiceReady(pctx, cli, plan.ProjectID, plan.Name)
 				if err != nil {
 					return err
 				}
 
-				callback(plugin_util.UpdateDesc("cloud run", o.Name, "ready"))
+				callback(plugin_util.UpdateDesc(CloudRunName, o.Name, "ready"))
 			}
 
 			if plan.IsPublic != nil {
@@ -419,7 +429,7 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 					return err
 				}
 
-				callback(plugin_util.UpdateDesc("cloud run", o.Name, "in-place"))
+				callback(plugin_util.UpdateDesc(CloudRunName, o.Name, "in-place"))
 
 				o.IsPublic = plan.IsPublic
 			}
@@ -437,14 +447,14 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 			o.Image = plan.Image
 			o.Options = plan.Options
 
-			callback(plugin_util.AddDesc("cloud run", o.Name))
+			callback(plugin_util.AddDesc(CloudRunName, o.Name))
 
-			err = waitForRunServiceReady(ctx, cli, plan.ProjectID, plan.Name)
+			err = waitForRunServiceReady(pctx, cli, plan.ProjectID, plan.Name)
 			if err != nil {
 				return err
 			}
 
-			callback(plugin_util.AddDesc("cloud run", o.Name, "ready"))
+			callback(plugin_util.AddDesc(CloudRunName, o.Name, "ready"))
 
 			if plan.IsPublic != nil {
 				err = setRunServiceIAMPolicy(cli, plan.ProjectID, plan.Name, plan.Region, *plan.IsPublic)
@@ -452,7 +462,7 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 					return err
 				}
 
-				callback(plugin_util.UpdateDesc("cloud run", o.Name, "in-place"))
+				callback(plugin_util.UpdateDesc(CloudRunName, o.Name, "in-place"))
 
 				o.IsPublic = plan.IsPublic
 			}
@@ -460,16 +470,4 @@ func (o *GCPCloudRun) Apply(ctx context.Context, cred *google.Credentials, a *ty
 	}
 
 	return nil
-}
-
-func (o *GCPCloudRun) planner(ctx context.Context, cred *google.Credentials, c *GCPCloudRunCreate, verify bool) func() (*types.PlanAction, error) {
-	return func() (*types.PlanAction, error) {
-		return o.Plan(ctx, cred, c, verify)
-	}
-}
-
-func (o *GCPCloudRun) applier(ctx context.Context, cred *google.Credentials) func(*types.PlanAction, util.ApplyCallbackFunc) error {
-	return func(a *types.PlanAction, cb util.ApplyCallbackFunc) error {
-		return o.Apply(ctx, cred, a, cb)
-	}
 }

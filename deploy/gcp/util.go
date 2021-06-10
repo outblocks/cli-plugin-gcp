@@ -1,4 +1,4 @@
-package deploy
+package gcp
 
 import (
 	"fmt"
@@ -10,7 +10,14 @@ import (
 )
 
 func ID(project, gcpProject, id string) string {
-	return fmt.Sprintf("%s-%s", util.LimitString(util.SanitizeName(id), 44), util.LimitString(util.SHAString(gcpProject+project), 8))
+	sanitizedID := util.SanitizeName(id)
+
+	if len(sanitizedID) > 44 {
+		idSHA := util.LimitString(util.SHAString(id), 4)
+		sanitizedID = fmt.Sprintf("%s-%s", util.LimitString(sanitizedID, 44), idSHA)
+	}
+
+	return fmt.Sprintf("%s-%s", sanitizedID, util.LimitString(util.SHAString(gcpProject+project), 4))
 }
 
 func RegionToGCR(region string) string {
@@ -42,6 +49,19 @@ func ErrIs404(err error) bool {
 func waitForGlobalOperation(cli *compute.Service, project, name string) error {
 	for {
 		op, err := cli.GlobalOperations.Wait(project, name).Do()
+		if err != nil {
+			return err
+		}
+
+		if op.Status == "DONE" {
+			return nil
+		}
+	}
+}
+
+func waitForRegionOperation(cli *compute.Service, project, region, name string) error {
+	for {
+		op, err := cli.RegionOperations.Wait(project, region, name).Do()
 		if err != nil {
 			return err
 		}

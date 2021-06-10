@@ -1,4 +1,4 @@
-package actions
+package config
 
 type Settings struct {
 	ProjectID string

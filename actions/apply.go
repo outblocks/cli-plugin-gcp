@@ -1,37 +1,22 @@
 package actions
 
 import (
-	"context"
-
-	"cloud.google.com/go/storage"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/compute/v1"
 )
 
 type ApplyAction struct {
-	ctx        context.Context
-	storageCli *storage.Client
-	computeCli *compute.Service
-	dockerCli  *dockerclient.Client
-	gcred      *google.Credentials
-	settings   *Settings
-	log        log.Logger
-	env        env.Enver
-
-	common *deploy.Common
+	pluginCtx *config.PluginContext
+	log       log.Logger
 
 	PluginMap        types.PluginStateMap
 	AppStates        map[string]*types.AppState
 	DependencyStates map[string]*types.DependencyState
 }
 
-func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings, logger log.Logger, enver env.Enver, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState) (*ApplyAction, error) {
+func NewApply(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState) (*ApplyAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -44,39 +29,9 @@ func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings
 		depStates = make(map[string]*types.DependencyState)
 	}
 
-	storageCli, err := config.NewStorageClient(ctx, gcred)
-	if err != nil {
-		return nil, err
-	}
-
-	dockerCli, err := config.NewDockerClient()
-	if err != nil {
-		return nil, err
-	}
-
-	common := deploy.NewCommon()
-
-	computeCli, err := config.NewGCPComputeClient(ctx, gcred)
-	if err != nil {
-		return nil, err
-	}
-
-	err = common.Decode(state[PluginCommonState])
-	if err != nil {
-		return nil, err
-	}
-
 	return &ApplyAction{
-		ctx:        ctx,
-		storageCli: storageCli,
-		computeCli: computeCli,
-		dockerCli:  dockerCli,
-		gcred:      gcred,
-		settings:   settings,
-		log:        logger,
-		env:        enver,
-
-		common: common,
+		pluginCtx: pctx,
+		log:       logger,
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -84,14 +39,13 @@ func NewApply(ctx context.Context, gcred *google.Credentials, settings *Settings
 	}, nil
 }
 
-func (p *ApplyAction) handleStaticAppDeploy(state *types.AppState, app *types.AppPlanActions, callback func(obj, desc string, progress, total int)) (*deploy.StaticApp, error) {
+func (p *ApplyAction) handleStaticAppDeploy(state *types.AppState, app *types.AppPlanActions, callback func(obj, desc string, idx, progress, total int)) (*deploy.StaticApp, error) {
 	deployState := deploy.NewStaticApp()
-
 	if err := deployState.Decode(state.DeployState[PluginName]); err != nil {
 		return nil, err
 	}
 
-	err := deployState.Apply(p.ctx, p.storageCli, p.dockerCli, p.gcred, app.Actions, callback)
+	err := app.Apply(p.pluginCtx, deployState, callback)
 	if err != nil {
 		return nil, err
 	}
@@ -101,11 +55,12 @@ func (p *ApplyAction) handleStaticAppDeploy(state *types.AppState, app *types.Ap
 
 func (p *ApplyAction) handleDeployApps(apps []*types.AppPlanActions, callback func(*types.ApplyAction)) error {
 	for _, app := range apps {
-		cb := func(obj, desc string, progress, total int) {
+		cb := func(obj, desc string, idx, progress, total int) {
 			callback(&types.ApplyAction{
 				TargetID:    app.App.ID,
 				TargetName:  app.App.Name,
 				TargetType:  types.TargetTypeApp,
+				Index:       idx,
 				Object:      obj,
 				Description: desc,
 				Progress:    progress,
@@ -140,11 +95,13 @@ func (p *ApplyAction) ApplyDeploy(plan *types.Plan, callback func(*types.ApplyAc
 		return err
 	}
 
-	for _, actions := range plan.Plugin {
-		cb := func(obj, desc string, progress, total int) {
+	// Apply plugin targets.
+	for _, pluginPlan := range plan.Plugin {
+		cb := func(obj, desc string, idx, progress, total int) {
 			callback(&types.ApplyAction{
 				TargetID:    PluginName,
 				TargetType:  types.TargetTypePlugin,
+				Index:       idx,
 				Object:      obj,
 				Description: desc,
 				Progress:    progress,
@@ -152,13 +109,20 @@ func (p *ApplyAction) ApplyDeploy(plan *types.Plan, callback func(*types.ApplyAc
 			})
 		}
 
-		if actions.Object == PluginCommonState {
-			err = p.common.Apply(p.ctx, p.computeCli, actions.Actions, cb)
+		if pluginPlan.Object == PluginLBState {
+			lb := deploy.NewLoadBalancer()
+
+			err := lb.Decode(p.PluginMap[PluginLBState])
 			if err != nil {
 				return err
 			}
 
-			p.PluginMap[PluginCommonState] = p.common
+			err = pluginPlan.Apply(p.pluginCtx, lb, cb)
+			if err != nil {
+				return err
+			}
+
+			p.PluginMap[PluginLBState] = lb
 		}
 	}
 

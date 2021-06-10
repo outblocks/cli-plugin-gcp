@@ -28,7 +28,7 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 		return nil, err
 	}
 
-	p.cred = cred
+	p.gcred = cred
 
 	return &plugin_go.EmptyResponse{}, nil
 }

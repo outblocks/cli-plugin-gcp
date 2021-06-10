@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/storage"
-	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	plugin_util "github.com/outblocks/cli-plugin-gcp/internal/util"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/types"
@@ -133,7 +132,9 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		return res, nil
 	}
 
-	cli, err := config.NewStorageClient(ctx, p.cred)
+	pctx := p.PluginContext(ctx)
+
+	cli, err := pctx.StorageClient()
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,9 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 		return res, nil
 	}
 
-	cli, err := config.NewStorageClient(ctx, p.cred)
+	pctx := p.PluginContext(ctx)
+
+	cli, err := pctx.StorageClient()
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +235,9 @@ func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockReques
 		return res, nil
 	}
 
-	cli, err := config.NewStorageClient(ctx, p.cred)
+	pctx := p.PluginContext(ctx)
+
+	cli, err := pctx.StorageClient()
 	if err != nil {
 		return nil, err
 	}

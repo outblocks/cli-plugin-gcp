@@ -1,28 +1,15 @@
 package actions
 
 import (
-	"context"
-
-	"cloud.google.com/go/storage"
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/compute/v1"
 )
 
 type PlanAction struct {
-	ctx        context.Context
-	storageCli *storage.Client
-	computeCli *compute.Service
-	gcred      *google.Credentials
-	settings   *Settings
-	log        log.Logger
-	env        env.Enver
-
-	common *deploy.Common
+	pluginCtx *config.PluginContext
+	log       log.Logger
 
 	PluginMap        types.PluginStateMap
 	AppStates        map[string]*types.AppState
@@ -30,12 +17,7 @@ type PlanAction struct {
 	verify           bool
 }
 
-func NewPlan(ctx context.Context, gcred *google.Credentials, settings *Settings, logger log.Logger, enver env.Enver, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify bool) (*PlanAction, error) {
-	storageCli, err := config.NewStorageClient(ctx, gcred)
-	if err != nil {
-		return nil, err
-	}
-
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -48,28 +30,9 @@ func NewPlan(ctx context.Context, gcred *google.Credentials, settings *Settings,
 		depStates = make(map[string]*types.DependencyState)
 	}
 
-	common := deploy.NewCommon()
-
-	computeCli, err := config.NewGCPComputeClient(ctx, gcred)
-	if err != nil {
-		return nil, err
-	}
-
-	err = common.Decode(state[PluginCommonState])
-	if err != nil {
-		return nil, err
-	}
-
 	return &PlanAction{
-		ctx:        ctx,
-		storageCli: storageCli,
-		computeCli: computeCli,
-		gcred:      gcred,
-		settings:   settings,
-		log:        logger,
-		env:        enver,
-
-		common: common,
+		pluginCtx: pctx,
+		log:       logger,
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -84,9 +47,9 @@ func (p *PlanAction) handleStaticAppDeploy(state *types.AppState, app *types.App
 		return nil, nil, err
 	}
 
-	actions, err := appDeploy.Plan(p.ctx, p.storageCli, p.gcred, app, p.env, &deploy.StaticAppCreate{
-		ProjectID: p.settings.ProjectID,
-		Region:    p.settings.Region,
+	actions, err := appDeploy.Plan(p.pluginCtx, app, &deploy.StaticAppCreate{
+		ProjectID: p.pluginCtx.Settings().ProjectID,
+		Region:    p.pluginCtx.Settings().Region,
 	}, p.verify)
 	if err != nil {
 		return nil, nil, err
@@ -136,7 +99,7 @@ func (p *PlanAction) handleCleanupApp(state *types.AppState) (appPlan *types.App
 
 	switch appDeploy := app.(type) { // nolint: gocritic // - more app types will be supported
 	case *deploy.StaticApp:
-		appPlan, err = appDeploy.Plan(p.ctx, p.storageCli, p.gcred, state.App, p.env, nil, p.verify)
+		appPlan, err = appDeploy.Plan(p.pluginCtx, state.App, nil, p.verify)
 		if err != nil {
 			return nil, err
 		}
@@ -145,11 +108,20 @@ func (p *PlanAction) handleCleanupApp(state *types.AppState) (appPlan *types.App
 	return appPlan, nil
 }
 
-func (p *PlanAction) planDeployCommon(static []*deploy.StaticApp, staticPlan []*types.AppPlan) (*types.PluginPlanActions, error) {
-	actions, err := p.common.Plan(p.ctx, p.computeCli, p.env, &deploy.CommonCreate{
-		Name:      PluginCommonState,
-		ProjectID: p.settings.ProjectID,
-		Region:    p.settings.Region,
+func (p *PlanAction) planDeployLB(static []*deploy.StaticApp, staticPlan []*types.AppPlan) (*types.PluginPlanActions, error) {
+	lb := deploy.NewLoadBalancer()
+
+	err := lb.Decode(p.PluginMap[PluginLBState])
+	if err != nil {
+		return nil, err
+	}
+
+	plan := types.NewPluginPlanActions(PluginLBState)
+
+	err = lb.Plan(p.pluginCtx, plan, &deploy.LoadBalancerCreate{
+		Name:      PluginLBState,
+		ProjectID: p.pluginCtx.Settings().ProjectID,
+		Region:    p.pluginCtx.Settings().Region,
 	}, static, staticPlan,
 		p.verify)
 	if err != nil {
@@ -157,15 +129,12 @@ func (p *PlanAction) planDeployCommon(static []*deploy.StaticApp, staticPlan []*
 	}
 
 	if p.verify {
-		p.PluginMap[PluginCommonState] = p.common
+		p.PluginMap[PluginLBState] = lb
 	}
 
-	if len(actions) == 0 {
+	if len(plan.Actions) == 0 {
 		return nil, nil
 	}
-
-	plan := types.NewPluginPlanActions(PluginCommonState)
-	plan.Actions = actions
 
 	return plan, nil
 }
@@ -216,8 +185,8 @@ func (p *PlanAction) PlanDeploy(apps []*types.AppPlan) (*types.Plan, error) {
 		}
 	}
 
-	// Plan common part.
-	pluginAction, err := p.planDeployCommon(staticApps, staticAppsPlan)
+	// Plan load balancer.
+	pluginAction, err := p.planDeployLB(staticApps, staticAppsPlan)
 	if err != nil {
 		return nil, err
 	}

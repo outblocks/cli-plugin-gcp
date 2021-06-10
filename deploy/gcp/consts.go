@@ -1,4 +1,4 @@
-package deploy
+package gcp
 
 const (
 	ACLPublicRead     = "publicRead"

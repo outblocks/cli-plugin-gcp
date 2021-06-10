@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, in <-chan plugin_go.Request, out chan<- plugin_go.Response) error {
-	a, err := actions.NewApply(ctx, p.cred, &p.Settings, p.log, p.env, r.PluginMap, r.AppStates, r.DependencyStates)
+	a, err := actions.NewApply(p.PluginContext(ctx), p.log, r.PluginMap, r.AppStates, r.DependencyStates)
 	if err != nil {
 		return err
 	}

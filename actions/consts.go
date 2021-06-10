@@ -3,7 +3,7 @@ package actions
 const (
 	PluginName = "gcp"
 
-	PluginCommonState = "common"
+	PluginLBState = "load balancer"
 
 	TypeStatic = "static"
 )

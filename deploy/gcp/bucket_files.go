@@ -1,4 +1,4 @@
-package deploy
+package gcp
 
 import (
 	"crypto/md5"
