@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/creasty/defaults"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -19,8 +20,6 @@ type BackendService struct {
 	ProjectID string                 `json:"project_id" mapstructure:"project_id"`
 	NEG       string                 `json:"serverless_neg" mapstructure:"serverless_neg"`
 	Options   *BackendServiceOptions `json:"options"`
-
-	Planned *BackendServiceCreate `json:"-"`
 }
 
 func (o *BackendService) Key() string {
@@ -43,6 +42,10 @@ func (o *BackendServiceCreate) Key() string {
 	return o.NEG
 }
 
+func (o *BackendServiceCreate) ID() string {
+	return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/backendServices/%s", o.ProjectID, o.Name)
+}
+
 type BackendServicePlan BackendService
 
 func (o *BackendServicePlan) Encode() []byte {
@@ -54,19 +57,43 @@ func (o *BackendServicePlan) Encode() []byte {
 	return d
 }
 
-type BackendServiceOptions struct {
-	CDN struct {
-		Enabled        bool
-		CacheMode      string `default:"CACHE_ALL_STATIC"`
-		CacheKeyPolicy struct {
-			IncludeHost        bool `default:"1"`
-			IncludeProtocol    bool `default:"1"`
-			IncludeQueryString bool `default:"1"`
-		}
-		DefaultTTL int `default:"3600"`
-		MaxTTL     int `default:"86400"`
-		ClientTTL  int `default:"3600"`
+type BackendServiceOptionsCDN struct {
+	Enabled        bool
+	CacheMode      string `default:"CACHE_ALL_STATIC"`
+	CacheKeyPolicy struct {
+		IncludeHost        bool `default:"1"`
+		IncludeProtocol    bool `default:"1"`
+		IncludeQueryString bool `default:"1"`
 	}
+	DefaultTTL int `default:"3600"`
+	MaxTTL     int `default:"86400"`
+	ClientTTL  int `default:"3600"`
+}
+
+type BackendServiceOptions struct {
+	CDN BackendServiceOptionsCDN
+}
+
+func (o *BackendServiceOptions) Equals(c *BackendServiceOptions) bool {
+	if o == nil {
+		o = &BackendServiceOptions{}
+	}
+
+	if c == nil {
+		c = &BackendServiceOptions{}
+	}
+
+	err := defaults.Set(o)
+	if err != nil {
+		panic(err)
+	}
+
+	err = defaults.Set(c)
+	if err != nil {
+		panic(err)
+	}
+
+	return reflect.DeepEqual(o, c)
 }
 
 func makeBackendService(name, neg string, opts *BackendServiceOptions) *compute.BackendService {
@@ -159,8 +186,6 @@ func (o *BackendService) Plan(ctx context.Context, key string, dest interface{},
 		}
 	}
 
-	o.Planned = c
-
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
@@ -184,11 +209,12 @@ func (o *BackendService) Plan(ctx context.Context, key string, dest interface{},
 	}
 
 	// Check for partial updates.
-	if o.NEG != c.NEG {
+	if o.NEG != c.NEG || !o.Options.Equals(c.Options) {
 		plan := &BackendServicePlan{
 			Name:      o.Name,
 			ProjectID: o.ProjectID,
-			NEG:       o.NEG,
+			NEG:       c.NEG,
+			Options:   c.Options,
 		}
 
 		return types.NewPlanActionUpdate(key, plugin_util.UpdateDesc(BackendServiceName, c.Name, "in-place"),
@@ -245,12 +271,12 @@ func (o *BackendService) Apply(ctx context.Context, ops []*types.PlanActionOpera
 		switch op.Operation {
 		case types.PlanOpDelete:
 			// Deletion.
-			op, err := cli.BackendServices.Delete(plan.ProjectID, plan.Name).Do()
+			oper, err := cli.BackendServices.Delete(plan.ProjectID, plan.Name).Do()
 			if err != nil {
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}
@@ -259,12 +285,12 @@ func (o *BackendService) Apply(ctx context.Context, ops []*types.PlanActionOpera
 
 		case types.PlanOpAdd:
 			// Creation.
-			op, err := cli.BackendServices.Insert(plan.ProjectID, makeBackendService(plan.Name, plan.NEG, plan.Options)).Do()
+			oper, err := cli.BackendServices.Insert(plan.ProjectID, makeBackendService(plan.Name, plan.NEG, plan.Options)).Do()
 			if err != nil {
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}
@@ -279,21 +305,20 @@ func (o *BackendService) Apply(ctx context.Context, ops []*types.PlanActionOpera
 			o.Name = plan.Name
 			o.ProjectID = plan.ProjectID
 			o.NEG = plan.NEG
+			o.Options = plan.Options
 
 		case types.PlanOpUpdate:
-			op, err := cli.BackendServices.Patch(plan.ProjectID, plan.Name, makeBackendService(plan.Name, plan.NEG, plan.Options)).Do()
+			oper, err := cli.BackendServices.Patch(plan.ProjectID, plan.Name, makeBackendService(plan.Name, plan.NEG, plan.Options)).Do()
+			if err != nil {
+				return err
+			}
+
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}
 
 			callback(plugin_util.AddDesc(BackendServiceName, plan.Name))
-
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
-			if err != nil {
-				return err
-			}
-
-			callback(plugin_util.AddDesc(BackendServiceName, plan.Name, "ready"))
 
 			_, err = cli.BackendServices.Get(plan.ProjectID, plan.Name).Do()
 			if err != nil {
@@ -303,8 +328,7 @@ func (o *BackendService) Apply(ctx context.Context, ops []*types.PlanActionOpera
 			o.Name = plan.Name
 			o.ProjectID = plan.ProjectID
 			o.NEG = plan.NEG
-
-			return fmt.Errorf("unimplemented")
+			o.Options = plan.Options
 		}
 	}
 

@@ -18,8 +18,6 @@ type ServerlessNEG struct {
 	Region    string `json:"region"`
 	CloudRun  string `json:"cloud_run" mapstructure:"cloud_run"`
 	ProjectID string `json:"project_id" mapstructure:"project_id"`
-
-	Planned *ServerlessNEGCreate `json:"-"`
 }
 
 func (o *ServerlessNEG) Key() string {
@@ -118,8 +116,6 @@ func (o *ServerlessNEG) Plan(ctx context.Context, key string, dest interface{}, 
 			return nil, err
 		}
 	}
-
-	o.Planned = c
 
 	// Deletions.
 	if c == nil {

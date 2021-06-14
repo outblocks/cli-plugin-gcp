@@ -28,8 +28,6 @@ type Bucket struct {
 	Versioning *bool                `json:"versioning"`
 	IsPublic   *bool                `json:"is_public" mapstructure:"is_public"`
 	Files      map[string]*FileInfo `json:"files"`
-
-	Planned *BucketCreate `json:"-"`
 }
 
 func (o *Bucket) MarshalJSON() ([]byte, error) {
@@ -169,8 +167,6 @@ func (o *Bucket) Plan(ctx context.Context, key string, dest interface{}, verify 
 			return nil, err
 		}
 	}
-
-	o.Planned = c
 
 	// Deletions.
 	if c == nil {

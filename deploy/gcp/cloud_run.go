@@ -25,8 +25,6 @@ type CloudRun struct {
 	Image     string             `json:"image"`
 	IsPublic  *bool              `json:"is_public" mapstructure:"is_public"`
 	Options   *RunServiceOptions `json:"options"`
-
-	Planned *CloudRunCreate `json:"-"`
 }
 
 func (o *CloudRun) MarshalJSON() ([]byte, error) {
@@ -321,8 +319,6 @@ func (o *CloudRun) Plan(ctx context.Context, key string, dest interface{}, verif
 			return nil, err
 		}
 	}
-
-	o.Planned = c
 
 	// Deletions.
 	if c == nil {

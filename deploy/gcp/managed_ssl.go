@@ -17,8 +17,6 @@ type ManagedSSL struct {
 	Name      string `json:"name"`
 	Domain    string `json:"domain"`
 	ProjectID string `json:"project_id" mapstructure:"project_id"`
-
-	Planned *ManagedSSLCreate `json:"-"`
 }
 
 func (o *ManagedSSL) Key() string {
@@ -108,8 +106,6 @@ func (o *ManagedSSL) Plan(ctx context.Context, key string, dest interface{}, ver
 		}
 	}
 
-	o.Planned = c
-
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
@@ -182,12 +178,12 @@ func (o *ManagedSSL) Apply(ctx context.Context, ops []*types.PlanActionOperation
 		switch op.Operation {
 		case types.PlanOpDelete:
 			// Deletion.
-			op, err := cli.SslCertificates.Delete(plan.ProjectID, plan.Name).Do()
+			oper, err := cli.SslCertificates.Delete(plan.ProjectID, plan.Name).Do()
 			if err != nil {
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}
@@ -196,7 +192,7 @@ func (o *ManagedSSL) Apply(ctx context.Context, ops []*types.PlanActionOperation
 
 		case types.PlanOpAdd:
 			// Creation.
-			op, err := cli.SslCertificates.Insert(plan.ProjectID, &compute.SslCertificate{
+			oper, err := cli.SslCertificates.Insert(plan.ProjectID, &compute.SslCertificate{
 				Name: plan.Name,
 				Type: "MANAGED",
 				Managed: &compute.SslCertificateManagedSslCertificate{
@@ -207,7 +203,7 @@ func (o *ManagedSSL) Apply(ctx context.Context, ops []*types.PlanActionOperation
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}

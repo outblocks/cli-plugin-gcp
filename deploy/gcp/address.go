@@ -17,8 +17,6 @@ type Address struct {
 	Name      string `json:"name"`
 	ProjectID string `json:"project_id" mapstructure:"project_id"`
 	IP        string `json:"ip"`
-
-	Planned *AddressCreate `json:"-"`
 }
 
 func (o *Address) MarshalJSON() ([]byte, error) {
@@ -101,8 +99,6 @@ func (o *Address) Plan(ctx context.Context, key string, dest interface{}, verify
 		}
 	}
 
-	o.Planned = c
-
 	// Deletions.
 	if c == nil {
 		if o.Name != "" {
@@ -168,12 +164,12 @@ func (o *Address) Apply(ctx context.Context, ops []*types.PlanActionOperation, c
 		switch op.Operation {
 		case types.PlanOpDelete:
 			// Deletion.
-			op, err := cli.GlobalAddresses.Delete(plan.ProjectID, plan.Name).Do()
+			oper, err := cli.GlobalAddresses.Delete(plan.ProjectID, plan.Name).Do()
 			if err != nil {
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}
@@ -182,14 +178,14 @@ func (o *Address) Apply(ctx context.Context, ops []*types.PlanActionOperation, c
 
 		case types.PlanOpAdd:
 			// Creation.
-			op, err := cli.GlobalAddresses.Insert(plan.ProjectID, &compute.Address{
+			oper, err := cli.GlobalAddresses.Insert(plan.ProjectID, &compute.Address{
 				Name: plan.Name,
 			}).Do()
 			if err != nil {
 				return err
 			}
 
-			err = waitForGlobalOperation(cli, plan.ProjectID, op.Name)
+			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
 			if err != nil {
 				return err
 			}

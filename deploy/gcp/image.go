@@ -24,8 +24,6 @@ type Image struct {
 	Source    string `json:"source"`
 	ProjectID string `json:"project_id" mapstructure:"project_id"`
 	GCR       string `json:"gcr"`
-
-	Planned *ImageCreate `json:"-"`
 }
 
 func (o *Image) ImageName() string {
@@ -115,8 +113,6 @@ func (o *Image) Plan(ctx context.Context, key string, dest interface{}, verify b
 			return nil, err
 		}
 	}
-
-	o.Planned = c
 
 	// Deletions.
 	if c == nil {

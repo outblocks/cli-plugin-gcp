@@ -20,6 +20,19 @@ type StaticApp struct {
 
 	// TODO: support for cleanup of not needed stuff
 	Other map[string]interface{} `json:"-" mapstructure:",remain"`
+
+	Planned *StaticAppPlan `json:"-" mapstructure:"-"`
+}
+
+type StaticAppPlan struct {
+	Bucket        *gcp.BucketCreate
+	ProxyImage    *gcp.ImageCreate
+	ProxyCloudRun *gcp.CloudRunCreate
+}
+
+type StaticAppCreate struct {
+	ProjectID string
+	Region    string
 }
 
 func NewStaticApp() *StaticApp {
@@ -27,6 +40,8 @@ func NewStaticApp() *StaticApp {
 		ProxyImage:    &gcp.Image{},
 		Bucket:        &gcp.Bucket{},
 		ProxyCloudRun: &gcp.CloudRun{},
+
+		Planned: &StaticAppPlan{},
 	}
 }
 
@@ -56,18 +71,7 @@ func (o *StaticAppOptions) Decode(in interface{}) error {
 	return mapstructure.Decode(in, o)
 }
 
-type StaticAppCreate struct {
-	ProjectID string
-	Region    string
-}
-
 func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAppCreate, verify bool) (*types.AppPlanActions, error) {
-	var (
-		bucketCreate     *gcp.BucketCreate
-		proxyImageCreate *gcp.ImageCreate
-		cloudRunCreate   *gcp.CloudRunCreate
-	)
-
 	plan := types.NewAppPlanActions(app)
 
 	opts := &StaticAppOptions{}
@@ -84,7 +88,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAp
 			return nil, fmt.Errorf("app '%s' build dir '%s' does not exist", app.Name, buildDir)
 		}
 
-		bucketCreate = &gcp.BucketCreate{
+		o.Planned.Bucket = &gcp.BucketCreate{
 			Name:       gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID),
 			ProjectID:  c.ProjectID,
 			Location:   c.Region,
@@ -93,7 +97,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAp
 			Path:       buildPath,
 		}
 
-		proxyImageCreate = &gcp.ImageCreate{
+		o.Planned.ProxyImage = &gcp.ImageCreate{
 			Name:      gcp.GCSProxyImageName,
 			ProjectID: c.ProjectID,
 			Source:    gcp.GCSProxyDockerImage,
@@ -101,7 +105,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAp
 		}
 
 		envVars := map[string]string{
-			"GCS_BUCKET": bucketCreate.Name,
+			"GCS_BUCKET": o.Planned.Bucket.Name,
 		}
 
 		if opts.IsReactRouting() {
@@ -109,9 +113,9 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAp
 			envVars["ERROR404_CODE"] = "200"
 		}
 
-		cloudRunCreate = &gcp.CloudRunCreate{
+		o.Planned.ProxyCloudRun = &gcp.CloudRunCreate{
 			Name:      gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID),
-			Image:     proxyImageCreate.ImageName(),
+			Image:     o.Planned.ProxyImage.ImageName(),
 			ProjectID: c.ProjectID,
 			Region:    c.Region,
 			IsPublic:  true,
@@ -122,19 +126,19 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, app *types.App, c *StaticAp
 	}
 
 	// Plan Bucket.
-	err := plan.PlanObject(pctx, o, "Bucket", bucketCreate, verify)
+	err := plan.PlanObject(pctx, o, "Bucket", o.Planned.Bucket, verify)
 	if err != nil {
 		return nil, err
 	}
 
 	// Plan GCR Proxy Image.
-	err = plan.PlanObject(pctx, o, "ProxyImage", proxyImageCreate, verify)
+	err = plan.PlanObject(pctx, o, "ProxyImage", o.Planned.ProxyImage, verify)
 	if err != nil {
 		return nil, err
 	}
 
 	// Plan Cloud Run.
-	err = plan.PlanObject(pctx, o, "ProxyCloudRun", cloudRunCreate, verify)
+	err = plan.PlanObject(pctx, o, "ProxyCloudRun", o.Planned.ProxyCloudRun, verify)
 	if err != nil {
 		return nil, err
 	}
