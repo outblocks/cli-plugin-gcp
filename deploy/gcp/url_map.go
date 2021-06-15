@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -42,10 +43,14 @@ func (o *URLMap) MarshalJSON() ([]byte, error) {
 }
 
 type URLMapCreate struct {
-	Name            string        `json:"name"`
-	ProjectID       string        `json:"project_id" mapstructure:"project_id"`
-	Mapping         []*URLMapping `json:"mapping"`
-	InvalidatePaths []string      `json:"invalidate_paths"`
+	Name            string
+	ProjectID       string
+	Mapping         []*URLMapping
+	InvalidatePaths []string
+}
+
+func (o *URLMapCreate) ID() string {
+	return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/urlMaps/%s", o.ProjectID, o.Name)
 }
 
 type URLMapPlan URLMapCreate
@@ -357,8 +362,6 @@ func (o *URLMap) Apply(ctx context.Context, ops []*types.PlanActionOperation, ca
 				return err
 			}
 
-			o.Name = plan.Name
-			o.ProjectID = plan.ProjectID
 			o.Mapping = plan.Mapping
 		}
 

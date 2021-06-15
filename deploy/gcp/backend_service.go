@@ -74,6 +74,28 @@ type BackendServiceOptions struct {
 	CDN BackendServiceOptionsCDN
 }
 
+func (o *BackendServiceOptions) ConflictsWith(c *BackendServiceOptions) bool {
+	if o == nil {
+		o = &BackendServiceOptions{}
+	}
+
+	if c == nil {
+		c = &BackendServiceOptions{}
+	}
+
+	err := defaults.Set(o)
+	if err != nil {
+		panic(err)
+	}
+
+	err = defaults.Set(c)
+	if err != nil {
+		panic(err)
+	}
+
+	return o.CDN.Enabled != c.CDN.Enabled
+}
+
 func (o *BackendServiceOptions) Equals(c *BackendServiceOptions) bool {
 	if o == nil {
 		o = &BackendServiceOptions{}
@@ -122,8 +144,7 @@ func makeBackendService(name, neg string, opts *BackendServiceOptions) *compute.
 		},
 		Backends: []*compute.Backend{
 			{
-				Group:          neg,
-				CapacityScaler: 0,
+				Group: neg,
 			},
 		},
 	}
@@ -203,7 +224,7 @@ func (o *BackendService) Plan(ctx context.Context, key string, dest interface{},
 	}
 
 	// Check for conflicting updates.
-	if o.ProjectID != c.ProjectID {
+	if o.ProjectID != c.ProjectID || o.Options.ConflictsWith(c.Options) {
 		return types.NewPlanActionRecreate(key, plugin_util.UpdateDesc(BackendServiceName, c.Name, "forces recreate"),
 			append(ops, deleteBackendServiceOp(o), createBackendServiceOp(c))), nil
 	}
@@ -243,6 +264,7 @@ func createBackendServiceOp(c *BackendServiceCreate) *types.PlanActionOperation 
 			Name:      c.Name,
 			ProjectID: c.ProjectID,
 			NEG:       c.NEG,
+			Options:   c.Options,
 		}).Encode(),
 	}
 }
@@ -325,8 +347,6 @@ func (o *BackendService) Apply(ctx context.Context, ops []*types.PlanActionOpera
 				return err
 			}
 
-			o.Name = plan.Name
-			o.ProjectID = plan.ProjectID
 			o.NEG = plan.NEG
 			o.Options = plan.Options
 		}

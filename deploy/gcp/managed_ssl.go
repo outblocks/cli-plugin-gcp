@@ -39,6 +39,10 @@ func (o *ManagedSSLCreate) Key() string {
 	return o.Domain
 }
 
+func (o *ManagedSSLCreate) ID() string {
+	return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
+}
+
 type ManagedSSLPlan ManagedSSL
 
 func (o *ManagedSSLPlan) Encode() []byte {

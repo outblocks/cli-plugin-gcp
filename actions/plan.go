@@ -41,15 +41,16 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 	}, nil
 }
 
-func (p *PlanAction) handleStaticAppDeploy(state *types.AppState, app *types.App) (*deploy.StaticApp, *types.AppPlanActions, error) {
+func (p *PlanAction) handleStaticAppDeploy(state *types.AppState, appPlan *types.AppPlan) (*deploy.StaticApp, *types.AppPlanActions, error) {
 	appDeploy := deploy.NewStaticApp()
 	if err := appDeploy.Decode(state.DeployState[PluginName]); err != nil {
 		return nil, nil, err
 	}
 
-	actions, err := appDeploy.Plan(p.pluginCtx, app, &deploy.StaticAppCreate{
+	actions, err := appDeploy.Plan(p.pluginCtx, appPlan.App, &deploy.StaticAppCreate{
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
+		Path:      appPlan.Path,
 	}, p.verify)
 	if err != nil {
 		return nil, nil, err
@@ -66,7 +67,7 @@ func (p *PlanAction) handleStaticAppsDeploy(appPlans []*types.AppPlan) (apps []*
 			p.AppStates[plan.App.ID] = state
 		}
 
-		sa, aa, e := p.handleStaticAppDeploy(state, plan.App)
+		sa, aa, e := p.handleStaticAppDeploy(state, plan)
 		if e != nil {
 			return nil, nil, e
 		}

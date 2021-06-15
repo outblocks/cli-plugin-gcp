@@ -268,6 +268,10 @@ func decodeBucketPlan(p *types.PlanActionOperation) (ret *BucketPlan, err error)
 }
 
 func applyBucketFiles(ctx context.Context, b *storage.BucketHandle, cur map[string]*FileInfo, path string, add, upd, del map[string]*FileInfo, callback func(f string)) error {
+	if add == nil {
+		add = make(map[string]*FileInfo)
+	}
+
 	for k, v := range upd {
 		add[k] = v
 	}
@@ -436,7 +440,6 @@ func (o *Bucket) applyCreatePlan(ctx context.Context, cli *storage.Client, plan 
 	callback(plugin_util.AddDesc(BucketName, o.Name))
 
 	// Apply files if needed.
-
 	err := applyBucketFiles(ctx, bucket, o.Files, plan.Path, plan.FilesAdd, plan.FilesUpdate, plan.FilesDelete, func(f string) {
 		callback(plugin_util.UpdateDesc("files in bucket", o.Name, f))
 	})

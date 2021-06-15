@@ -25,4 +25,4 @@ require (
 	google.golang.org/grpc v1.38.0 // indirect
 )
 
-// replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go
+replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go
