@@ -1,8 +1,6 @@
 package plugin
 
 import (
-	"context"
-
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/env"
@@ -37,6 +35,6 @@ func (p *Plugin) Handler() *plugin_go.ReqHandler {
 	}
 }
 
-func (p *Plugin) PluginContext(ctx context.Context) *config.PluginContext {
-	return config.NewPluginContext(ctx, p.env, p.gcred, &p.Settings)
+func (p *Plugin) PluginContext() *config.PluginContext {
+	return config.NewPluginContext(p.env, p.gcred, &p.Settings)
 }

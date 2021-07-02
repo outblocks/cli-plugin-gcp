@@ -1,30 +1,73 @@
 package deploy
 
 import (
-	"fmt"
-
-	"github.com/mitchellh/mapstructure"
+	"crypto/md5"
+	"encoding/hex"
+	"io"
+	"os"
+	"path/filepath"
 )
 
-type detect struct {
-	Type string `mapstructure:"type"`
+func hashFile(f string) (string, error) {
+	file, err := os.Open(f)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	buf := make([]byte, 30*1024)
+	hash := md5.New()
+
+	for {
+		n, err := file.Read(buf)
+		if n > 0 {
+			_, err := hash.Write(buf[:n])
+			if err != nil {
+				return "", err
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return "", err
+		}
+	}
+
+	sum := hash.Sum(nil)
+
+	return hex.EncodeToString(sum), nil
 }
 
-func DetectAppType(i interface{}) (interface{}, error) {
-	var d *detect
+func findFiles(root string) (ret map[string]string, err error) {
+	ret = make(map[string]string)
 
-	err := mapstructure.Decode(i, d)
-	if err != nil {
-		return nil, err
-	}
+	err = filepath.Walk(root,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 
-	switch d.Type { // nolint: gocritic // - more app types will be supported
-	case "static_app":
-		o := NewStaticApp()
-		err = o.Decode(i)
+			if info.IsDir() {
+				return nil
+			}
 
-		return o, err
-	}
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
 
-	return nil, fmt.Errorf("undetected state type")
+			hash, err := hashFile(path)
+			if err != nil {
+				return err
+			}
+
+			ret[rel] = hash
+
+			return nil
+		})
+
+	return ret, err
 }

@@ -132,9 +132,9 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		return res, nil
 	}
 
-	pctx := p.PluginContext(ctx)
+	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient()
+	cli, err := pctx.StorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -195,9 +195,9 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 		return res, nil
 	}
 
-	pctx := p.PluginContext(ctx)
+	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient()
+	cli, err := pctx.StorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -235,9 +235,9 @@ func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockReques
 		return res, nil
 	}
 
-	pctx := p.PluginContext(ctx)
+	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient()
+	cli, err := pctx.StorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}

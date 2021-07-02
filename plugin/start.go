@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
@@ -29,6 +30,18 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 	}
 
 	p.gcred = cred
+
+	crmCli, err := config.NewGCPCloudResourceManager(ctx, p.gcred)
+	if err != nil {
+		return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
+	}
+
+	proj, err := crmCli.Projects.Get(p.Settings.ProjectID).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	p.Settings.ProjectNumber = proj.ProjectNumber
 
 	return &plugin_go.EmptyResponse{}, nil
 }

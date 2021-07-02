@@ -9,25 +9,23 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-type TargetHTTPProxy struct {
+type ForwardingRule struct {
 	registry.ResourceBase
 
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
-	URLMap    fields.StringInputField
+	IPAddress fields.StringInputField `state:"force_new"`
+	Target    fields.StringInputField
+	PortRange fields.StringInputField
 
 	Fingerprint string `state:"-"`
 }
 
-func (o *TargetHTTPProxy) GetName() string {
+func (o *ForwardingRule) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *TargetHTTPProxy) ID() fields.StringInputField {
-	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
-}
-
-func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
+func (o *ForwardingRule) Read(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -38,7 +36,7 @@ func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
 	projectID := o.ProjectID.Any()
 	name := o.Name.Any()
 
-	proxy, err := cli.TargetHttpProxies.Get(projectID, name).Do()
+	rule, err := cli.GlobalForwardingRules.Get(projectID, name).Do()
 	if ErrIs404(err) {
 		o.SetNew(true)
 
@@ -50,14 +48,16 @@ func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
 	o.SetNew(false)
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
-	o.URLMap.SetCurrent(proxy.UrlMap)
+	o.IPAddress.SetCurrent(rule.IPAddress)
+	o.Target.SetCurrent(rule.Target)
+	o.PortRange.SetCurrent(rule.PortRange)
 
-	o.Fingerprint = proxy.Fingerprint
+	o.Fingerprint = rule.Fingerprint
 
 	return nil
 }
 
-func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
+func (o *ForwardingRule) Create(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -68,9 +68,11 @@ func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
 	projectID := o.ProjectID.Wanted()
 	name := o.Name.Wanted()
 
-	oper, err := cli.TargetHttpProxies.Insert(projectID, &compute.TargetHttpProxy{
-		Name:   name,
-		UrlMap: o.URLMap.Wanted(),
+	oper, err := cli.GlobalForwardingRules.Insert(projectID, &compute.ForwardingRule{
+		Name:      name,
+		IPAddress: o.IPAddress.Wanted(),
+		Target:    o.Target.Wanted(),
+		PortRange: o.PortRange.Wanted(),
 	}).Do()
 	if err != nil {
 		return err
@@ -79,7 +81,7 @@ func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
 	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
+func (o *ForwardingRule) Update(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -92,17 +94,19 @@ func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
 
 	// Check fingerprint.
 	if o.Fingerprint == "" {
-		proxy, err := cli.TargetHttpProxies.Get(projectID, name).Do()
+		rule, err := cli.GlobalForwardingRules.Get(projectID, name).Do()
 		if err != nil {
 			return err
 		}
 
-		o.Fingerprint = proxy.Fingerprint
+		o.Fingerprint = rule.Fingerprint
 	}
 
-	oper, err := cli.TargetHttpProxies.Patch(projectID, name, &compute.TargetHttpProxy{
+	oper, err := cli.GlobalForwardingRules.Patch(projectID, name, &compute.ForwardingRule{
 		Name:        name,
-		UrlMap:      o.URLMap.Wanted(),
+		IPAddress:   o.IPAddress.Wanted(),
+		Target:      o.Target.Wanted(),
+		PortRange:   o.PortRange.Wanted(),
 		Fingerprint: o.Fingerprint,
 	}).Do()
 	if err != nil {
@@ -112,7 +116,7 @@ func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
 	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
+func (o *ForwardingRule) Delete(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -120,7 +124,7 @@ func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	oper, err := cli.TargetHttpProxies.Delete(o.ProjectID.Current(), o.Name.Current()).Do()
+	oper, err := cli.GlobalForwardingRules.Delete(o.ProjectID.Current(), o.Name.Current()).Do()
 	if err != nil {
 		return err
 	}

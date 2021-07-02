@@ -1,23 +1,34 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/outblocks/cli-plugin-gcp/deploy"
+	"github.com/outblocks/cli-plugin-gcp/deploy/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/log"
+	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 type PlanAction struct {
-	pluginCtx *config.PluginContext
-	log       log.Logger
+	pluginCtx   *config.PluginContext
+	log         log.Logger
+	apiRegistry *registry.Registry
+	registry    *registry.Registry
+	appIDMap    map[string]*types.App
 
-	PluginMap        types.PluginStateMap
-	AppStates        map[string]*types.AppState
-	DependencyStates map[string]*types.DependencyState
-	verify           bool
+	staticApps   []*deploy.StaticApp
+	loadBalancer *deploy.LoadBalancer
+
+	PluginMap         types.PluginStateMap
+	AppStates         map[string]*types.AppState
+	DependencyStates  map[string]*types.DependencyState
+	verify, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -30,126 +41,63 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		depStates = make(map[string]*types.DependencyState)
 	}
 
-	return &PlanAction{
-		pluginCtx: pctx,
-		log:       logger,
+	r := registry.NewRegistry()
 
-		PluginMap:        state,
-		AppStates:        appStates,
-		DependencyStates: depStates,
-		verify:           verify,
-	}, nil
-}
-
-func (p *PlanAction) handleStaticAppDeploy(state *types.AppState, appPlan *types.AppPlan) (*deploy.StaticApp, *types.AppPlanActions, error) {
-	appDeploy := deploy.NewStaticApp()
-	if err := appDeploy.Decode(state.DeployState[PluginName]); err != nil {
-		return nil, nil, err
-	}
-
-	actions, err := appDeploy.Plan(p.pluginCtx, appPlan.App, &deploy.StaticAppCreate{
-		ProjectID: p.pluginCtx.Settings().ProjectID,
-		Region:    p.pluginCtx.Settings().Region,
-		Path:      appPlan.Path,
-	}, p.verify)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return appDeploy, actions, nil
-}
-
-func (p *PlanAction) handleStaticAppsDeploy(appPlans []*types.AppPlan) (apps []*deploy.StaticApp, appPlan []*types.AppPlanActions, err error) {
-	for _, plan := range appPlans {
-		state := p.AppStates[plan.App.ID]
-		if state == nil {
-			state = types.NewAppState()
-			p.AppStates[plan.App.ID] = state
-		}
-
-		sa, aa, e := p.handleStaticAppDeploy(state, plan)
-		if e != nil {
-			return nil, nil, e
-		}
-
-		if p.verify {
-			state.DeployState[PluginName] = sa
-			state.App = plan.App
-		}
-
-		if aa != nil && len(aa.Actions) > 0 {
-			appPlan = append(appPlan, aa)
-		}
-
-		apps = append(apps, sa)
-	}
-
-	return
-}
-
-func (p *PlanAction) handleCleanupApp(state *types.AppState) (appPlan *types.AppPlanActions, err error) {
-	deployState := state.DeployState[PluginName]
-	if deployState == nil {
-		return nil, nil
-	}
-
-	app, err := deploy.DetectAppType(deployState)
-	if err != nil {
-		return nil, err
-	}
-
-	switch appDeploy := app.(type) { // nolint: gocritic // - more app types will be supported
-	case *deploy.StaticApp:
-		appPlan, err = appDeploy.Plan(p.pluginCtx, state.App, nil, p.verify)
+	for _, t := range gcp.Types {
+		err := r.RegisterType(t)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return appPlan, nil
+	return &PlanAction{
+		pluginCtx:   pctx,
+		log:         logger,
+		apiRegistry: registry.NewRegistry(),
+		registry:    r,
+		appIDMap:    make(map[string]*types.App),
+
+		PluginMap:        state,
+		AppStates:        appStates,
+		DependencyStates: depStates,
+		verify:           verify,
+		fullCheck:        fullCheck,
+	}, nil
 }
 
-func (p *PlanAction) planDeployLB(static []*deploy.StaticApp, staticPlan []*types.AppPlan) (*types.PluginPlanActions, error) {
-	lb := deploy.NewLoadBalancer()
+func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.StaticApp, error) {
+	appDeploy := deploy.NewStaticApp(appPlan.App)
+	pctx := p.pluginCtx
 
-	err := lb.Decode(p.PluginMap[PluginLBState])
-	if err != nil {
-		return nil, err
-	}
+	err := appDeploy.Plan(pctx, p.registry, appPlan.App, &deploy.StaticAppArgs{
+		ProjectID: pctx.Settings().ProjectID,
+		Region:    pctx.Settings().Region,
+		Path:      appPlan.Path,
+	}, p.verify)
 
-	plan := types.NewPluginPlanActions(PluginLBState)
-
-	err = lb.Plan(p.pluginCtx, plan, &deploy.LoadBalancerCreate{
-		Name:      PluginLBState,
-		ProjectID: p.pluginCtx.Settings().ProjectID,
-		Region:    p.pluginCtx.Settings().Region,
-	}, static, staticPlan,
-		p.verify)
-	if err != nil {
-		return nil, err
-	}
-
-	if p.verify {
-		p.PluginMap[PluginLBState] = lb
-	}
-
-	if len(plan.Actions) == 0 {
-		return nil, nil
-	}
-
-	return plan, nil
+	return appDeploy, err
 }
 
-func (p *PlanAction) PlanDeploy(apps []*types.AppPlan) (*types.Plan, error) {
+func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret []*deploy.StaticApp, err error) {
+	for _, plan := range appPlans {
+		app, err := p.planStaticAppDeploy(plan)
+		if err != nil {
+			return ret, err
+		}
+
+		ret = append(ret, app)
+	}
+
+	return ret, nil
+}
+
+func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 	var (
 		staticAppsPlan []*types.AppPlan
-		pluginPlan     []*types.PluginPlanActions
 	)
 
-	appIDs := make(map[string]struct{})
-
-	for _, app := range apps {
-		appIDs[app.App.ID] = struct{}{}
+	for _, app := range appPlans {
+		p.appIDMap[app.App.ID] = app.App
 
 		if !app.IsDeploy {
 			continue
@@ -160,44 +108,212 @@ func (p *PlanAction) PlanDeploy(apps []*types.AppPlan) (*types.Plan, error) {
 		}
 	}
 
-	var (
-		appPlan []*types.AppPlanActions
-	)
+	var err error
 
 	// Plan static app deployment.
-	staticApps, staticAppDeployPlan, err := p.handleStaticAppsDeploy(staticAppsPlan)
+	p.staticApps, err = p.planStaticAppsDeploy(staticAppsPlan)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	appPlan = append(appPlan, staticAppDeployPlan...)
+	return nil
+}
 
-	// Plan cleanup.
-	for appID, appState := range p.AppStates {
-		if _, ok := appIDs[appID]; !ok {
-			cleanupPlan, err := p.handleCleanupApp(appState)
-			if err != nil {
-				return nil, err
-			}
+func (p *PlanAction) enableAPIs(ctx context.Context) error {
+	// Process API registry.
+	for _, api := range gcp.APISRequired {
+		s := &gcp.APIService{Name: fields.String(api)}
 
-			if cleanupPlan != nil {
-				appPlan = append(appPlan, cleanupPlan)
-			}
+		err := p.apiRegistry.Register(s, deploy.APIName, api)
+		if err != nil {
+			return err
 		}
 	}
 
-	// Plan load balancer.
-	pluginAction, err := p.planDeployLB(staticApps, staticAppsPlan)
+	apiReg := p.PluginMap["api_registry"]
+
+	err := p.apiRegistry.Load(ctx, apiReg)
+	if err != nil {
+		return err
+	}
+
+	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
+	if p.fullCheck {
+		err = p.apiRegistry.Read(ctx, p.pluginCtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	diff, err := p.apiRegistry.Diff(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = p.apiRegistry.Apply(ctx, p.pluginCtx, diff, nil)
+	if err != nil {
+		return err
+	}
+
+	data, err := p.apiRegistry.Dump()
+	if err != nil {
+		return err
+	}
+
+	p.PluginMap["api_registry"] = data
+
+	return nil
+}
+
+func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) error {
+	err := p.planApps(appPlans)
+	if err != nil {
+		return err
+	}
+
+	p.loadBalancer = deploy.NewLoadBalancer()
+
+	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, &deploy.LoadBalancerArgs{
+		Name:      "load_balancer",
+		ProjectID: p.pluginCtx.Settings().ProjectID,
+		Region:    p.pluginCtx.Settings().Region,
+	}, p.verify)
+	if err != nil {
+		return err
+	}
+
+	// Process registry.
+	reg := p.PluginMap["registry"]
+
+	err = p.registry.Load(ctx, reg)
+	if err != nil {
+		return err
+	}
+
+	if p.verify {
+		err = p.registry.Read(ctx, p.pluginCtx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *PlanAction) diff(ctx context.Context) (appPlanActions []*types.AppPlanActions, pluginPlanActions []*types.PluginPlanActions, err error) {
+	// Process diffs.
+	diff, err := p.registry.Diff(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	appPlanMap := make(map[string]*types.AppPlanActions)
+	pluginPlanMap := make(map[string]*types.PluginPlanActions)
+
+	for _, d := range diff {
+		ns := d.Object.Namespace
+
+		if app, ok := p.appIDMap[ns]; ok {
+			appPlan, ok := appPlanMap[ns]
+			if !ok {
+				appPlan = types.NewAppPlanActions(app)
+				appPlanMap[ns] = appPlan
+				appPlanActions = append(appPlanActions, appPlan)
+			}
+
+			appPlan.Actions = append(appPlan.Actions, d.ToPlanAction())
+		} else {
+			pluginPlan, ok := pluginPlanMap[ns]
+			if !ok {
+				pluginPlan = types.NewPluginPlanActions(d.Object.Namespace)
+				pluginPlanMap[ns] = pluginPlan
+				pluginPlanActions = append(pluginPlanActions, pluginPlan)
+			}
+
+			pluginPlan.Actions = append(pluginPlan.Actions, d.ToPlanAction())
+		}
+	}
+
+	return appPlanActions, pluginPlanActions, nil
+}
+
+func (p *PlanAction) save() error {
+	data, err := p.registry.Dump()
+	if err != nil {
+		return err
+	}
+
+	p.PluginMap["registry"] = data
+
+	for _, app := range p.staticApps {
+		state, ok := p.AppStates[app.App.ID]
+		if !ok {
+			state = types.NewAppState(app.App)
+		}
+
+		state.DNS = &types.DNS{
+			IP:  p.loadBalancer.Addresses[0].IP.Current(),
+			URL: "https://" + app.App.URL,
+		}
+
+		p.AppStates[app.App.ID] = state
+	}
+
+	return nil
+}
+
+func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan) (*types.Plan, error) {
+	err := p.enableAPIs(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if pluginAction != nil {
-		pluginPlan = append(pluginPlan, pluginAction)
+	err = p.planAll(ctx, appPlans)
+	if err != nil {
+		return nil, err
+	}
+
+	appPlanActions, pluginPlanActions, err := p.diff(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.save()
+	if err != nil {
+		return nil, err
 	}
 
 	return &types.Plan{
-		Apps:   appPlan,
-		Plugin: pluginPlan,
+		Apps:   appPlanActions,
+		Plugin: pluginPlanActions,
 	}, nil
+}
+
+func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, cb func(a *types.ApplyAction)) error {
+	err := p.enableAPIs(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = p.planAll(ctx, appPlans)
+	if err != nil {
+		return err
+	}
+
+	diff, err := p.registry.Diff(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = p.registry.Apply(ctx, p.pluginCtx, diff, cb)
+	if err != nil {
+		return err
+	}
+
+	err = p.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

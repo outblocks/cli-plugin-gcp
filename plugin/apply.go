@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, in <-chan plugin_go.Request, out chan<- plugin_go.Response) error {
-	a, err := actions.NewApply(p.PluginContext(ctx), p.log, r.PluginMap, r.AppStates, r.DependencyStates)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginMap, r.AppStates, r.DependencyStates, false, false)
 	if err != nil {
 		return err
 	}
@@ -20,12 +20,7 @@ func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest
 		}
 	}
 
-	err = a.ApplyDeploy(r.DeployPlan, cb)
-	if err != nil {
-		return err
-	}
-
-	err = a.ApplyDNS(r.DNSPlan, cb)
+	err = a.Apply(ctx, r.Apps, cb)
 	if err != nil {
 		return err
 	}

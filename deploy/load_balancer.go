@@ -1,222 +1,209 @@
 package deploy
 
 import (
-	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/deploy/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/outblocks-plugin-go/types"
+	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 )
 
 type LoadBalancer struct {
-	Addresses    []*gcp.Address    `json:"addresses"`
-	Certificates []*gcp.ManagedSSL `json:"managed_ssl" mapstructure:"managed_ssl"`
-
-	NetworkEndpointGroups []*gcp.ServerlessNEG    `json:"network_endpoint_groups" mapstructure:"network_endpoint_groups"`
-	BackendServices       []*gcp.BackendService   `json:"backend_services" mapstructure:"backend_services"`
-	URLMap                *gcp.URLMap             `json:"url_map" mapstructure:"url_map"`
-	TargetHTTPSProxies    []*gcp.TargetHTTPSProxy `json:"target_https_proxies" mapstructure:"target_https_proxies"`
-	TargetHTTPProxy       *gcp.TargetHTTPProxy    `json:"target_http_proxy" mapstructure:"target_http_proxy"`
-
-	Planned *LoadBalancerPlanned `json:"-" mapstructure:"-"`
+	Addresses          []*gcp.Address
+	ManagedSSLs        []*gcp.ManagedSSL
+	ServerlessNEGs     []*gcp.ServerlessNEG
+	BackendServices    []*gcp.BackendService
+	URLMaps            []*gcp.URLMap
+	TargetHTTPProxies  []*gcp.TargetHTTPProxy
+	TargetHTTPSProxies []*gcp.TargetHTTPSProxy
+	ForwardingRules    []*gcp.ForwardingRule
 }
 
-type LoadBalancerCreate struct {
+type LoadBalancerArgs struct {
 	Name      string
 	ProjectID string
 	Region    string
 }
 
-type LoadBalancerPlanned struct {
-	Addresses    []*gcp.AddressCreate
-	Certificates []*gcp.ManagedSSLCreate
-
-	NetworkEndpointGroups []*gcp.ServerlessNEGCreate
-	BackendServices       []*gcp.BackendServiceCreate
-	URLMap                *gcp.URLMapCreate
-	TargetHTTPSProxies    []*gcp.TargetHTTPSProxyCreate
-	TargetHTTPProxy       *gcp.TargetHTTPProxyCreate
-}
-
 func NewLoadBalancer() *LoadBalancer {
-	return &LoadBalancer{
-		URLMap:          &gcp.URLMap{},
-		TargetHTTPProxy: &gcp.TargetHTTPProxy{},
-
-		Planned: &LoadBalancerPlanned{},
-	}
+	return &LoadBalancer{}
 }
 
-func (o *LoadBalancer) Decode(in interface{}) error {
-	err := mapstructure.Decode(in, o)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (o *LoadBalancer) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		LoadBalancer
-		Type string `json:"type"`
-	}{
-		LoadBalancer: *o,
-		Type:         "load_balancer",
-	})
-}
-
-func (o *LoadBalancer) Plan(pctx *config.PluginContext, plan *types.PluginPlanActions, c *LoadBalancerCreate, static []*StaticApp, staticPlan []*types.AppPlan, verify bool) error {
+func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static []*StaticApp, c *LoadBalancerArgs, verify bool) error {
 	if len(static) == 0 {
-		c = nil
+		return nil
 	}
 
-	if c != nil {
-		lbID := gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name)
+	lbID := gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name)
 
-		// Certificates.
-		domains := make(map[string]struct{})
-
-		for _, app := range staticPlan {
-			domain := strings.SplitN(app.App.URL, "/", 2)[0]
-			domains[domain] = struct{}{}
-		}
-
-		for domain := range domains {
-			o.Planned.Certificates = append(o.Planned.Certificates, &gcp.ManagedSSLCreate{
-				Name:      gcp.ID(pctx.Env().ProjectName(), c.ProjectID, domain),
-				Domain:    domain,
-				ProjectID: c.ProjectID,
-			})
-		}
-
-		var mapping []*gcp.URLMapping
-
-		for i, app := range static {
-			// Serverless NEG creation.
-			negC := &gcp.ServerlessNEGCreate{
-				Name:      app.Planned.ProxyCloudRun.Name,
-				Region:    app.Planned.ProxyCloudRun.Region,
-				ProjectID: app.Planned.ProxyCloudRun.ProjectID,
-				CloudRun:  app.Planned.ProxyCloudRun.Name,
-			}
-
-			o.Planned.NetworkEndpointGroups = append(o.Planned.NetworkEndpointGroups, negC)
-
-			// Backend service creation.
-			backendC := &gcp.BackendServiceCreate{
-				Name:      negC.Name,
-				ProjectID: negC.ProjectID,
-				NEG:       negC.ID(),
-				Options: &gcp.BackendServiceOptions{
-					CDN: gcp.BackendServiceOptionsCDN{
-						Enabled: false,
-					},
-				},
-			}
-
-			o.Planned.BackendServices = append(o.Planned.BackendServices, backendC)
-
-			// URL Mapping.
-			mapping = append(mapping, gcp.CreateURLMapping(staticPlan[i].App.URL, backendC.ID()))
-		}
-
-		o.Planned.URLMap = &gcp.URLMapCreate{
-			Name:      lbID,
-			ProjectID: c.ProjectID,
-			Mapping:   gcp.CleanupURLMapping(mapping),
-		}
-
-		// TargetHTTPProxy.
-		o.Planned.TargetHTTPProxy = &gcp.TargetHTTPProxyCreate{
-			Name:      lbID,
-			ProjectID: c.ProjectID,
-			URLMap:    o.Planned.URLMap.ID(),
-		}
-
-		// TargetHTTPSProxies.
-		var certIDs []string
-		for _, cert := range o.Planned.Certificates {
-			certIDs = append(certIDs, cert.ID())
-		}
-
-		sort.Strings(certIDs)
-
-		for i := 0; len(certIDs) > i; i += 15 {
-			r := i + 15
-			if r > len(certIDs) {
-				r = len(certIDs)
-			}
-
-			o.Planned.TargetHTTPSProxies = append(o.Planned.TargetHTTPSProxies, &gcp.TargetHTTPSProxyCreate{
-				Name:            gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name) + fmt.Sprintf("-%d", i/15),
-				ProjectID:       c.ProjectID,
-				URLMap:          o.Planned.URLMap.ID(),
-				SSLCertificates: certIDs[i:r],
-			})
-		}
-
-		// Addresses.
-		var rules []*gcp.AddressForwardingRule
-
-		rules = append(rules, &gcp.AddressForwardingRule{
-			Name:      o.Planned.TargetHTTPProxy.Name,
-			Target:    o.Planned.TargetHTTPProxy.ID(),
-			PortRange: "80-80",
-		})
-
-		o.Planned.Addresses = append(o.Planned.Addresses, &gcp.AddressCreate{
-			Name:            lbID + "-0",
-			ProjectID:       c.ProjectID,
-			ForwardingRules: rules,
-		})
+	// IP Address.
+	addr := &gcp.Address{
+		Name:      fields.String(lbID + "-0"),
+		ProjectID: fields.String(c.ProjectID),
 	}
 
-	// Plan Certificates.
-	err := plan.PlanObjectList(pctx, o, "Certificates", o.Planned.Certificates, verify)
+	err := r.Register(addr, LoadBalancerName, lbID+"-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan NEG.
-	err = plan.PlanObjectList(pctx, o, "NetworkEndpointGroups", o.Planned.NetworkEndpointGroups, verify)
+	o.Addresses = append(o.Addresses, addr)
+
+	// Certificates.
+	domains := make(map[string]struct{})
+
+	for _, app := range static {
+		domain := strings.SplitN(app.App.URL, "/", 2)[0]
+		domains[domain] = struct{}{}
+	}
+
+	// Sort domains to make sure state remains the same.
+	var domainList []string
+	for domain := range domains {
+		domainList = append(domainList, domain)
+	}
+
+	sort.Strings(domainList)
+
+	for _, domain := range domainList {
+		cert := &gcp.ManagedSSL{
+			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, domain)),
+			ProjectID: fields.String(c.ProjectID),
+			Domain:    fields.String(domain),
+		}
+
+		err := r.Register(cert, LoadBalancerName, domain)
+		if err != nil {
+			return err
+		}
+
+		o.ManagedSSLs = append(o.ManagedSSLs, cert)
+	}
+
+	urlMap := make(map[string]fields.Field)
+
+	for _, app := range static {
+		// Serverless NEGs.
+		neg := &gcp.ServerlessNEG{
+			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.App.ID)),
+			ProjectID: fields.String(c.ProjectID),
+			Region:    fields.String(c.Region),
+			CloudRun:  app.CloudRun.Name,
+		}
+
+		err := r.Register(neg, LoadBalancerName, app.App.ID)
+		if err != nil {
+			return err
+		}
+
+		o.ServerlessNEGs = append(o.ServerlessNEGs, neg)
+
+		// Backend Services.
+		svc := &gcp.BackendService{
+			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.App.ID)),
+			ProjectID: fields.String(c.ProjectID),
+			NEG:       neg.ID(),
+		}
+
+		svc.CDN.Enabled = fields.Bool(true)
+
+		err = r.Register(svc, LoadBalancerName, app.App.ID)
+		if err != nil {
+			return err
+		}
+
+		o.BackendServices = append(o.BackendServices, svc)
+
+		// URL Mapping.
+		url := app.App.URL
+		if strings.Count(url, "/") == 1 {
+			url += "*"
+		}
+
+		urlMap[url] = svc.ID()
+	}
+
+	// URL Map.
+	m := &gcp.URLMap{
+		Name:       fields.String(lbID + "-0"),
+		ProjectID:  fields.String(c.ProjectID),
+		URLMapping: fields.Map(urlMap),
+	}
+
+	err = r.Register(m, LoadBalancerName, lbID+"-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan Backend Services.
-	err = plan.PlanObjectList(pctx, o, "BackendServices", o.Planned.BackendServices, verify)
+	o.URLMaps = append(o.URLMaps, m)
+
+	// Target HTTP Proxy.
+	proxy := &gcp.TargetHTTPProxy{
+		Name:      fields.String(lbID + "-0"),
+		ProjectID: fields.String(c.ProjectID),
+		URLMap:    m.ID(),
+	}
+
+	err = r.Register(proxy, LoadBalancerName, lbID+"-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan URL Map.
-	err = plan.PlanObject(pctx, o, "URLMap", o.Planned.URLMap, verify)
+	o.TargetHTTPProxies = append(o.TargetHTTPProxies, proxy)
+
+	// Target HTTPS Proxy.
+	var certs []fields.Field
+	for _, cert := range o.ManagedSSLs {
+		certs = append(certs, cert.ID())
+	}
+
+	sproxy := &gcp.TargetHTTPSProxy{
+		Name:            fields.String(lbID + "-0"),
+		ProjectID:       fields.String(c.ProjectID),
+		URLMap:          m.ID(),
+		SSLCertificates: fields.Array(certs),
+	}
+
+	err = r.Register(sproxy, LoadBalancerName, lbID+"-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan TargetHTTPProxy.
-	err = plan.PlanObject(pctx, o, "TargetHTTPProxy", o.Planned.TargetHTTPProxy, verify)
+	o.TargetHTTPSProxies = append(o.TargetHTTPSProxies, sproxy)
+
+	// HTTP forwarding Rules.
+	rule := &gcp.ForwardingRule{
+		Name:      fields.String(lbID + "-http-0"),
+		ProjectID: fields.String(c.ProjectID),
+		IPAddress: addr.IP,
+		Target:    proxy.ID(),
+		PortRange: fields.String("80-80"),
+	}
+
+	err = r.Register(rule, LoadBalancerName, lbID+"-http-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan TargetHTTPProxies.
-	err = plan.PlanObjectList(pctx, o, "TargetHTTPSProxies", o.Planned.TargetHTTPSProxies, verify)
+	o.ForwardingRules = append(o.ForwardingRules, rule)
+
+	// HTTPS forwarding rule.
+	rule = &gcp.ForwardingRule{
+		Name:      fields.String(lbID + "-https-0"),
+		ProjectID: fields.String(c.ProjectID),
+		IPAddress: addr.IP,
+		Target:    sproxy.ID(),
+		PortRange: fields.String("443-443"),
+	}
+
+	err = r.Register(rule, LoadBalancerName, lbID+"-https-0")
 	if err != nil {
 		return err
 	}
 
-	// Plan Address.
-	err = plan.PlanObjectList(pctx, o, "Addresses", o.Planned.Addresses, verify)
-	if err != nil {
-		return err
-	}
+	o.ForwardingRules = append(o.ForwardingRules, rule)
 
 	return nil
 }

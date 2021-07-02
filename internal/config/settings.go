@@ -1,6 +1,7 @@
 package config
 
 type Settings struct {
-	ProjectID string
-	Region    string
+	ProjectID     string
+	ProjectNumber int64
+	Region        string
 }

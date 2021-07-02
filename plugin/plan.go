@@ -8,12 +8,12 @@ import (
 )
 
 func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.Response, error) {
-	a, err := actions.NewPlan(p.PluginContext(ctx), p.log, r.PluginMap, r.AppStates, r.DependencyStates, r.Verify)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginMap, r.AppStates, r.DependencyStates, r.Verify, false)
 	if err != nil {
 		return nil, err
 	}
 
-	deployPlan, err := a.PlanDeploy(r.Apps)
+	deployPlan, err := a.Plan(ctx, r.Apps)
 	if err != nil {
 		return nil, err
 	}

@@ -2,231 +2,103 @@ package gcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/outblocks-plugin-go/types"
-	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
+	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"google.golang.org/api/compute/v1"
 )
 
-const ManagedSSLName = "SSL certificate"
-
 type ManagedSSL struct {
-	Name      string `json:"name"`
-	Domain    string `json:"domain"`
-	ProjectID string `json:"project_id" mapstructure:"project_id"`
+	registry.ResourceBase
+
+	Name      fields.StringInputField `state:"force_new"`
+	ProjectID fields.StringInputField `state:"force_new"`
+	Domain    fields.StringInputField `state:"force_new"`
 }
 
-func (o *ManagedSSL) Key() string {
-	return o.Domain
+func (o *ManagedSSL) GetName() string {
+	return o.Domain.Any()
 }
 
-func (o *ManagedSSL) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		ManagedSSL
-		Type string `json:"type"`
-	}{
-		ManagedSSL: *o,
-		Type:       "gcp_managed_ssl",
-	})
+func (o *ManagedSSL) ID() fields.StringInputField {
+	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 
-type ManagedSSLCreate ManagedSSL
+func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
+	pctx := meta.(*config.PluginContext)
 
-func (o *ManagedSSLCreate) Key() string {
-	return o.Domain
-}
-
-func (o *ManagedSSLCreate) ID() string {
-	return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
-}
-
-type ManagedSSLPlan ManagedSSL
-
-func (o *ManagedSSLPlan) Encode() []byte {
-	d, err := json.Marshal(o)
+	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	return d
-}
-func (o *ManagedSSL) verify(cli *compute.Service, c *ManagedSSLCreate) error {
-	name := o.Name
-	projectID := o.ProjectID
+	projectID := o.ProjectID.Any()
+	name := o.Name.Any()
 
-	if name == "" && c != nil {
-		name = c.Name
-		projectID = c.ProjectID
-	}
-
-	if name == "" {
-		return nil
-	}
-
-	obj, err := cli.SslCertificates.Get(projectID, name).Do()
+	cert, err := cli.SslCertificates.Get(projectID, name).Do()
 	if ErrIs404(err) {
-		*o = ManagedSSL{}
+		o.SetNew(true)
 
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	o.Name = name
-	o.ProjectID = projectID
+	o.SetNew(false)
+	o.ProjectID.SetCurrent(projectID)
+	o.Name.SetCurrent(name)
 
-	if obj.Managed != nil && len(obj.Managed.Domains) == 1 {
-		o.Domain = obj.Managed.Domains[0]
+	if cert.Managed != nil && len(cert.Managed.Domains) == 1 {
+		o.Domain.SetCurrent(cert.Managed.Domains[0])
 	}
 
 	return nil
 }
 
-func (o *ManagedSSL) Plan(ctx context.Context, key string, dest interface{}, verify bool) (*types.PlanAction, error) {
-	var (
-		ops []*types.PlanActionOperation
-		c   *ManagedSSLCreate
-	)
+func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
+	pctx := meta.(*config.PluginContext)
 
-	if dest != nil {
-		c = dest.(*ManagedSSLCreate)
-	}
-
-	pctx := ctx.(*config.PluginContext)
-
-	cli, err := pctx.GCPComputeClient()
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch current state if needed.
-	if verify {
-		err := o.verify(cli, c)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Deletions.
-	if c == nil {
-		if o.Name != "" {
-			return types.NewPlanActionDelete(key, plugin_util.DeleteDesc(ManagedSSLName, o.Name),
-				append(ops, deleteManagedSSLOp(o))), nil
-		}
-
-		return nil, nil
-	}
-
-	// Check for fresh create.
-	if o.Name == "" {
-		return types.NewPlanActionCreate(key, plugin_util.AddDesc(ManagedSSLName, c.Name),
-			append(ops, createManagedSSLOp(c))), nil
-	}
-
-	// Check for conflicting updates.
-	if o.ProjectID != c.ProjectID {
-		return types.NewPlanActionRecreate(key, plugin_util.UpdateDesc(ManagedSSLName, c.Name, "forces recreate"),
-			append(ops, deleteManagedSSLOp(o), createManagedSSLOp(c))), nil
-	}
-
-	return nil, nil
-}
-
-func deleteManagedSSLOp(o *ManagedSSL) *types.PlanActionOperation {
-	return &types.PlanActionOperation{
-		Steps:     1,
-		Operation: types.PlanOpDelete,
-		Data: (&ManagedSSLPlan{
-			Name:      o.Name,
-			ProjectID: o.ProjectID,
-		}).Encode(),
-	}
-}
-
-func createManagedSSLOp(c *ManagedSSLCreate) *types.PlanActionOperation {
-	return &types.PlanActionOperation{
-		Steps:     1,
-		Operation: types.PlanOpAdd,
-		Data: (&ManagedSSLPlan{
-			Name:      c.Name,
-			ProjectID: c.ProjectID,
-			Domain:    c.Domain,
-		}).Encode(),
-	}
-}
-
-func decodeManagedSSLPlan(p *types.PlanActionOperation) (ret *ManagedSSLPlan, err error) {
-	err = json.Unmarshal(p.Data, &ret)
-
-	return
-}
-
-func (o *ManagedSSL) Apply(ctx context.Context, ops []*types.PlanActionOperation, callback types.ApplyCallbackFunc) error {
-	pctx := ctx.(*config.PluginContext)
-
-	cli, err := pctx.GCPComputeClient()
+	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Process operations.
-	for _, op := range ops {
-		plan, err := decodeManagedSSLPlan(op)
-		if err != nil {
-			return err
-		}
+	projectID := o.ProjectID.Wanted()
+	name := o.Name.Wanted()
+	domain := o.Domain.Wanted()
 
-		switch op.Operation {
-		case types.PlanOpDelete:
-			// Deletion.
-			oper, err := cli.SslCertificates.Delete(plan.ProjectID, plan.Name).Do()
-			if err != nil {
-				return err
-			}
-
-			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
-			if err != nil {
-				return err
-			}
-
-			callback(plugin_util.DeleteDesc(ManagedSSLName, plan.Name))
-
-		case types.PlanOpAdd:
-			// Creation.
-			oper, err := cli.SslCertificates.Insert(plan.ProjectID, &compute.SslCertificate{
-				Name: plan.Name,
-				Type: "MANAGED",
-				Managed: &compute.SslCertificateManagedSslCertificate{
-					Domains: []string{plan.Domain},
-				},
-			}).Do()
-			if err != nil {
-				return err
-			}
-
-			err = waitForGlobalOperation(cli, plan.ProjectID, oper.Name)
-			if err != nil {
-				return err
-			}
-
-			callback(plugin_util.AddDesc(ManagedSSLName, plan.Name))
-
-			_, err = cli.SslCertificates.Get(plan.ProjectID, plan.Name).Do()
-			if err != nil {
-				return err
-			}
-
-			o.Name = plan.Name
-			o.ProjectID = plan.ProjectID
-			o.Domain = plan.Domain
-
-		case types.PlanOpUpdate:
-			return fmt.Errorf("unimplemented")
-		}
+	oper, err := cli.SslCertificates.Insert(projectID, &compute.SslCertificate{
+		Name: name,
+		Type: "MANAGED",
+		Managed: &compute.SslCertificateManagedSslCertificate{
+			Domains: []string{domain},
+		},
+	}).Do()
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+}
+
+func (o *ManagedSSL) Update(ctx context.Context, meta interface{}) error {
+	return fmt.Errorf("unimplemented")
+}
+
+func (o *ManagedSSL) Delete(ctx context.Context, meta interface{}) error {
+	pctx := meta.(*config.PluginContext)
+
+	cli, err := pctx.GCPComputeClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	oper, err := cli.SslCertificates.Delete(o.ProjectID.Current(), o.Name.Current()).Do()
+	if err != nil {
+		return err
+	}
+
+	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }
