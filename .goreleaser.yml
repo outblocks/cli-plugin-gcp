@@ -1,15 +1,15 @@
-project_name: cli-gcp-plugin
+project_name: cli-plugin-gcp
 
 release:
   github:
     owner: outblocks
-    name: cli-gcp-plugin
+    name: cli-plugin-gcp
 
 before:
   hooks:
     - go mod download
 builds:
-  - binary: ok
+  - binary: gcp_plugin
     goos:
       - darwin
       - linux
@@ -35,8 +35,7 @@ builds:
     ldflags: -s -w -X internal.version.version={{.Version}} -X internal.version.gitCommit={{.ShortCommit}} -X internal.version.date={{.Date}}
 
 archives:
-  - name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    wrap_in_directory: true
+  - name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
     format_overrides:
       - goos: windows

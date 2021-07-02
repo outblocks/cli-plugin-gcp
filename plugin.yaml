@@ -1,7 +1,7 @@
 name: gcp
 author: outblocks
-usage: Preview helm upgrade changes as a diff
-description: Preview helm upgrade changes as a diff
+usage: GCP deploy plugin
+description: Deploy whole stack to Google Cloud Platform
 run: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin
 actions:
   - deploy
