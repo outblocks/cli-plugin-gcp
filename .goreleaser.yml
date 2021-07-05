@@ -20,19 +20,11 @@ builds:
       - arm64
       - arm
       - 386
-    goarm:
-      - 6
-      - 7
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: freebsd
-        goarch: arm64
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
-    ldflags: -s -w -X internal.version.version={{.Version}} -X internal.version.gitCommit={{.ShortCommit}} -X internal.version.date={{.Date}}
+    ldflags: -s -w
 
 archives:
   - name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
