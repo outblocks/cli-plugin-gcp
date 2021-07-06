@@ -37,10 +37,10 @@ archives:
       - plugin.yaml
 
 checksum:
-  name_template: '{{ .ProjectName }}-{{ .Version }}-checksums.txt'
+  name_template: "checksums.txt"
 
 snapshot:
-  name_template: SNAPSHOT-{{ .Commit }}
+  name_template: "{{ .Tag }}-snapshot"
 
 changelog:
   sort: asc
