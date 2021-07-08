@@ -37,7 +37,7 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 
 	attrs, err := cli.Bucket(o.Name.Any()).Attrs(ctx)
 	if err == storage.ErrBucketNotExist {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	}
@@ -48,7 +48,7 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 
 	isNew := o.IsNew()
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.Name.SetCurrent(attrs.Name)
 	o.Location.SetCurrent(strings.ToLower(attrs.Location))
 	o.Versioning.SetCurrent(attrs.VersioningEnabled)

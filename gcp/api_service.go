@@ -35,10 +35,10 @@ func (o *APIService) Read(ctx context.Context, meta interface{}) error {
 	}
 
 	if res.State != "ENABLED" {
-		o.SetNew(true)
+		o.MarkAsNew()
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.Name.SetCurrent(name)
 
 	return nil

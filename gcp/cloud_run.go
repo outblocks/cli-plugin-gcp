@@ -49,7 +49,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
 
 	svc, err := getRunService(cli, projectID, name)
 	if ErrIs404(err) {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	}
@@ -60,7 +60,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
 
 	isNew := o.IsNew()
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
 	o.Region.SetCurrent(region)

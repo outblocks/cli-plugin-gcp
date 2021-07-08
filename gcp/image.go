@@ -69,14 +69,14 @@ func (o *Image) Read(ctx context.Context, meta interface{}) error {
 
 	_, err = gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
 	if ErrIs404(err) {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("error fetching image status: %w", err)
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.Name.SetCurrent(name)
 	o.GCR.SetCurrent(gcr)
 	o.ProjectID.SetCurrent(projectID)
@@ -96,6 +96,11 @@ func (o *Image) Create(ctx context.Context, meta interface{}) error {
 	cli, err := pctx.DockerClient()
 	if err != nil {
 		return err
+	}
+
+	_, err = cli.Ping(ctx)
+	if err != nil {
+		return fmt.Errorf("docker is required for GCR image upload!\n%w", err)
 	}
 
 	reader, err := cli.ImagePull(ctx, GCSProxyDockerImage, dockertypes.ImagePullOptions{})

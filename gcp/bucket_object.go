@@ -59,7 +59,7 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 		return ret, nil
 	})
 	if err == storage.ErrBucketNotExist {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	}
@@ -70,12 +70,12 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 
 	attrs, ok := files.(map[string]*storage.ObjectAttrs)[o.Name.Any()]
 	if !ok {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.BucketName.SetCurrent(attrs.Bucket)
 	o.Name.SetCurrent(attrs.Name)
 	o.Hash.SetCurrent(hex.EncodeToString(attrs.MD5))

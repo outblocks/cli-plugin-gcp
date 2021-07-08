@@ -41,14 +41,14 @@ func (o *ServerlessNEG) Read(ctx context.Context, meta interface{}) error {
 
 	neg, err := cli.RegionNetworkEndpointGroups.Get(projectID, region, name).Do()
 	if ErrIs404(err) {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Region.SetCurrent(region)
 	o.Name.SetCurrent(name)

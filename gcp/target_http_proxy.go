@@ -9,26 +9,25 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-type TargetHTTPSProxy struct {
+type TargetHTTPProxy struct {
 	registry.ResourceBase
 
-	Name            fields.StringInputField `state:"force_new"`
-	ProjectID       fields.StringInputField `state:"force_new"`
-	URLMap          fields.StringInputField
-	SSLCertificates fields.ArrayInputField
+	Name      fields.StringInputField `state:"force_new"`
+	ProjectID fields.StringInputField `state:"force_new"`
+	URLMap    fields.StringInputField
 
 	Fingerprint string `state:"-"`
 }
 
-func (o *TargetHTTPSProxy) GetName() string {
+func (o *TargetHTTPProxy) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *TargetHTTPSProxy) ID() fields.StringInputField {
-	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpsProxies/%s", o.ProjectID, o.Name)
+func (o *TargetHTTPProxy) ID() fields.StringInputField {
+	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
 }
 
-func (o *TargetHTTPSProxy) Read(ctx context.Context, meta interface{}) error {
+func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -39,16 +38,16 @@ func (o *TargetHTTPSProxy) Read(ctx context.Context, meta interface{}) error {
 	projectID := o.ProjectID.Any()
 	name := o.Name.Any()
 
-	proxy, err := cli.TargetHttpsProxies.Get(projectID, name).Do()
+	proxy, err := cli.TargetHttpProxies.Get(projectID, name).Do()
 	if ErrIs404(err) {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
 	o.URLMap.SetCurrent(proxy.UrlMap)
@@ -58,7 +57,7 @@ func (o *TargetHTTPSProxy) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
+func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -67,8 +66,12 @@ func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
 	}
 
 	projectID := o.ProjectID.Wanted()
+	name := o.Name.Wanted()
 
-	oper, err := cli.TargetHttpsProxies.Insert(projectID, o.makeHTTPSProxy()).Do()
+	oper, err := cli.TargetHttpProxies.Insert(projectID, &compute.TargetHttpProxy{
+		Name:   name,
+		UrlMap: o.URLMap.Wanted(),
+	}).Do()
 	if err != nil {
 		return err
 	}
@@ -76,7 +79,7 @@ func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
 	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
+func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -89,7 +92,7 @@ func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
 
 	// Check fingerprint.
 	if o.Fingerprint == "" {
-		proxy, err := cli.TargetHttpsProxies.Get(projectID, name).Do()
+		proxy, err := cli.TargetHttpProxies.Get(projectID, name).Do()
 		if err != nil {
 			return err
 		}
@@ -97,7 +100,11 @@ func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
 		o.Fingerprint = proxy.Fingerprint
 	}
 
-	oper, err := cli.TargetHttpsProxies.Patch(projectID, name, o.makeHTTPSProxy()).Do()
+	oper, err := cli.TargetHttpProxies.Patch(projectID, name, &compute.TargetHttpProxy{
+		Name:        name,
+		UrlMap:      o.URLMap.Wanted(),
+		Fingerprint: o.Fingerprint,
+	}).Do()
 	if err != nil {
 		return err
 	}
@@ -105,22 +112,7 @@ func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
 	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPSProxy) makeHTTPSProxy() *compute.TargetHttpsProxy {
-	var certs []string
-
-	for _, cert := range o.SSLCertificates.Wanted() {
-		certs = append(certs, cert.(string))
-	}
-
-	return &compute.TargetHttpsProxy{
-		Name:            o.Name.Wanted(),
-		UrlMap:          o.URLMap.Wanted(),
-		SslCertificates: certs,
-		Fingerprint:     o.Fingerprint,
-	}
-}
-
-func (o *TargetHTTPSProxy) Delete(ctx context.Context, meta interface{}) error {
+func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	cli, err := pctx.GCPComputeClient(ctx)
@@ -128,7 +120,7 @@ func (o *TargetHTTPSProxy) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	oper, err := cli.TargetHttpsProxies.Delete(o.ProjectID.Current(), o.Name.Current()).Do()
+	oper, err := cli.TargetHttpProxies.Delete(o.ProjectID.Current(), o.Name.Current()).Do()
 	if err != nil {
 		return err
 	}

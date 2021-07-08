@@ -39,14 +39,14 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 
 	cert, err := cli.SslCertificates.Get(projectID, name).Do()
 	if ErrIs404(err) {
-		o.SetNew(true)
+		o.MarkAsNew()
 
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	o.SetNew(false)
+	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
 

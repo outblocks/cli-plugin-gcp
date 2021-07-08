@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
-	"github.com/outblocks/cli-plugin-gcp/deploy/gcp"
+	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -22,13 +22,13 @@ type PlanAction struct {
 	staticApps   []*deploy.StaticApp
 	loadBalancer *deploy.LoadBalancer
 
-	PluginMap         types.PluginStateMap
-	AppStates         map[string]*types.AppState
-	DependencyStates  map[string]*types.DependencyState
-	verify, fullCheck bool
+	PluginMap                  types.PluginStateMap
+	AppStates                  map[string]*types.AppState
+	DependencyStates           map[string]*types.DependencyState
+	verify, destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -61,6 +61,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		AppStates:        appStates,
 		DependencyStates: depStates,
 		verify:           verify,
+		destroy:          destroy,
 		fullCheck:        fullCheck,
 	}, nil
 }
@@ -145,9 +146,13 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 		}
 	}
 
-	diff, err := p.apiRegistry.Diff(ctx)
+	diff, err := p.apiRegistry.Diff(ctx, false)
 	if err != nil {
 		return err
+	}
+
+	if len(diff) != 0 {
+		p.log.Infoln("Enabling required Project Service APIs...")
 	}
 
 	err = p.apiRegistry.Apply(ctx, p.pluginCtx, diff, nil)
@@ -202,7 +207,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) err
 
 func (p *PlanAction) diff(ctx context.Context) (appPlanActions []*types.AppPlanActions, pluginPlanActions []*types.PluginPlanActions, err error) {
 	// Process diffs.
-	diff, err := p.registry.Diff(ctx)
+	diff, err := p.registry.Diff(ctx, p.destroy)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -300,20 +305,17 @@ func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, cb fu
 		return err
 	}
 
-	diff, err := p.registry.Diff(ctx)
+	diff, err := p.registry.Diff(ctx, p.destroy)
 	if err != nil {
 		return err
 	}
 
 	err = p.registry.Apply(ctx, p.pluginCtx, diff, cb)
+	saveErr := p.save()
+
 	if err != nil {
 		return err
 	}
 
-	err = p.save()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return saveErr
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/validate"
@@ -37,8 +38,10 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 	}
 
 	proj, err := crmCli.Projects.Get(p.Settings.ProjectID).Do()
-	if err != nil {
-		return nil, err
+	if gcp.ErrIs404(err) {
+		return nil, fmt.Errorf("project '%s' not found or caller lacks permissions", p.Settings.ProjectID)
+	} else if err != nil {
+		return nil, fmt.Errorf("error getting project '%s': %w", p.Settings.ProjectID, err)
 	}
 
 	p.Settings.ProjectNumber = proj.ProjectNumber
