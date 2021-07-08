@@ -2,7 +2,9 @@ name: gcp
 author: outblocks
 usage: GCP deploy plugin
 description: Deploy whole stack to Google Cloud Platform
-run: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin
+cmd:
+  default: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin
+  windows: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin.exe
 actions:
   - deploy
   - dns
