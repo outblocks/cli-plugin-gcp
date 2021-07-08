@@ -257,8 +257,9 @@ func (p *PlanAction) save() error {
 		}
 
 		state.DNS = &types.DNS{
-			IP:  p.loadBalancer.Addresses[0].IP.Current(),
-			URL: "https://" + app.App.URL,
+			IP:     p.loadBalancer.Addresses[0].IP.Current(),
+			URL:    "https://" + app.App.URL,
+			Manual: true,
 		}
 
 		p.AppStates[app.App.ID] = state
