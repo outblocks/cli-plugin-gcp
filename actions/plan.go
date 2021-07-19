@@ -250,6 +250,10 @@ func (p *PlanAction) save() error {
 
 	p.PluginMap["registry"] = data
 
+	if p.destroy {
+		return nil
+	}
+
 	for _, app := range p.staticApps {
 		state, ok := p.AppStates[app.App.ID]
 		if !ok {

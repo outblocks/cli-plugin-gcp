@@ -67,7 +67,6 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
-		IsPublic:   fields.Bool(true),
 	}
 
 	err := r.Register(o.Bucket, app.ID, "bucket")
@@ -87,6 +86,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 			Name:       fields.String(filePath),
 			Hash:       fields.String(hash),
 			Path:       filepath.Join(buildPath, filePath),
+			IsPublic:   fields.Bool(true),
 		}
 
 		err = r.Register(obj, app.ID, filePath)

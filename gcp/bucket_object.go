@@ -20,6 +20,7 @@ type BucketObject struct {
 	BucketName fields.StringInputField `state:"force_new"`
 	Name       fields.StringInputField `state:"force_new"`
 	Hash       fields.StringInputField
+	IsPublic   fields.BoolInputField
 
 	Path string `state:"-"`
 }
@@ -75,10 +76,19 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 		return nil
 	}
 
+	isPublic := false
+
+	for _, acl := range attrs.ACL {
+		if acl.Entity == storage.AllUsers && acl.Role == storage.RoleReader {
+			isPublic = true
+		}
+	}
+
 	o.MarkAsExisting()
 	o.BucketName.SetCurrent(attrs.Bucket)
 	o.Name.SetCurrent(attrs.Name)
 	o.Hash.SetCurrent(hex.EncodeToString(attrs.MD5))
+	o.IsPublic.SetCurrent(isPublic)
 
 	return nil
 }
@@ -97,6 +107,7 @@ func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 	}
 
 	w := cli.Bucket(o.BucketName.Wanted()).Object(o.Name.Wanted()).NewWriter(ctx)
+	w.ACL = []storage.ACLRule{{Entity: storage.AllUsers, Role: storage.RoleReader}}
 	_, err = io.Copy(w, file)
 	_ = file.Close()
 

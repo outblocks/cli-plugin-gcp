@@ -20,7 +20,6 @@ type Bucket struct {
 	Location   fields.StringInputField `state:"force_new"`
 	ProjectID  fields.StringInputField
 	Versioning fields.BoolInputField
-	IsPublic   fields.BoolInputField
 }
 
 func (o *Bucket) GetName() string {
@@ -46,16 +45,10 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 		return fmt.Errorf("error fetching bucket status: %w", err)
 	}
 
-	isNew := o.IsNew()
-
 	o.MarkAsExisting()
 	o.Name.SetCurrent(attrs.Name)
 	o.Location.SetCurrent(strings.ToLower(attrs.Location))
 	o.Versioning.SetCurrent(attrs.VersioningEnabled)
-
-	if isNew {
-		o.IsPublic.UnsetCurrent()
-	}
 
 	return nil
 }
@@ -70,10 +63,6 @@ func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 
 	attrs := &storage.BucketAttrs{Location: o.Location.Wanted(), VersioningEnabled: o.Versioning.Wanted()}
 
-	if o.IsPublic.Wanted() {
-		attrs.PredefinedACL = ACLPublicRead
-	}
-
 	return cli.Bucket(o.Name.Wanted()).Create(ctx, o.ProjectID.Wanted(), attrs)
 }
 
@@ -86,12 +75,6 @@ func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 	}
 
 	attrs := storage.BucketAttrsToUpdate{VersioningEnabled: o.Versioning.Wanted()}
-
-	if o.IsPublic.Wanted() {
-		attrs.PredefinedACL = ACLPublicRead
-	} else {
-		attrs.PredefinedACL = ACLProjectPrivate
-	}
 
 	_, err = cli.Bucket(o.Name.Wanted()).Update(ctx, attrs)
 
