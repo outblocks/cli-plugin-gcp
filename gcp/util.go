@@ -69,7 +69,7 @@ func ErrIs404(err error) bool {
 	return false
 }
 
-func waitForGlobalComputeOperation(cli *compute.Service, project, name string) error {
+func WaitForGlobalComputeOperation(cli *compute.Service, project, name string) error {
 	for {
 		op, err := cli.GlobalOperations.Wait(project, name).Do()
 		if err != nil {
@@ -82,7 +82,7 @@ func waitForGlobalComputeOperation(cli *compute.Service, project, name string) e
 	}
 }
 
-func waitForRegionComputeOperation(cli *compute.Service, project, region, name string) error {
+func WaitForRegionComputeOperation(cli *compute.Service, project, region, name string) error {
 	for {
 		op, err := cli.RegionOperations.Wait(project, region, name).Do()
 		if err != nil {
@@ -95,7 +95,7 @@ func waitForRegionComputeOperation(cli *compute.Service, project, region, name s
 	}
 }
 
-func waitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Operation) error {
+func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Operation) error {
 	if op.Done {
 		return nil
 	}
@@ -117,4 +117,18 @@ func waitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Op
 			return nil
 		}
 	}
+}
+
+func SplitURL(url string) (host, path string) {
+	urlSplit := strings.SplitN(url, "/", 2)
+
+	if len(urlSplit) == 2 {
+		path = urlSplit[1]
+	}
+
+	if path == "*" || path == "" {
+		path = "/*"
+	}
+
+	return urlSplit[0], path
 }

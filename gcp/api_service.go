@@ -57,7 +57,7 @@ func (o *APIService) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	err = waitForServiceUsageOperation(cli, op)
+	err = WaitForServiceUsageOperation(cli, op)
 	if err != nil {
 		return err
 	}

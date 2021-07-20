@@ -19,7 +19,7 @@ type PlanAction struct {
 	registry    *registry.Registry
 	appIDMap    map[string]*types.App
 
-	staticApps   []*deploy.StaticApp
+	staticApps   map[string]*deploy.StaticApp
 	loadBalancer *deploy.LoadBalancer
 
 	PluginMap                  types.PluginStateMap
@@ -79,14 +79,16 @@ func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.Static
 	return appDeploy, err
 }
 
-func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret []*deploy.StaticApp, err error) {
+func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret map[string]*deploy.StaticApp, err error) {
+	ret = make(map[string]*deploy.StaticApp, len(appPlans))
+
 	for _, plan := range appPlans {
 		app, err := p.planStaticAppDeploy(plan)
 		if err != nil {
 			return ret, err
 		}
 
-		ret = append(ret, app)
+		ret[app.App.ID] = app
 	}
 
 	return ret, nil

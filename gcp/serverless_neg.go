@@ -84,7 +84,7 @@ func (o *ServerlessNEG) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForRegionComputeOperation(cli, projectID, region, oper.Name)
+	return WaitForRegionComputeOperation(cli, projectID, region, oper.Name)
 }
 
 func (o *ServerlessNEG) Update(ctx context.Context, meta interface{}) error {
@@ -104,5 +104,5 @@ func (o *ServerlessNEG) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForRegionComputeOperation(cli, o.ProjectID.Current(), o.Region.Current(), oper.Name)
+	return WaitForRegionComputeOperation(cli, o.ProjectID.Current(), o.Region.Current(), oper.Name)
 }

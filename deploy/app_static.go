@@ -20,7 +20,8 @@ type StaticApp struct {
 	Image    *gcp.Image
 	CloudRun *gcp.CloudRun
 
-	App *types.App
+	App  *types.App
+	Opts *StaticAppOptions
 }
 
 type StaticAppArgs struct {
@@ -30,14 +31,27 @@ type StaticAppArgs struct {
 }
 
 func NewStaticApp(app *types.App) *StaticApp {
-	return &StaticApp{App: app}
+	opts := &StaticAppOptions{}
+	if err := opts.Decode(app.Properties); err != nil {
+		panic(err)
+	}
+
+	return &StaticApp{
+		App:  app,
+		Opts: opts,
+	}
 }
 
 type StaticAppOptions struct {
 	Build struct {
 		Dir string `mapstructure:"dir"`
 	} `mapstructure:"build"`
+
 	Routing string `mapstructure:"routing"`
+
+	CDN struct {
+		Enabled bool `mapstructure:"enabled"`
+	} `mapstructure:"cdn"`
 }
 
 func (o *StaticAppOptions) IsReactRouting() bool {
@@ -49,12 +63,7 @@ func (o *StaticAppOptions) Decode(in interface{}) error {
 }
 
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *types.App, c *StaticAppArgs, verify bool) error {
-	opts := &StaticAppOptions{}
-	if err := opts.Decode(app.Properties); err != nil {
-		return err
-	}
-
-	buildDir := filepath.Join(c.Path, opts.Build.Dir)
+	buildDir := filepath.Join(c.Path, o.Opts.Build.Dir)
 
 	buildPath, ok := pluginutil.CheckDir(buildDir)
 	if !ok {
@@ -114,7 +123,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 		"GCS_BUCKET": o.Bucket.Name,
 	}
 
-	if opts.IsReactRouting() {
+	if o.Opts.IsReactRouting() {
 		envVars["ERROR404"] = fields.String("index.html")
 		envVars["ERROR404_CODE"] = fields.String("200")
 	}

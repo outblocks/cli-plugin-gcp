@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -29,6 +28,8 @@ type BackendService struct {
 		MaxTTL     fields.IntInputField `default:"86400"`
 		ClientTTL  fields.IntInputField `default:"3600"`
 	}
+
+	Fingerprint string `state:"-"`
 }
 
 func (o *BackendService) GetName() string {
@@ -82,6 +83,8 @@ func (o *BackendService) Read(ctx context.Context, meta interface{}) error {
 		}
 	}
 
+	o.Fingerprint = svc.Fingerprint
+
 	return nil
 }
 
@@ -120,11 +123,55 @@ func (o *BackendService) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *BackendService) Update(ctx context.Context, meta interface{}) error {
-	return fmt.Errorf("unimplemented")
+	pctx := meta.(*config.PluginContext)
+
+	cli, err := pctx.GCPComputeClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	projectID := o.ProjectID.Current()
+	name := o.Name.Current()
+
+	// Check fingerprint.
+	if o.Fingerprint == "" {
+		svc, err := cli.BackendServices.Get(projectID, name).Do()
+		if err != nil {
+			return err
+		}
+
+		o.Fingerprint = svc.Fingerprint
+	}
+
+	oper, err := cli.BackendServices.Update(projectID, name, &compute.BackendService{
+		EnableCDN: o.CDN.Enabled.Wanted(),
+		CdnPolicy: &compute.BackendServiceCdnPolicy{
+			CacheMode: o.CDN.CacheMode.Wanted(),
+			CacheKeyPolicy: &compute.CacheKeyPolicy{
+				IncludeHost:        o.CDN.CacheKeyPolicy.IncludeHost.Wanted(),
+				IncludeProtocol:    o.CDN.CacheKeyPolicy.IncludeProtocol.Wanted(),
+				IncludeQueryString: o.CDN.CacheKeyPolicy.IncludeQueryString.Wanted(),
+			},
+			DefaultTtl: int64(o.CDN.DefaultTTL.Wanted()),
+			MaxTtl:     int64(o.CDN.MaxTTL.Wanted()),
+			ClientTtl:  int64(o.CDN.ClientTTL.Wanted()),
+		},
+		Backends: []*compute.Backend{
+			{
+				Group: o.NEG.Wanted(),
+			},
+		},
+		Fingerprint: o.Fingerprint,
+	}).Do()
+	if err != nil {
+		return err
+	}
+
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *BackendService) Delete(ctx context.Context, meta interface{}) error {
@@ -140,5 +187,5 @@ func (o *BackendService) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
+	return WaitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }

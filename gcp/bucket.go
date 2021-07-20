@@ -50,6 +50,9 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	o.Location.SetCurrent(strings.ToLower(attrs.Location))
 	o.Versioning.SetCurrent(attrs.VersioningEnabled)
 
+	// Cannot check project ID, assume that it is in correct project ID always.
+	o.ProjectID.SetCurrent(o.ProjectID.Wanted())
+
 	return nil
 }
 
@@ -109,7 +112,7 @@ func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 		todel = append(todel, attrs)
 	}
 
-	g, _ := errgroup.WithConcurrency(ctx, defaultConcurrency)
+	g, _ := errgroup.WithConcurrency(ctx, DefaultConcurrency)
 
 	for _, d := range todel {
 		d := d

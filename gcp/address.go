@@ -68,7 +68,7 @@ func (o *Address) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	err = waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	err = WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 	if err != nil {
 		return err
 	}
@@ -100,5 +100,5 @@ func (o *Address) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
+	return WaitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }

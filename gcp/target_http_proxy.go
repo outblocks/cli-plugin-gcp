@@ -76,7 +76,7 @@ func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
@@ -109,7 +109,7 @@ func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
@@ -125,5 +125,5 @@ func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
+	return WaitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }

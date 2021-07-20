@@ -31,12 +31,13 @@ func NewLoadBalancer() *LoadBalancer {
 	return &LoadBalancer{}
 }
 
-func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static []*StaticApp, c *LoadBalancerArgs, verify bool) error {
+func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, c *LoadBalancerArgs, verify bool) error {
 	if len(static) == 0 {
 		return nil
 	}
 
 	lbID := gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name)
+	staticApps := make([]*StaticApp, 0, len(static))
 
 	// IP Address.
 	addr := &gcp.Address{
@@ -57,6 +58,8 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	for _, app := range static {
 		domain := strings.SplitN(app.App.URL, "/", 2)[0]
 		domains[domain] = struct{}{}
+
+		staticApps = append(staticApps, app)
 	}
 
 	// Sort domains to make sure state remains the same.
@@ -107,7 +110,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 			NEG:       neg.ID(),
 		}
 
-		svc.CDN.Enabled = fields.Bool(true)
+		svc.CDN.Enabled = fields.Bool(app.Opts.CDN.Enabled)
 
 		err = r.Register(svc, LoadBalancerName, app.App.ID)
 		if err != nil {
@@ -133,6 +136,15 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	}
 
 	err = r.Register(m, LoadBalancerName, lbID+"-0")
+	if err != nil {
+		return err
+	}
+
+	err = r.Register(&CacheInvalidate{
+		URLMapName: m.Name,
+		ProjectID:  fields.String(c.ProjectID),
+		StaticApps: staticApps,
+	}, LoadBalancerName, lbID)
 	if err != nil {
 		return err
 	}

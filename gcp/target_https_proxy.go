@@ -73,7 +73,7 @@ func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
@@ -102,7 +102,7 @@ func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *TargetHTTPSProxy) makeHTTPSProxy() *compute.TargetHttpsProxy {
@@ -133,5 +133,5 @@ func (o *TargetHTTPSProxy) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
+	return WaitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }

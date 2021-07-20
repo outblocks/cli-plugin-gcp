@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"sort"
-	"strings"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -95,7 +94,7 @@ func (o *URLMap) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *URLMap) Update(ctx context.Context, meta interface{}) error {
@@ -124,7 +123,7 @@ func (o *URLMap) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, projectID, oper.Name)
+	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
 func (o *URLMap) Delete(ctx context.Context, meta interface{}) error {
@@ -140,7 +139,7 @@ func (o *URLMap) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return waitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
+	return WaitForGlobalComputeOperation(cli, o.ProjectID.Current(), oper.Name)
 }
 
 type URLMapping struct {
@@ -157,7 +156,7 @@ func cleanupURLMapping(m map[string]interface{}) []*URLMapping {
 	hmap := make(map[string][]*URLPathMatcher)
 
 	for k, v := range m {
-		host, path := splitURL(k)
+		host, path := SplitURL(k)
 		hmap[host] = append(hmap[host], &URLPathMatcher{
 			Paths:     []string{path},
 			ServiceID: v.(string),
@@ -250,18 +249,4 @@ func (o *URLMap) makeURLMap() *compute.UrlMap {
 	}
 
 	return urlMap
-}
-
-func splitURL(url string) (host, path string) {
-	urlSplit := strings.SplitN(url, "/", 2)
-
-	if len(urlSplit) == 2 {
-		path = urlSplit[1]
-	}
-
-	if path == "*" || path == "" {
-		path = "/*"
-	}
-
-	return urlSplit[0], path
 }
