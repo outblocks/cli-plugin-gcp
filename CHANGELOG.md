@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.5](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.4...v0.1.5)
+
+> 2021-07-20
+
+### FEATURES
+
+[`e1443f3`](https://github.com/outblocks/cli-plugin-gcp/commit/e1443f3a72a7f1887395fcab8b8af1fcffe31ae9) cache invalidate
+
+
 ## [v0.1.4](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.3...v0.1.4)
 
 > 2021-07-19
