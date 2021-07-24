@@ -16,6 +16,7 @@ type URLMap struct {
 	Name       fields.StringInputField `state:"force_new"`
 	ProjectID  fields.StringInputField `state:"force_new"`
 	URLMapping fields.MapInputField
+	AppMapping fields.MapInputField
 
 	Fingerprint string `state:"-"`
 }

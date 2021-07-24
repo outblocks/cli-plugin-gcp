@@ -32,7 +32,7 @@ func (o *CacheInvalidate) SkipState() bool {
 
 func anyFileChanged(files []*gcp.BucketObject) bool {
 	for _, f := range files {
-		if f.Hash.IsChanged() {
+		if f.Hash.IsChanged() && !f.IsNew() {
 			return true
 		}
 	}

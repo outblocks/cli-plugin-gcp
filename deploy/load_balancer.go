@@ -86,6 +86,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	}
 
 	urlMap := make(map[string]fields.Field)
+	appMap := make(map[string]fields.Field)
 
 	for _, app := range static {
 		// Serverless NEGs.
@@ -126,6 +127,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		}
 
 		urlMap[url] = svc.ID()
+		appMap[app.App.URL] = fields.String(app.App.ID)
 	}
 
 	// URL Map.
@@ -133,6 +135,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		Name:       fields.String(lbID + "-0"),
 		ProjectID:  fields.String(c.ProjectID),
 		URLMapping: fields.Map(urlMap),
+		AppMapping: fields.Map(appMap),
 	}
 
 	err = r.Register(m, LoadBalancerName, lbID+"-0")

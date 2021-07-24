@@ -74,3 +74,13 @@ func PartialMapCompare(m1, m2 map[string]string, keys []string) bool {
 func BoolPtr(b bool) *bool {
 	return &b
 }
+
+func StringSliceContains(arr []string, s string) bool {
+	for _, v := range arr {
+		if v == s {
+			return true
+		}
+	}
+
+	return false
+}

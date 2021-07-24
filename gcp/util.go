@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	"github.com/outblocks/outblocks-plugin-go/registry"
+	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/serviceusage/v1"
@@ -96,6 +97,30 @@ func WaitForRegionComputeOperation(cli *compute.Service, project, region, name s
 }
 
 func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Operation) error {
+	if op.Done {
+		return nil
+	}
+
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+
+	var err error
+
+	for {
+		op, err = cli.Operations.Get(op.Name).Do()
+		if err != nil {
+			return err
+		}
+
+		<-t.C
+
+		if op.Done {
+			return nil
+		}
+	}
+}
+
+func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op *cloudresourcemanager.Operation) error {
 	if op.Done {
 		return nil
 	}

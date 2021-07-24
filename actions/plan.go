@@ -256,19 +256,24 @@ func (p *PlanAction) save() error {
 		return nil
 	}
 
-	for _, app := range p.staticApps {
-		state, ok := p.AppStates[app.App.ID]
+	curMapping := p.loadBalancer.URLMaps[0].AppMapping.Current()
+
+	for url, appID := range curMapping {
+		id := appID.(string)
+
+		state, ok := p.AppStates[id]
 		if !ok {
+			app := p.staticApps[id]
 			state = types.NewAppState(app.App)
 		}
 
 		state.DNS = &types.DNS{
 			IP:     p.loadBalancer.Addresses[0].IP.Current(),
-			URL:    "https://" + app.App.URL,
+			URL:    "https://" + url,
 			Manual: true,
 		}
 
-		p.AppStates[app.App.ID] = state
+		p.AppStates[id] = state
 	}
 
 	return nil
