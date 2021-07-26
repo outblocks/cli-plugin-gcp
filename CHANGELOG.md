@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.6](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.5...v0.1.6)
+
+> 2021-07-24
+
+### FEATURES
+
+[`3efcaae`](https://github.com/outblocks/cli-plugin-gcp/commit/3efcaae5835dd0cd90451d7b97bc321cc3a574f9) init fix: app mapping
+
+
 ## [v0.1.5](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.4...v0.1.5)
 
 > 2021-07-20
