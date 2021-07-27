@@ -89,7 +89,7 @@ func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, 
 		return fmt.Errorf("error creating cloud resource manager client: %w", err)
 	}
 
-	if v, ok := r.Args["project"]; ok {
+	if v, ok := r.Args["project"]; ok && v != "" {
 		// Check project from args.
 		project = v.(string)
 
@@ -107,7 +107,7 @@ func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, 
 		}
 	}
 
-	if v, ok := r.Args["region"]; ok {
+	if v, ok := r.Args["region"]; ok && v != "" {
 		// Check region from args.
 		region = strings.ToLower(v.(string))
 
