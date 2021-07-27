@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.8](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.7...v0.1.8)
+
+> 2021-07-27
+
+### FEATURES
+
+[`6929a51`](https://github.com/outblocks/cli-plugin-gcp/commit/6929a5120b3efd08d8e9b30e69c6ad1f12798fe3) show project name and id during init
+
+
 ## [v0.1.7](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.6...v0.1.7)
 
 > 2021-07-27
