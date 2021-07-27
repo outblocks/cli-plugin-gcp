@@ -1,8 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.7](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.6...v0.1.7)
+
+> 2021-07-27
+
+### BUG FIXES
+
+[`fe7d741`](https://github.com/outblocks/cli-plugin-gcp/commit/fe7d741ab4cbb7172b9eb22d5c17f6d7a0bbe4bd) init with args
+
+
 ## [v0.1.6](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.5...v0.1.6)
 
-> 2021-07-24
+> 2021-07-26
 
 ### FEATURES
 
