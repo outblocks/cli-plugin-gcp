@@ -52,7 +52,7 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 
 	projects, _ := crmCli.Projects.List().Do()
 	for _, proj := range projects.Projects {
-		projOptions = append(projOptions, proj.Name)
+		projOptions = append(projOptions, fmt.Sprintf("%s (%s)", proj.ProjectId, proj.Name))
 	}
 
 	if len(projOptions) > 0 {
@@ -71,7 +71,7 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 		return "", err
 	}
 
-	return res.(*plugin_go.PromptInputAnswer).Answer, nil
+	return strings.SplitN(res.(*plugin_go.PromptInputAnswer).Answer, " ", 2)[0], nil
 }
 
 func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, stream *plugin_go.ReceiverStream) error {
