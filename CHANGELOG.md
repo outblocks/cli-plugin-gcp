@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.9](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.8...v0.1.9)
+
+> 2021-08-01
+
+### BUG FIXES
+
+[`e9585a4`](https://github.com/outblocks/cli-plugin-gcp/commit/e9585a489c4c6aa6cf53992a676ace2c4fe25de4) init for missing projects
+
+
 ## [v0.1.8](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.7...v0.1.8)
 
 > 2021-07-27
