@@ -50,12 +50,12 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 
 	var projOptions []string
 
-	projects, _ := crmCli.Projects.List().Do()
-	for _, proj := range projects.Projects {
-		projOptions = append(projOptions, fmt.Sprintf("%s (%s)", proj.ProjectId, proj.Name))
-	}
+	projRes, _ := crmCli.Projects.List().Do()
+	if projRes != nil && len(projRes.Projects) > 0 {
+		for _, proj := range projRes.Projects {
+			projOptions = append(projOptions, fmt.Sprintf("%s (%s)", proj.ProjectId, proj.Name))
+		}
 
-	if len(projOptions) > 0 {
 		_ = stream.Send(&plugin_go.PromptSelect{
 			Message: "GCP Project to use:",
 			Options: projOptions,
