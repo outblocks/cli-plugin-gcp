@@ -124,8 +124,8 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 	}
 
 	envVars := map[string]fields.Field{
-		"GCS_BUCKET":       o.Bucket.Name,
-		"REWRITE_TO_HTTPS": fields.String("1"),
+		"GCS_BUCKET":  o.Bucket.Name,
+		"FORCE_HTTPS": fields.String("1"),
 	}
 
 	if o.Opts.IsReactRouting() {
