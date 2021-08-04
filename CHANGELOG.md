@@ -1,5 +1,18 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.10](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.9...v0.1.10)
+
+> 2021-08-04
+
+### BUG FIXES
+
+[`f82f9ab`](https://github.com/outblocks/cli-plugin-gcp/commit/f82f9ab2350beea38fbe6ef5b6311c457a13bcb4) force https
+
+### FEATURES
+
+[`0aed870`](https://github.com/outblocks/cli-plugin-gcp/commit/0aed8707796d25cac120518252c8c3e86b964c69) content type on buckets, cloud run deletions fix, url cleanup, new nginx image
+
+
 ## [v0.1.9](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.8...v0.1.9)
 
 > 2021-08-01
