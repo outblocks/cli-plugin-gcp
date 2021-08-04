@@ -269,7 +269,7 @@ func (p *PlanAction) save() error {
 
 		state.DNS = &types.DNS{
 			IP:     p.loadBalancer.Addresses[0].IP.Current(),
-			URL:    "https://" + url,
+			URL:    url,
 			Manual: true,
 		}
 

@@ -50,7 +50,7 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 
 	var projOptions []string
 
-	projRes, _ := crmCli.Projects.List().Do()
+	projRes, err := crmCli.Projects.List().Do()
 	if projRes != nil && len(projRes.Projects) > 0 {
 		for _, proj := range projRes.Projects {
 			projOptions = append(projOptions, fmt.Sprintf("%s (%s)", proj.ProjectId, proj.Name))
@@ -61,6 +61,19 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 			Options: projOptions,
 		})
 	} else {
+		if err == nil {
+			_ = stream.Send(&plugin_go.MessageResponse{
+				Message:  "Cannot find any existing projects! Specify GCP project manually.",
+				LogLevel: plugin_go.MessageLogLevelWarn,
+			})
+		} else {
+			_ = stream.Send(&plugin_go.MessageResponse{
+				Message:  "Cannot list existing projects! Make sure you have 'gcloud' set up and authorized. You still can specify GCP project manually.",
+				LogLevel: plugin_go.MessageLogLevelWarn,
+			})
+
+		}
+
 		_ = stream.Send(&plugin_go.PromptInput{
 			Message: "GCP Project to use:",
 		})
@@ -79,7 +92,7 @@ func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, 
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return fmt.Errorf("error getting google credentials, did you install and set up gcloud?")
+		return fmt.Errorf("error getting google credentials, did you install and set up 'gcloud'?")
 	}
 
 	p.gcred = cred

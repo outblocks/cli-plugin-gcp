@@ -163,9 +163,15 @@ func (o *CloudRun) Delete(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	_, err = deleteRunService(cli, o.ProjectID.Current(), o.Name.Current())
+	projectID := o.ProjectID.Current()
+	name := o.Name.Current()
 
-	return err
+	_, err = deleteRunService(cli, projectID, name)
+	if err != nil {
+		return err
+	}
+
+	return waitForRunServiceDeleted(ctx, cli, projectID, name)
 }
 
 func (o *CloudRun) makeRunService() *run.Service {
@@ -275,6 +281,27 @@ func waitForRunServiceReady(ctx context.Context, cli *run.APIService, project, n
 							c.Status, c.Reason, c.Message)
 					}
 				}
+			}
+		}
+	}
+}
+
+func waitForRunServiceDeleted(ctx context.Context, cli *run.APIService, project, name string) error {
+	t := time.NewTicker(time.Second * 5)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			_, err := getRunService(cli, project, name)
+			if ErrIs404(err) {
+				return nil
+			}
+
+			if err != nil {
+				return fmt.Errorf("failed to query service for readiness: %w", err)
 			}
 		}
 	}

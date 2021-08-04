@@ -17,10 +17,11 @@ import (
 type BucketObject struct {
 	registry.ResourceBase
 
-	BucketName fields.StringInputField `state:"force_new"`
-	Name       fields.StringInputField `state:"force_new"`
-	Hash       fields.StringInputField
-	IsPublic   fields.BoolInputField
+	BucketName  fields.StringInputField `state:"force_new"`
+	ContentType fields.StringInputField
+	Name        fields.StringInputField `state:"force_new"`
+	Hash        fields.StringInputField
+	IsPublic    fields.BoolInputField
 
 	Path string `state:"-"`
 }
@@ -87,6 +88,7 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 	o.MarkAsExisting()
 	o.BucketName.SetCurrent(attrs.Bucket)
 	o.Name.SetCurrent(attrs.Name)
+	o.ContentType.SetCurrent(attrs.ContentType)
 	o.Hash.SetCurrent(hex.EncodeToString(attrs.MD5))
 	o.IsPublic.SetCurrent(isPublic)
 
@@ -107,6 +109,11 @@ func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 	}
 
 	w := cli.Bucket(o.BucketName.Wanted()).Object(o.Name.Wanted()).NewWriter(ctx)
+
+	if o.ContentType.Wanted() != "" {
+		w.ContentType = o.ContentType.Wanted()
+	}
+
 	w.ACL = []storage.ACLRule{{Entity: storage.AllUsers, Role: storage.RoleReader}}
 	_, err = io.Copy(w, file)
 	_ = file.Close()

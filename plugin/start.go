@@ -27,7 +27,7 @@ func (p *Plugin) Start(ctx context.Context, r *plugin_go.StartRequest) (plugin_g
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return nil, fmt.Errorf("error getting google credentials, did you install and set up gcloud?")
+		return nil, fmt.Errorf("error getting google credentials, did you install and set up 'gcloud'?")
 	}
 
 	p.gcred = cred

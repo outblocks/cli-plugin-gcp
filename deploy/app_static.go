@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"mime"
 	"path/filepath"
 	"strings"
 
@@ -90,12 +91,15 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 	}
 
 	for filePath, hash := range files {
+		path := filepath.Join(buildPath, filePath)
+
 		obj := &gcp.BucketObject{
-			BucketName: o.Bucket.Name,
-			Name:       fields.String(filePath),
-			Hash:       fields.String(hash),
-			Path:       filepath.Join(buildPath, filePath),
-			IsPublic:   fields.Bool(true),
+			BucketName:  o.Bucket.Name,
+			Name:        fields.String(filePath),
+			Hash:        fields.String(hash),
+			Path:        path,
+			IsPublic:    fields.Bool(true),
+			ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
 		}
 
 		err = r.Register(obj, app.ID, filePath)
@@ -114,13 +118,14 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 		Source:    fields.String(gcp.GCSProxyDockerImage),
 	}
 
-	err = r.Register(o.Image, CommonName, "proxy")
+	err = r.Register(o.Image, CommonName, gcp.GCSProxyImageName)
 	if err != nil {
 		return err
 	}
 
 	envVars := map[string]fields.Field{
-		"GCS_BUCKET": o.Bucket.Name,
+		"GCS_BUCKET":       o.Bucket.Name,
+		"REWRITE_TO_HTTPS": fields.String("1"),
 	}
 
 	if o.Opts.IsReactRouting() {

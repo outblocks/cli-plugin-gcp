@@ -23,7 +23,7 @@ type Image struct {
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
 	GCR       fields.StringInputField `state:"force_new"`
-	Source    fields.StringInputField `state:"force_new"`
+	Source    fields.StringInputField
 }
 
 func (o *Image) GetName() string {
@@ -86,6 +86,14 @@ func (o *Image) Read(ctx context.Context, meta interface{}) error {
 }
 
 func (o *Image) Create(ctx context.Context, meta interface{}) error {
+	return o.push(ctx, meta)
+}
+
+func (o *Image) Update(ctx context.Context, meta interface{}) error {
+	return o.push(ctx, meta)
+}
+
+func (o *Image) push(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
 	token, err := pctx.GoogleCredentials().TokenSource.Token()
@@ -153,10 +161,6 @@ func (o *Image) Create(ctx context.Context, meta interface{}) error {
 	}
 
 	return reader.Close()
-}
-
-func (o *Image) Update(ctx context.Context, meta interface{}) error {
-	return fmt.Errorf("unimplemented")
 }
 
 func (o *Image) Delete(ctx context.Context, meta interface{}) error {

@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"context"
-	"strings"
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -80,10 +79,6 @@ func (o *CacheInvalidate) Process(ctx context.Context, meta interface{}) error {
 
 	for _, app := range o.changedStaticApps {
 		host, path := gcp.SplitURL(app.App.URL)
-
-		if strings.HasSuffix(path, "/") {
-			path += "*"
-		}
 
 		g.Go(func() error {
 			oper, err := cli.UrlMaps.InvalidateCache(projectID, urlMap, &compute.CacheInvalidationRule{

@@ -145,6 +145,11 @@ func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op 
 }
 
 func SplitURL(url string) (host, path string) {
+	split := strings.SplitN(url, "://", 2)
+	if len(split) == 2 {
+		url = split[1]
+	}
+
 	urlSplit := strings.SplitN(url, "/", 2)
 
 	if len(urlSplit) == 2 {

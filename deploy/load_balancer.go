@@ -1,8 +1,8 @@
 package deploy
 
 import (
+	"net/url"
 	"sort"
-	"strings"
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -56,8 +56,8 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	domains := make(map[string]struct{})
 
 	for _, app := range static {
-		domain := strings.SplitN(app.App.URL, "/", 2)[0]
-		domains[domain] = struct{}{}
+		u, _ := url.Parse(app.App.URL)
+		domains[u.Hostname()] = struct{}{}
 
 		staticApps = append(staticApps, app)
 	}
@@ -121,12 +121,9 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		o.BackendServices = append(o.BackendServices, svc)
 
 		// URL Mapping.
-		url := app.App.URL
-		if strings.Count(url, "/") == 1 {
-			url += "*"
-		}
+		host, path := gcp.SplitURL(app.App.URL)
 
-		urlMap[url] = svc.ID()
+		urlMap[host+path] = svc.ID()
 		appMap[app.App.URL] = fields.String(app.App.ID)
 	}
 
