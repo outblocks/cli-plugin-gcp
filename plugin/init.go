@@ -71,7 +71,6 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 				Message:  "Cannot list existing projects! Make sure you have 'gcloud' set up and authorized. You still can specify GCP project manually.",
 				LogLevel: plugin_go.MessageLogLevelWarn,
 			})
-
 		}
 
 		_ = stream.Send(&plugin_go.PromptInput{
