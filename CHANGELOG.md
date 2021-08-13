@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.11](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.10...v0.1.11)
+
+> 2021-08-13
+
+### FEATURES
+
+[`c27dbb9`](https://github.com/outblocks/cli-plugin-gcp/commit/c27dbb98e8b4578f4eb1f2cb158caed8722cc3e3) path redirect and ssl info
+
+
 ## [v0.1.10](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.9...v0.1.10)
 
 > 2021-08-04
