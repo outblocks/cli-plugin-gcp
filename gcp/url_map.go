@@ -64,11 +64,23 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 	for _, hr := range obj.HostRules {
 		for _, host := range hr.Hosts {
 			pm := pathMatchersMap[hr.PathMatcher]
-			urlMap[host+"/*"] = pm.DefaultService
+			pathRedirect := ""
+
+			if pm.DefaultRouteAction != nil && pm.DefaultRouteAction.UrlRewrite != nil {
+				pathRedirect = pm.DefaultRouteAction.UrlRewrite.PathPrefixRewrite
+			}
+
+			urlMap[host+"/*"] = map[string]interface{}{
+				URLPathMatcherServiceIDKey:         pm.DefaultService,
+				URLPathMatcherPathPrefixRewriteKey: pathRedirect,
+			}
 
 			for _, pr := range pm.PathRules {
 				for _, p := range pr.Paths {
-					urlMap[host+p] = pr.Service
+					urlMap[host+p] = map[string]interface{}{
+						URLPathMatcherServiceIDKey:         pr.Service,
+						URLPathMatcherPathPrefixRewriteKey: pathRedirect,
+					}
 				}
 			}
 		}
@@ -149,18 +161,27 @@ type URLMapping struct {
 }
 
 type URLPathMatcher struct {
-	Paths     []string
-	ServiceID string
+	Paths             []string
+	ServiceID         string
+	PathPrefixRewrite string
 }
+
+const (
+	URLPathMatcherServiceIDKey         = "service_id"
+	URLPathMatcherPathPrefixRewriteKey = "path_redirect"
+)
 
 func cleanupURLMapping(m map[string]interface{}) []*URLMapping {
 	hmap := make(map[string][]*URLPathMatcher)
 
 	for k, v := range m {
 		host, path := SplitURL(k)
+		valMap := v.(map[string]interface{})
+
 		hmap[host] = append(hmap[host], &URLPathMatcher{
-			Paths:     []string{path},
-			ServiceID: v.(string),
+			Paths:             []string{path},
+			ServiceID:         valMap[URLPathMatcherServiceIDKey].(string),
+			PathPrefixRewrite: valMap[URLPathMatcherPathPrefixRewriteKey].(string),
 		})
 	}
 
@@ -226,8 +247,7 @@ func (o *URLMap) makeURLMap() *compute.UrlMap {
 		})
 
 		pathMatcher := &compute.PathMatcher{
-			Name:           ID(name, projectID, host),
-			DefaultService: matcher.PathMatcher[0].ServiceID,
+			Name: ID(name, projectID, host),
 		}
 
 		urlMap.PathMatchers = append(urlMap.PathMatchers, pathMatcher)
@@ -235,12 +255,23 @@ func (o *URLMap) makeURLMap() *compute.UrlMap {
 		for _, m := range matcher.PathMatcher {
 			if len(m.Paths) == 1 && m.Paths[0] == "/*" {
 				pathMatcher.DefaultService = m.ServiceID
+				pathMatcher.DefaultRouteAction = &compute.HttpRouteAction{
+					UrlRewrite: &compute.UrlRewrite{
+						PathPrefixRewrite: m.PathPrefixRewrite,
+					},
+				}
+
 				continue
 			}
 
 			pathMatcher.PathRules = append(pathMatcher.PathRules, &compute.PathRule{
 				Paths:   m.Paths,
 				Service: m.ServiceID,
+				RouteAction: &compute.HttpRouteAction{
+					UrlRewrite: &compute.UrlRewrite{
+						PathPrefixRewrite: m.PathPrefixRewrite,
+					},
+				},
 			})
 		}
 	}

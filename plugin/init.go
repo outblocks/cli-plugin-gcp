@@ -7,8 +7,8 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	"github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 )

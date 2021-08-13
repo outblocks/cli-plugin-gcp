@@ -11,14 +11,15 @@ import (
 )
 
 type LoadBalancer struct {
-	Addresses          []*gcp.Address
-	ManagedSSLs        []*gcp.ManagedSSL
-	ServerlessNEGs     []*gcp.ServerlessNEG
-	BackendServices    []*gcp.BackendService
-	URLMaps            []*gcp.URLMap
-	TargetHTTPProxies  []*gcp.TargetHTTPProxy
-	TargetHTTPSProxies []*gcp.TargetHTTPSProxy
-	ForwardingRules    []*gcp.ForwardingRule
+	Addresses           []*gcp.Address
+	ManagedSSLs         []*gcp.ManagedSSL
+	ManagedSSLDomainMap map[string]*gcp.ManagedSSL
+	ServerlessNEGs      []*gcp.ServerlessNEG
+	BackendServices     []*gcp.BackendService
+	URLMaps             []*gcp.URLMap
+	TargetHTTPProxies   []*gcp.TargetHTTPProxy
+	TargetHTTPSProxies  []*gcp.TargetHTTPSProxy
+	ForwardingRules     []*gcp.ForwardingRule
 }
 
 type LoadBalancerArgs struct {
@@ -28,7 +29,9 @@ type LoadBalancerArgs struct {
 }
 
 func NewLoadBalancer() *LoadBalancer {
-	return &LoadBalancer{}
+	return &LoadBalancer{
+		ManagedSSLDomainMap: make(map[string]*gcp.ManagedSSL),
+	}
 }
 
 func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, c *LoadBalancerArgs, verify bool) error {
@@ -74,7 +77,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		cert := &gcp.ManagedSSL{
 			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, domain)),
 			ProjectID: fields.String(c.ProjectID),
-			Domain:    fields.String(domain),
+			Domains:   fields.Array([]fields.Field{fields.String(domain)}),
 		}
 
 		err := r.Register(cert, LoadBalancerName, domain)
@@ -83,6 +86,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		}
 
 		o.ManagedSSLs = append(o.ManagedSSLs, cert)
+		o.ManagedSSLDomainMap[domain] = cert
 	}
 
 	urlMap := make(map[string]fields.Field)
@@ -123,7 +127,10 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		// URL Mapping.
 		host, path := gcp.SplitURL(app.App.URL)
 
-		urlMap[host+path] = svc.ID()
+		urlMap[host+path] = fields.Map(map[string]fields.Field{
+			gcp.URLPathMatcherServiceIDKey:         svc.ID(),
+			gcp.URLPathMatcherPathPrefixRewriteKey: fields.String(app.App.PathRedirect),
+		})
 		appMap[app.App.URL] = fields.String(app.App.ID)
 	}
 

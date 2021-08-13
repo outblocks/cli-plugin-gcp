@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
@@ -202,6 +203,14 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) err
 		if err != nil {
 			return err
 		}
+	} else {
+		// Read all SSL status if they were not checked already.
+		for _, ssl := range p.loadBalancer.ManagedSSLs {
+			err = ssl.Read(ctx, p.pluginCtx)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -258,7 +267,7 @@ func (p *PlanAction) save() error {
 
 	curMapping := p.loadBalancer.URLMaps[0].AppMapping.Current()
 
-	for url, appID := range curMapping {
+	for mapURL, appID := range curMapping {
 		id := appID.(string)
 
 		state, ok := p.AppStates[id]
@@ -267,10 +276,36 @@ func (p *PlanAction) save() error {
 			state = types.NewAppState(app.App)
 		}
 
+		u, _ := url.Parse(mapURL)
+		domain := u.Hostname()
+
+		ssl := p.loadBalancer.ManagedSSLDomainMap[domain]
+		sslStatus := types.SSLStatusUnknown
+		sslStatusInfo := ""
+
+		if ssl != nil {
+			switch ssl.Status.Current() {
+			case "ACTIVE":
+				sslStatus = types.SSLStatusOK
+			case "PROVISIONING":
+				sslStatus = types.SSLStatusProvisioning
+			case "PROVISIONING_FAILED", "PROVISIONING_FAILED_PERMANENTLY":
+				sslStatus = types.SSLStatusProvisioningFailed
+			case "RENEWAL_FAILED":
+				sslStatus = types.SSLStatusRenewalFailed
+			}
+
+			if v, ok := ssl.DomainStatus.Current()[domain]; ok {
+				sslStatusInfo = v.(string)
+			}
+		}
+
 		state.DNS = &types.DNS{
-			IP:     p.loadBalancer.Addresses[0].IP.Current(),
-			URL:    url,
-			Manual: true,
+			IP:            p.loadBalancer.Addresses[0].IP.Current(),
+			URL:           mapURL,
+			Manual:        true,
+			SSLStatus:     sslStatus,
+			SSLStatusInfo: sslStatusInfo,
 		}
 
 		p.AppStates[id] = state

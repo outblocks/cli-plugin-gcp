@@ -13,13 +13,15 @@ import (
 type ManagedSSL struct {
 	registry.ResourceBase
 
-	Name      fields.StringInputField `state:"force_new"`
-	ProjectID fields.StringInputField `state:"force_new"`
-	Domain    fields.StringInputField `state:"force_new"`
+	Name         fields.StringInputField `state:"force_new"`
+	ProjectID    fields.StringInputField `state:"force_new"`
+	Domains      fields.ArrayInputField  `state:"force_new"`
+	Status       fields.StringOutputField
+	DomainStatus fields.MapOutputField
 }
 
 func (o *ManagedSSL) GetName() string {
-	return o.Domain.Any()
+	return o.Name.Any()
 }
 
 func (o *ManagedSSL) ID() fields.StringInputField {
@@ -50,8 +52,21 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
 
-	if cert.Managed != nil && len(cert.Managed.Domains) == 1 {
-		o.Domain.SetCurrent(cert.Managed.Domains[0])
+	if cert.Managed != nil {
+		domains := make([]interface{}, len(cert.Managed.Domains))
+		for i, v := range cert.Managed.Domains {
+			domains[i] = v
+		}
+
+		o.Domains.SetCurrent(domains)
+		o.Status.SetCurrent(cert.Managed.Status)
+
+		domainStatus := make(map[string]interface{})
+		for k, v := range cert.Managed.DomainStatus {
+			domainStatus[k] = v
+		}
+
+		o.DomainStatus.SetCurrent(domainStatus)
 	}
 
 	return nil
@@ -67,13 +82,18 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 
 	projectID := o.ProjectID.Wanted()
 	name := o.Name.Wanted()
-	domain := o.Domain.Wanted()
+	domains := o.Domains.Wanted()
+	domainsStr := make([]string, len(domains))
+
+	for i, v := range domains {
+		domainsStr[i] = v.(string)
+	}
 
 	oper, err := cli.SslCertificates.Insert(projectID, &compute.SslCertificate{
 		Name: name,
 		Type: "MANAGED",
 		Managed: &compute.SslCertificateManagedSslCertificate{
-			Domains: []string{domain},
+			Domains: domainsStr,
 		},
 	}).Do()
 	if err != nil {

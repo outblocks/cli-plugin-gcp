@@ -11,9 +11,9 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/storage"
-	plugin_util "github.com/outblocks/cli-plugin-gcp/internal/util"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
 	"github.com/outblocks/outblocks-plugin-go/types"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"github.com/outblocks/outblocks-plugin-go/validate"
 	"google.golang.org/api/googleapi"
 )

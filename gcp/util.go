@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/outblocks/cli-plugin-gcp/internal/util"
 	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
