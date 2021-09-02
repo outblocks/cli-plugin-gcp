@@ -28,7 +28,7 @@ type StaticApp struct {
 type StaticAppArgs struct {
 	ProjectID string
 	Region    string
-	Path      string
+	Dir       string
 }
 
 func NewStaticApp(app *types.App) *StaticApp {
@@ -64,7 +64,7 @@ func (o *StaticAppOptions) Decode(in interface{}) error {
 }
 
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *types.App, c *StaticAppArgs, verify bool) error {
-	buildDir := filepath.Join(c.Path, o.Opts.Build.Dir)
+	buildDir := filepath.Join(c.Dir, o.Opts.Build.Dir)
 
 	buildPath, ok := pluginutil.CheckDir(buildDir)
 	if !ok {

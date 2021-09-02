@@ -12,7 +12,7 @@ func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.Static
 	err := appDeploy.Plan(pctx, p.registry, appPlan.App, &deploy.StaticAppArgs{
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
-		Path:      appPlan.Path,
+		Dir:       appPlan.Dir,
 	}, p.verify)
 
 	return appDeploy, err
