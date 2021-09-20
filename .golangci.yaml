@@ -64,7 +64,6 @@ linters:
     - ineffassign
     - misspell
     - nakedret
-    - nestif
     - noctx
     - nolintlint
     - rowserrcheck
@@ -90,4 +89,5 @@ linters:
     # - gosec
     # - lll
     # - maligned
+    # - nestif
     # - revive

@@ -9,10 +9,9 @@ func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.Static
 	appDeploy := deploy.NewStaticApp(appPlan.App)
 	pctx := p.pluginCtx
 
-	err := appDeploy.Plan(pctx, p.registry, appPlan.App, &deploy.StaticAppArgs{
+	err := appDeploy.Plan(pctx, p.registry, &deploy.StaticAppArgs{
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
-		Dir:       appPlan.Dir,
 	}, p.verify)
 
 	return appDeploy, err

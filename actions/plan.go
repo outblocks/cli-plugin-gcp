@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
@@ -20,7 +21,9 @@ type PlanAction struct {
 	registry    *registry.Registry
 	appIDMap    map[string]*types.App
 
+	env          map[string]string
 	staticApps   map[string]*deploy.StaticApp
+	serviceApps  map[string]*deploy.ServiceApp
 	loadBalancer *deploy.LoadBalancer
 
 	PluginMap                  types.PluginStateMap
@@ -57,6 +60,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		apiRegistry: registry.NewRegistry(),
 		registry:    r,
 		appIDMap:    make(map[string]*types.App),
+		env:         make(map[string]string),
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -69,18 +73,25 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 
 func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 	var (
-		staticAppsPlan []*types.AppPlan
+		staticAppsPlan  []*types.AppPlan
+		serviceAppsPlan []*types.AppPlan
 	)
 
 	for _, app := range appPlans {
+		prefix := app.App.EnvPrefix()
 		p.appIDMap[app.App.ID] = app.App
+
+		p.env[fmt.Sprintf("%sURL", prefix)] = app.App.URL
 
 		if !app.IsDeploy {
 			continue
 		}
 
-		if app.App.Type == TypeStatic {
+		switch app.App.Type {
+		case TypeStatic:
 			staticAppsPlan = append(staticAppsPlan, app)
+		case TypeService:
+			serviceAppsPlan = append(serviceAppsPlan, app)
 		}
 	}
 
@@ -88,6 +99,12 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 
 	// Plan static app deployment.
 	p.staticApps, err = p.planStaticAppsDeploy(staticAppsPlan)
+	if err != nil {
+		return err
+	}
+
+	// Plan service app deployment.
+	p.serviceApps, err = p.planServiceAppsDeploy(serviceAppsPlan)
 	if err != nil {
 		return err
 	}
@@ -108,17 +125,12 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 
 	apiReg := p.PluginMap["api_registry"]
 
-	err := p.apiRegistry.Load(ctx, apiReg)
+	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
+	err := p.apiRegistry.Load(ctx, apiReg, p.pluginCtx, &registry.Options{
+		Read: p.fullCheck,
+	})
 	if err != nil {
 		return err
-	}
-
-	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
-	if p.fullCheck {
-		err = p.apiRegistry.Read(ctx, p.pluginCtx)
-		if err != nil {
-			return err
-		}
 	}
 
 	diff, err := p.apiRegistry.Diff(ctx, false)
@@ -153,7 +165,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) err
 
 	p.loadBalancer = deploy.NewLoadBalancer()
 
-	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, &deploy.LoadBalancerArgs{
+	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, p.serviceApps, &deploy.LoadBalancerArgs{
 		Name:      "load_balancer",
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
@@ -165,24 +177,11 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) err
 	// Process registry.
 	reg := p.PluginMap["registry"]
 
-	err = p.registry.Load(ctx, reg)
+	err = p.registry.Load(ctx, reg, p.pluginCtx, &registry.Options{
+		Read: p.verify,
+	})
 	if err != nil {
 		return err
-	}
-
-	if p.verify {
-		err = p.registry.Read(ctx, p.pluginCtx)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Read all SSL status if they were not checked already.
-		for _, ssl := range p.loadBalancer.ManagedSSLs {
-			err = ssl.Read(ctx, p.pluginCtx)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -244,8 +243,7 @@ func (p *PlanAction) save() error {
 
 		state, ok := p.AppStates[id]
 		if !ok {
-			app := p.staticApps[id]
-			state = types.NewAppState(app.App)
+			state = types.NewAppState(p.appIDMap[id])
 		}
 
 		u, _ := url.Parse(mapURL)

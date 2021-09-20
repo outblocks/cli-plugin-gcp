@@ -11,7 +11,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-containerregistry v0.5.1
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20210902144651-b40b54674bbb
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20210920145153-327cbc94707d
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c

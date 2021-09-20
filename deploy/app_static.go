@@ -12,7 +12,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	pluginutil "github.com/outblocks/outblocks-plugin-go/util"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 type StaticApp struct {
@@ -28,7 +28,6 @@ type StaticApp struct {
 type StaticAppArgs struct {
 	ProjectID string
 	Region    string
-	Dir       string
 }
 
 func NewStaticApp(app *types.App) *StaticApp {
@@ -63,23 +62,23 @@ func (o *StaticAppOptions) Decode(in interface{}) error {
 	return mapstructure.Decode(in, o)
 }
 
-func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *types.App, c *StaticAppArgs, verify bool) error {
-	buildDir := filepath.Join(c.Dir, o.Opts.Build.Dir)
+func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs, verify bool) error {
+	buildDir := filepath.Join(o.App.Dir, o.Opts.Build.Dir)
 
-	buildPath, ok := pluginutil.CheckDir(buildDir)
+	buildPath, ok := plugin_util.CheckDir(buildDir)
 	if !ok {
-		return fmt.Errorf("app '%s' build dir '%s' does not exist", app.Name, buildDir)
+		return fmt.Errorf("app '%s' build dir '%s' does not exist", o.App.Name, buildDir)
 	}
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
-		Name:       fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		Name:       fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, o.App.ID)),
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
 	}
 
-	err := r.Register(o.Bucket, app.ID, "bucket")
+	err := r.Register(o.Bucket, o.App.ID, "bucket")
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 			ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
 		}
 
-		err = r.Register(obj, app.ID, filePath)
+		err = r.Register(obj, o.App.ID, filePath)
 		if err != nil {
 			return err
 		}
@@ -113,9 +112,11 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
 		Name:      fields.String(gcp.GCSProxyImageName),
+		Tag:       fields.String(gcp.GCSProxyVersion),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
 		Source:    fields.String(gcp.GCSProxyDockerImage),
+		Pull:      true,
 	}
 
 	err = r.Register(o.Image, CommonName, gcp.GCSProxyImageName)
@@ -135,7 +136,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, o.App.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),
@@ -143,7 +144,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, app *
 		EnvVars:   fields.Map(envVars),
 	}
 
-	err = r.Register(o.CloudRun, app.ID, "cloud_run")
+	err = r.Register(o.CloudRun, o.App.ID, "cloud_run")
 	if err != nil {
 		return err
 	}

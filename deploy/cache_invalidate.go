@@ -14,11 +14,12 @@ import (
 type CacheInvalidate struct {
 	registry.ResourceBase
 
-	URLMapName fields.StringInputField
-	ProjectID  fields.StringInputField
-	StaticApps []*StaticApp `state:"-"`
+	URLMapName  fields.StringInputField
+	ProjectID   fields.StringInputField
+	StaticApps  []*StaticApp  `state:"-"`
+	ServiceApps []*ServiceApp `state:"-"`
 
-	changedStaticApps []*StaticApp
+	changedURLs []string
 }
 
 func (o *CacheInvalidate) GetName() string {
@@ -42,11 +43,17 @@ func anyFileChanged(files []*gcp.BucketObject) bool {
 func (o *CacheInvalidate) CalculateDiff() registry.DiffType {
 	for _, app := range o.StaticApps {
 		if app.Opts.CDN.Enabled && anyFileChanged(app.Files) {
-			o.changedStaticApps = append(o.changedStaticApps, app)
+			o.changedURLs = append(o.changedURLs, app.App.URL)
 		}
 	}
 
-	if len(o.changedStaticApps) == 0 {
+	for _, app := range o.ServiceApps {
+		if app.Opts.CDN.Enabled && app.Image.Digest.IsChanged() {
+			o.changedURLs = append(o.changedURLs, app.App.URL)
+		}
+	}
+
+	if len(o.changedURLs) == 0 {
 		return registry.DiffTypeNone
 	}
 
@@ -77,8 +84,8 @@ func (o *CacheInvalidate) Process(ctx context.Context, meta interface{}) error {
 	urlMap := o.URLMapName.Wanted()
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
-	for _, app := range o.changedStaticApps {
-		host, path := gcp.SplitURL(app.App.URL)
+	for _, url := range o.changedURLs {
+		host, path := gcp.SplitURL(url)
 
 		g.Go(func() error {
 			oper, err := cli.UrlMaps.InvalidateCache(projectID, urlMap, &compute.CacheInvalidationRule{

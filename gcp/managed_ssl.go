@@ -28,6 +28,15 @@ func (o *ManagedSSL) ID() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 
+func (o *ManagedSSL) Init(ctx context.Context, meta interface{}, opts *registry.Options) error {
+	// Make sure managed ssl status is read always if ssl already exists.
+	if opts.Read || !o.IsExisting() {
+		return nil
+	}
+
+	return o.Read(ctx, meta)
+}
+
 func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
@@ -41,6 +50,8 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 
 	cert, err := cli.SslCertificates.Get(projectID, name).Do()
 	if ErrIs404(err) {
+		o.Status.Invalidate()
+		o.DomainStatus.Invalidate()
 		o.MarkAsNew()
 
 		return nil

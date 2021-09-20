@@ -1,5 +1,6 @@
 package actions
 
 const (
-	TypeStatic = "static"
+	TypeStatic  = "static"
+	TypeService = "service"
 )

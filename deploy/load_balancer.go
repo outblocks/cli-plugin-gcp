@@ -8,6 +8,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 type LoadBalancer struct {
@@ -20,6 +21,8 @@ type LoadBalancer struct {
 	TargetHTTPProxies   []*gcp.TargetHTTPProxy
 	TargetHTTPSProxies  []*gcp.TargetHTTPSProxy
 	ForwardingRules     []*gcp.ForwardingRule
+
+	urlMap, appMap map[string]fields.Field
 }
 
 type LoadBalancerArgs struct {
@@ -31,16 +34,85 @@ type LoadBalancerArgs struct {
 func NewLoadBalancer() *LoadBalancer {
 	return &LoadBalancer{
 		ManagedSSLDomainMap: make(map[string]*gcp.ManagedSSL),
+		urlMap:              make(map[string]fields.Field),
+		appMap:              make(map[string]fields.Field),
 	}
 }
 
-func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, c *LoadBalancerArgs, verify bool) error {
-	if len(static) == 0 {
+func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Registry, app *types.App, cloudrun fields.StringInputField, cdnEnabled bool, c *LoadBalancerArgs) error {
+	// Serverless NEGs.
+	neg := &gcp.ServerlessNEG{
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		ProjectID: fields.String(c.ProjectID),
+		Region:    fields.String(c.Region),
+		CloudRun:  cloudrun,
+	}
+
+	err := r.Register(neg, LoadBalancerName, app.ID)
+	if err != nil {
+		return err
+	}
+
+	o.ServerlessNEGs = append(o.ServerlessNEGs, neg)
+
+	// Backend Services.
+	svc := &gcp.BackendService{
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		ProjectID: fields.String(c.ProjectID),
+		NEG:       neg.ID(),
+	}
+
+	svc.CDN.Enabled = fields.Bool(cdnEnabled)
+
+	err = r.Register(svc, LoadBalancerName, app.ID)
+	if err != nil {
+		return err
+	}
+
+	o.BackendServices = append(o.BackendServices, svc)
+
+	// URL Mapping.
+	host, path := gcp.SplitURL(app.URL)
+
+	o.urlMap[host+path] = fields.Map(map[string]fields.Field{
+		gcp.URLPathMatcherServiceIDKey:         svc.ID(),
+		gcp.URLPathMatcherPathPrefixRewriteKey: fields.String(app.PathRedirect),
+	})
+	o.appMap[app.URL] = fields.String(app.ID)
+
+	return nil
+}
+
+func (o *LoadBalancer) processServiceApps(pctx *config.PluginContext, r *registry.Registry, service map[string]*ServiceApp, c *LoadBalancerArgs) error {
+	for _, app := range service {
+		err := o.addCloudRun(pctx, r, app.App, app.CloudRun.Name, app.Opts.CDN.Enabled, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *LoadBalancer) processStaticApps(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, c *LoadBalancerArgs) error {
+	for _, app := range static {
+		err := o.addCloudRun(pctx, r, app.App, app.CloudRun.Name, app.Opts.CDN.Enabled, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, c *LoadBalancerArgs, verify bool) error {
+	if len(static) == 0 && len(service) == 0 {
 		return nil
 	}
 
 	lbID := gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name)
 	staticApps := make([]*StaticApp, 0, len(static))
+	serviceApps := make([]*ServiceApp, 0, len(service))
 
 	// IP Address.
 	addr := &gcp.Address{
@@ -63,6 +135,13 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		domains[u.Hostname()] = struct{}{}
 
 		staticApps = append(staticApps, app)
+	}
+
+	for _, app := range service {
+		u, _ := url.Parse(app.App.URL)
+		domains[u.Hostname()] = struct{}{}
+
+		serviceApps = append(serviceApps, app)
 	}
 
 	// Sort domains to make sure state remains the same.
@@ -89,57 +168,23 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		o.ManagedSSLDomainMap[domain] = cert
 	}
 
-	urlMap := make(map[string]fields.Field)
-	appMap := make(map[string]fields.Field)
+	// Process Apps in LB.
+	err = o.processStaticApps(pctx, r, static, c)
+	if err != nil {
+		return err
+	}
 
-	for _, app := range static {
-		// Serverless NEGs.
-		neg := &gcp.ServerlessNEG{
-			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.App.ID)),
-			ProjectID: fields.String(c.ProjectID),
-			Region:    fields.String(c.Region),
-			CloudRun:  app.CloudRun.Name,
-		}
-
-		err := r.Register(neg, LoadBalancerName, app.App.ID)
-		if err != nil {
-			return err
-		}
-
-		o.ServerlessNEGs = append(o.ServerlessNEGs, neg)
-
-		// Backend Services.
-		svc := &gcp.BackendService{
-			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.App.ID)),
-			ProjectID: fields.String(c.ProjectID),
-			NEG:       neg.ID(),
-		}
-
-		svc.CDN.Enabled = fields.Bool(app.Opts.CDN.Enabled)
-
-		err = r.Register(svc, LoadBalancerName, app.App.ID)
-		if err != nil {
-			return err
-		}
-
-		o.BackendServices = append(o.BackendServices, svc)
-
-		// URL Mapping.
-		host, path := gcp.SplitURL(app.App.URL)
-
-		urlMap[host+path] = fields.Map(map[string]fields.Field{
-			gcp.URLPathMatcherServiceIDKey:         svc.ID(),
-			gcp.URLPathMatcherPathPrefixRewriteKey: fields.String(app.App.PathRedirect),
-		})
-		appMap[app.App.URL] = fields.String(app.App.ID)
+	err = o.processServiceApps(pctx, r, service, c)
+	if err != nil {
+		return err
 	}
 
 	// URL Map.
 	m := &gcp.URLMap{
 		Name:       fields.String(lbID + "-0"),
 		ProjectID:  fields.String(c.ProjectID),
-		URLMapping: fields.Map(urlMap),
-		AppMapping: fields.Map(appMap),
+		URLMapping: fields.Map(o.urlMap),
+		AppMapping: fields.Map(o.appMap),
 	}
 
 	err = r.Register(m, LoadBalancerName, lbID+"-0")
@@ -148,9 +193,10 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	}
 
 	err = r.Register(&CacheInvalidate{
-		URLMapName: m.Name,
-		ProjectID:  fields.String(c.ProjectID),
-		StaticApps: staticApps,
+		URLMapName:  m.Name,
+		ProjectID:   fields.String(c.ProjectID),
+		StaticApps:  staticApps,
+		ServiceApps: serviceApps,
 	}, LoadBalancerName, lbID)
 	if err != nil {
 		return err
