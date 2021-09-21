@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.14](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.13...v0.1.14)
+
+> 2021-09-20
+
+### FEATURES
+
+[`fb0a8c1`](https://github.com/outblocks/cli-plugin-gcp/commit/fb0a8c162a973d8c4f8d89fae95ab34c26d61721) support for app service
+
+
 ## [v0.1.13](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.12...v0.1.13)
 
 > 2021-09-03
