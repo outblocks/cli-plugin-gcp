@@ -1,8 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.15](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.14...v0.1.15)
+
+> 2021-09-22
+
+### FEATURES
+
+[`fa243bf`](https://github.com/outblocks/cli-plugin-gcp/commit/fa243bf040293befb8fb0eada1665529d8601266) cache control for objects, id gen changes
+
+
 ## [v0.1.14](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.13...v0.1.14)
 
-> 2021-09-20
+> 2021-09-21
 
 ### FEATURES
 
