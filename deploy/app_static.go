@@ -72,7 +72,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
-		Name:       fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, o.App.ID)),
+		Name:       fields.String(gcp.GlobalID(pctx.Env().ProjectID(), c.ProjectID, o.App.ID)),
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
@@ -99,6 +99,10 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 			Path:        path,
 			IsPublic:    fields.Bool(true),
 			ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
+		}
+
+		if !o.Opts.CDN.Enabled {
+			obj.CacheControl = fields.String("private, max-age=0, no-transform")
 		}
 
 		err = r.Register(obj, o.App.ID, filePath)
@@ -136,7 +140,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, o.App.ID)),
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), o.App.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),

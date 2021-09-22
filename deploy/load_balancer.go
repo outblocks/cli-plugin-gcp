@@ -42,7 +42,7 @@ func NewLoadBalancer() *LoadBalancer {
 func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Registry, app *types.App, cloudrun fields.StringInputField, cdnEnabled bool, c *LoadBalancerArgs) error {
 	// Serverless NEGs.
 	neg := &gcp.ServerlessNEG{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), app.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		CloudRun:  cloudrun,
@@ -57,7 +57,7 @@ func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Regis
 
 	// Backend Services.
 	svc := &gcp.BackendService{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, app.ID)),
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), app.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		NEG:       neg.ID(),
 	}
@@ -110,7 +110,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		return nil
 	}
 
-	lbID := gcp.ID(pctx.Env().ProjectName(), c.ProjectID, c.Name)
+	lbID := gcp.ID(pctx.Env().ProjectID(), c.Name)
 	staticApps := make([]*StaticApp, 0, len(static))
 	serviceApps := make([]*ServiceApp, 0, len(service))
 
@@ -120,7 +120,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		ProjectID: fields.String(c.ProjectID),
 	}
 
-	err := r.Register(addr, LoadBalancerName, lbID+"-0")
+	err := r.Register(addr, LoadBalancerName, c.Name+"-0")
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	for _, domain := range domainList {
 		cert := &gcp.ManagedSSL{
-			Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, domain)),
+			Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), domain)),
 			ProjectID: fields.String(c.ProjectID),
 			Domains:   fields.Array([]fields.Field{fields.String(domain)}),
 		}
@@ -187,7 +187,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		AppMapping: fields.Map(o.appMap),
 	}
 
-	err = r.Register(m, LoadBalancerName, lbID+"-0")
+	err = r.Register(m, LoadBalancerName, c.Name+"-0")
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		URLMap:    m.ID(),
 	}
 
-	err = r.Register(proxy, LoadBalancerName, lbID+"-0")
+	err = r.Register(proxy, LoadBalancerName, c.Name+"-0")
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		SSLCertificates: fields.Array(certs),
 	}
 
-	err = r.Register(sproxy, LoadBalancerName, lbID+"-0")
+	err = r.Register(sproxy, LoadBalancerName, c.Name+"-0")
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		PortRange: fields.String("80-80"),
 	}
 
-	err = r.Register(rule, LoadBalancerName, lbID+"-http-0")
+	err = r.Register(rule, LoadBalancerName, c.Name+"-http-0")
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		PortRange: fields.String("443-443"),
 	}
 
-	err = r.Register(rule, LoadBalancerName, lbID+"-https-0")
+	err = r.Register(rule, LoadBalancerName, c.Name+"-https-0")
 	if err != nil {
 		return err
 	}

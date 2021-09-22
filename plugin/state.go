@@ -127,7 +127,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		return res, nil
 	}
 
-	res, bucket := validate.OptionalString(p.defaultBucket(project), r.Properties, "project", "bucket must be a string")
+	res, bucket := validate.OptionalString(p.defaultBucket(project), r.Properties, "bucket", "bucket must be a string")
 	if res != nil {
 		return res, nil
 	}
@@ -142,7 +142,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 	// Read state.
 	b := cli.Bucket(bucket)
 	created := false
-	state, err := readBucketFile(ctx, b, p.statefile(r.Env))
+	state, err := readBucketFile(ctx, b, p.statefile(p.env.Env()))
 
 	if err == storage.ErrObjectNotExist {
 		created, err = ensureBucket(ctx, b, project, &storage.BucketAttrs{
@@ -160,7 +160,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 	// Lock if needed.
 	var lockinfo string
 	if r.Lock {
-		lockinfo, err = acquireLock(ctx, b.Object(p.lockfile(r.Env)))
+		lockinfo, err = acquireLock(ctx, b.Object(p.lockfile(p.env.Env())))
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 
 	// Write state.
 	b := cli.Bucket(bucket)
-	w := b.Object(p.statefile(r.Env)).NewWriter(ctx)
+	w := b.Object(p.statefile(p.env.Env())).NewWriter(ctx)
 
 	data, err := json.Marshal(r.State)
 	if err != nil {
@@ -243,7 +243,7 @@ func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockReques
 	}
 
 	b := cli.Bucket(bucket)
-	err = releaseLock(ctx, b.Object(p.lockfile(r.Env)), r.LockID)
+	err = releaseLock(ctx, b.Object(p.lockfile(p.env.Env())), r.LockID)
 
 	return &plugin_go.EmptyResponse{}, err
 }

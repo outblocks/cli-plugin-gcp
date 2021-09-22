@@ -17,11 +17,12 @@ import (
 type BucketObject struct {
 	registry.ResourceBase
 
-	BucketName  fields.StringInputField `state:"force_new"`
-	ContentType fields.StringInputField
-	Name        fields.StringInputField `state:"force_new"`
-	Hash        fields.StringInputField
-	IsPublic    fields.BoolInputField
+	BucketName   fields.StringInputField `state:"force_new"`
+	ContentType  fields.StringInputField
+	Name         fields.StringInputField `state:"force_new"`
+	Hash         fields.StringInputField
+	IsPublic     fields.BoolInputField
+	CacheControl fields.StringInputField
 
 	Path string `state:"-"`
 }
@@ -112,6 +113,10 @@ func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 
 	if o.ContentType.Wanted() != "" {
 		w.ContentType = o.ContentType.Wanted()
+	}
+
+	if o.CacheControl.Wanted() != "" {
+		w.CacheControl = o.CacheControl.Wanted()
 	}
 
 	w.ACL = []storage.ACLRule{{Entity: storage.AllUsers, Role: storage.RoleReader}}

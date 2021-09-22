@@ -229,7 +229,6 @@ func cleanupURLMapping(m map[string]interface{}) []*URLMapping {
 
 func (o *URLMap) makeURLMap() *compute.UrlMap {
 	name := o.Name.Wanted()
-	projectID := o.ProjectID.Wanted()
 
 	urlMap := &compute.UrlMap{
 		Name:        name,
@@ -243,11 +242,11 @@ func (o *URLMap) makeURLMap() *compute.UrlMap {
 
 		urlMap.HostRules = append(urlMap.HostRules, &compute.HostRule{
 			Hosts:       []string{host},
-			PathMatcher: ID(name, projectID, host),
+			PathMatcher: ID(name, host),
 		})
 
 		pathMatcher := &compute.PathMatcher{
-			Name: ID(name, projectID, host),
+			Name: ID(name, host),
 		}
 
 		urlMap.PathMatchers = append(urlMap.PathMatchers, pathMatcher)

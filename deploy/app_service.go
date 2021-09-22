@@ -89,7 +89,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectName(), c.ProjectID, o.App.ID)),
+		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), o.App.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),

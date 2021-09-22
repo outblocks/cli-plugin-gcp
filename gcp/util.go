@@ -30,15 +30,19 @@ var Types = []registry.Resource{
 	(*URLMap)(nil),
 }
 
-func ID(project, gcpProject, id string) string {
+func ID(project, id string) string {
 	sanitizedID := util.SanitizeName(id)
 
-	if len(sanitizedID) > 44 {
+	if len(sanitizedID) > 45 {
 		idSHA := util.LimitString(util.SHAString(id), 4)
-		sanitizedID = fmt.Sprintf("%s-%s", util.LimitString(sanitizedID, 44), idSHA)
+		sanitizedID = fmt.Sprintf("%s-%s", util.LimitString(sanitizedID, 40), idSHA)
 	}
 
-	return fmt.Sprintf("%s-%s", sanitizedID, util.LimitString(util.SHAString(gcpProject+project), 4))
+	return fmt.Sprintf("%s-%s", sanitizedID, util.LimitString(util.SHAString(project), 4))
+}
+
+func GlobalID(project, gcpProject, id string) string {
+	return ID(project, id) + util.LimitString(util.SHAString(gcpProject), 4)
 }
 
 func RegionToGCR(region string) string {
