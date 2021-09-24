@@ -25,13 +25,13 @@ func NewPlugin(logger log.Logger, enver env.Enver) *Plugin {
 
 func (p *Plugin) Handler() *plugin_go.ReqHandler {
 	return &plugin_go.ReqHandler{
-		InitInteractive:  p.InitInteractive,
-		Start:            p.Start,
-		GetState:         p.GetState,
-		SaveState:        p.SaveState,
-		ReleaseLock:      p.ReleaseLock,
-		Plan:             p.Plan,
-		ApplyInteractive: p.ApplyInteractive,
+		ProjectInitInteractive: p.ProjectInitInteractive,
+		StartInteractive:       p.StartInteractive,
+		GetState:               p.GetState,
+		SaveState:              p.SaveState,
+		ReleaseLock:            p.ReleaseLock,
+		Plan:                   p.Plan,
+		ApplyInteractive:       p.ApplyInteractive,
 	}
 }
 

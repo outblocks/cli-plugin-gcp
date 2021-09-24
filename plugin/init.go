@@ -42,10 +42,15 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 			ProjectId: project,
 		}).Do()
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("unable to create GCP project: %w", err)
 		}
 
-		return project, gcp.WaitForCloudResourceManagerOperation(crmCli, op)
+		err = gcp.WaitForCloudResourceManagerOperation(crmCli, op)
+		if err != nil {
+			return "", fmt.Errorf("unable to create GCP project: %w", err)
+		}
+
+		return project, nil
 	}
 
 	var projOptions []string
@@ -86,7 +91,7 @@ func promptProject(stream *plugin_go.ReceiverStream, crmCli *cloudresourcemanage
 	return strings.SplitN(res.(*plugin_go.PromptInputAnswer).Answer, " ", 2)[0], nil
 }
 
-func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, stream *plugin_go.ReceiverStream) error {
+func (p *Plugin) ProjectInitInteractive(ctx context.Context, r *plugin_go.ProjectInitRequest, stream *plugin_go.ReceiverStream) error {
 	var project, region string
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
@@ -142,7 +147,7 @@ func (p *Plugin) InitInteractive(ctx context.Context, r *plugin_go.InitRequest, 
 		region = res.(*plugin_go.PromptInputAnswer).Answer
 	}
 
-	_ = stream.Send(&plugin_go.InitResponse{
+	_ = stream.Send(&plugin_go.ProjectInitResponse{
 		Properties: map[string]interface{}{
 			"project": project,
 			"region":  region,

@@ -58,20 +58,28 @@ func RegionToGCR(region string) string {
 	}
 }
 
-func ErrIs404(err error) bool {
+func checkErrCode(err error, code int) bool {
 	if err == nil {
 		return false
 	}
 
-	if et, ok := err.(*transport.Error); ok && et.StatusCode == 404 {
+	if et, ok := err.(*transport.Error); ok && et.StatusCode == code {
 		return true
 	}
 
-	if e, ok := err.(*googleapi.Error); ok && e.Code == 404 {
+	if e, ok := err.(*googleapi.Error); ok && e.Code == code {
 		return true
 	}
 
 	return false
+}
+
+func ErrIs404(err error) bool {
+	return checkErrCode(err, 404)
+}
+
+func ErrIs403(err error) bool {
+	return checkErrCode(err, 403)
 }
 
 func WaitForGlobalComputeOperation(cli *compute.Service, project, name string) error {
