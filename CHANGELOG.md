@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.16](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.15...v0.1.16)
+
+> 2021-09-24
+
+### FEATURES
+
+[`0933461`](https://github.com/outblocks/cli-plugin-gcp/commit/09334618f1fc0bd5ecd903749324e39c726a4939) interactive project creator where needed
+
+
 ## [v0.1.15](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.14...v0.1.15)
 
 > 2021-09-22
