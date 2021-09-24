@@ -45,4 +45,4 @@ require (
 	google.golang.org/protobuf v1.26.0 // indirect
 )
 
-replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go
+// replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go
