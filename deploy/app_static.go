@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"mime"
 	"path/filepath"
-	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
@@ -52,10 +51,6 @@ type StaticAppOptions struct {
 	CDN struct {
 		Enabled bool `mapstructure:"enabled"`
 	} `mapstructure:"cdn"`
-}
-
-func (o *StaticAppOptions) IsReactRouting() bool {
-	return o.Routing == "" || strings.EqualFold(o.Routing, "react")
 }
 
 func (o *StaticAppOptions) Decode(in interface{}) error {
@@ -131,11 +126,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	envVars := map[string]fields.Field{
 		"GCS_BUCKET":  o.Bucket.Name,
 		"FORCE_HTTPS": fields.String("1"),
-	}
-
-	if o.Opts.IsReactRouting() {
-		envVars["ERROR404"] = fields.String("index.html")
-		envVars["ERROR404_CODE"] = fields.String("200")
+		"ROUTING":     fields.String(o.Opts.Routing),
 	}
 
 	// Add cloud run service.

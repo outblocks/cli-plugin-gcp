@@ -10,7 +10,7 @@ const (
 	ACLProjectPrivate = "projectPrivate"
 
 	GCSProxyImageName   = "nginx-gcs-static-proxy"
-	GCSProxyVersion     = "1.21"
+	GCSProxyVersion     = "1.21-v2"
 	GCSProxyDockerImage = "docker.io/outblocks/nginx-gcs-static-proxy:" + GCSProxyVersion
 
 	DefaultConcurrency = 5
