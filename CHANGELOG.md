@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.17](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.16...v0.1.17)
+
+> 2021-10-08
+
+### FEATURES
+
+[`ee0723b`](https://github.com/outblocks/cli-plugin-gcp/commit/ee0723bac9ade1be1d26632c531563b5c4d77e29) update routing handling, add gatsby support
+
+
 ## [v0.1.16](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.15...v0.1.16)
 
 > 2021-09-24
