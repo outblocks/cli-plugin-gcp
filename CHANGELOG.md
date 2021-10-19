@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.18](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.17...v0.1.18)
+
+> 2021-10-19
+
+### FEATURES
+
+[`f56e6c9`](https://github.com/outblocks/cli-plugin-gcp/commit/f56e6c9b4a3f40023ddaf4c9df9217374f15589b) nginx gcs proxy update
+
+
 ## [v0.1.17](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.16...v0.1.17)
 
 > 2021-10-08
