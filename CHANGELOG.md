@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.19](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.18...v0.1.19)
+
+> 2021-10-20
+
+### FEATURES
+
+[`a4a342b`](https://github.com/outblocks/cli-plugin-gcp/commit/a4a342b7c1b766501844dd0e990176c33796a909) postgres support, dependency env evaluator
+
+
 ## [v0.1.18](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.17...v0.1.18)
 
 > 2021-10-19
