@@ -1,6 +1,7 @@
 package gcp
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/serviceusage/v1"
+	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
 var Types = []registry.Resource{
@@ -89,7 +91,7 @@ func WaitForGlobalComputeOperation(cli *compute.Service, project, name string) e
 			return err
 		}
 
-		if op.Status == "DONE" {
+		if op.Status == OperationDone {
 			return nil
 		}
 	}
@@ -102,7 +104,7 @@ func WaitForRegionComputeOperation(cli *compute.Service, project, region, name s
 			return err
 		}
 
-		if op.Status == "DONE" {
+		if op.Status == OperationDone {
 			return nil
 		}
 	}
@@ -152,6 +154,27 @@ func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op 
 
 		if op.Done {
 			return nil
+		}
+	}
+}
+
+func WaitForSQLOperation(ctx context.Context, cli *sqladmin.Service, project, name string) error {
+	t := time.NewTicker(time.Second * 5)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+			op, err := cli.Operations.Get(project, name).Do()
+			if err != nil {
+				return fmt.Errorf("failed to query sql service for readiness: %w", err)
+			}
+
+			if op.Status == OperationDone {
+				return nil
+			}
 		}
 	}
 }

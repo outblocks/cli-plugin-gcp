@@ -21,9 +21,12 @@ type PlanAction struct {
 	registry    *registry.Registry
 	appIDMap    map[string]*types.App
 
-	env          map[string]string
+	appEnvVarsStr map[string]string
+	appEnvVars    map[string]map[string]interface{} // type->name->value
+
 	staticApps   map[string]*deploy.StaticApp
 	serviceApps  map[string]*deploy.ServiceApp
+	databaseDeps map[string]*deploy.DatabaseDep
 	loadBalancer *deploy.LoadBalancer
 
 	PluginMap                  types.PluginStateMap
@@ -55,12 +58,13 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 	}
 
 	return &PlanAction{
-		pluginCtx:   pctx,
-		log:         logger,
-		apiRegistry: registry.NewRegistry(),
-		registry:    r,
-		appIDMap:    make(map[string]*types.App),
-		env:         make(map[string]string),
+		pluginCtx:     pctx,
+		log:           logger,
+		apiRegistry:   registry.NewRegistry(),
+		registry:      r,
+		appIDMap:      make(map[string]*types.App),
+		appEnvVarsStr: make(map[string]string),
+		appEnvVars:    make(map[string]map[string]interface{}),
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -81,7 +85,26 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 		prefix := app.App.EnvPrefix()
 		p.appIDMap[app.App.ID] = app.App
 
-		p.env[fmt.Sprintf("%sURL", prefix)] = app.App.URL
+		p.appEnvVarsStr[fmt.Sprintf("%sURL", prefix)] = app.App.URL
+
+		u, err := url.Parse(app.App.URL)
+		if err != nil {
+			return err
+		}
+
+		appEnvVars := map[string]interface{}{
+			"url":  fields.String(app.App.URL),
+			"host": fields.String(u.Host),
+			"path": fields.String(u.Path),
+		}
+
+		if _, ok := p.appEnvVars[app.App.Type]; !ok {
+			p.appEnvVars[app.App.Type] = map[string]interface{}{
+				app.App.Name: appEnvVars,
+			}
+		} else {
+			p.appEnvVars[app.App.Type][app.App.Name] = appEnvVars
+		}
 
 		if !app.IsDeploy {
 			continue
@@ -105,6 +128,41 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 
 	// Plan service app deployment.
 	p.serviceApps, err = p.planServiceAppsDeploy(serviceAppsPlan)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PlanAction) planDependencies(appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) error {
+	allNeeds := make(map[string]map[*types.App]*types.AppNeed)
+
+	for _, d := range appPlans {
+		for _, n := range d.App.Needs {
+			if _, ok := allNeeds[n.Dependency]; !ok {
+				allNeeds[n.Dependency] = make(map[*types.App]*types.AppNeed)
+			}
+
+			allNeeds[n.Dependency][d.App] = n
+		}
+	}
+
+	var (
+		databasePlan []*types.DependencyPlan
+	)
+
+	for _, dep := range depPlans {
+		switch dep.Dependency.Type {
+		case DepTypePostgresql, DepTypeMySQL:
+			databasePlan = append(databasePlan, dep)
+		}
+	}
+
+	var err error
+
+	// Plan dependency deployment.
+	p.databaseDeps, err = p.planDatabaseDepsDeploy(databasePlan, allNeeds)
 	if err != nil {
 		return err
 	}
@@ -157,8 +215,13 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	return nil
 }
 
-func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) error {
-	err := p.planApps(appPlans)
+func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) error {
+	err := p.planDependencies(appPlans, depPlans)
+	if err != nil {
+		return err
+	}
+
+	err = p.planApps(appPlans)
 	if err != nil {
 		return err
 	}
@@ -169,7 +232,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan) err
 		Name:      "load_balancer",
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
-	}, p.verify)
+	})
 	if err != nil {
 		return err
 	}
@@ -284,13 +347,13 @@ func (p *PlanAction) save() error {
 	return nil
 }
 
-func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan) (*types.Plan, error) {
+func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) (*types.Plan, error) {
 	err := p.enableAPIs(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = p.planAll(ctx, appPlans)
+	err = p.planAll(ctx, appPlans, depPlans)
 	if err != nil {
 		return nil, err
 	}
@@ -311,13 +374,13 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan) (*type
 	}, nil
 }
 
-func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, cb func(a *types.ApplyAction)) error {
+func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan, cb func(a *types.ApplyAction)) error {
 	err := p.enableAPIs(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = p.planAll(ctx, appPlans)
+	err = p.planAll(ctx, appPlans, depPlans)
 	if err != nil {
 		return err
 	}

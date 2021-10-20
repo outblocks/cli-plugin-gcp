@@ -6,13 +6,17 @@ import (
 )
 
 func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.StaticApp, error) {
-	appDeploy := deploy.NewStaticApp(appPlan.App)
+	appDeploy, err := deploy.NewStaticApp(appPlan.App)
+	if err != nil {
+		return nil, err
+	}
+
 	pctx := p.pluginCtx
 
-	err := appDeploy.Plan(pctx, p.registry, &deploy.StaticAppArgs{
+	err = appDeploy.Plan(pctx, p.registry, &deploy.StaticAppArgs{
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
-	}, p.verify)
+	})
 
 	return appDeploy, err
 }
@@ -26,7 +30,7 @@ func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret map[st
 			return ret, err
 		}
 
-		ret[app.App.ID] = app
+		ret[plan.App.ID] = app
 	}
 
 	return ret, nil

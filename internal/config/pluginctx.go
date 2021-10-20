@@ -12,6 +12,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/run/v1"
 	"google.golang.org/api/serviceusage/v1"
+	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
 type funcCacheData struct {
@@ -29,6 +30,7 @@ type PluginContext struct {
 	runCliMap       map[string]*run.APIService
 	computeCli      *compute.Service
 	serviceusageCli *serviceusage.Service
+	sqlAdminCli     *sqladmin.Service
 
 	funcCache map[string]*funcCacheData
 
@@ -36,7 +38,7 @@ type PluginContext struct {
 		runCli, funcCache sync.Mutex
 	}
 	once struct {
-		storageCli, dockerCli, computeCli, serviceusageCli sync.Once
+		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli sync.Once
 	}
 }
 
@@ -122,6 +124,20 @@ func (c *PluginContext) GCPServiceUsageClient(ctx context.Context) (*serviceusag
 	}
 
 	return c.serviceusageCli, err
+}
+
+func (c *PluginContext) GCPSQLAdminClient(ctx context.Context) (*sqladmin.Service, error) {
+	var err error
+
+	c.once.sqlAdminCli.Do(func() {
+		c.sqlAdminCli, err = NewGCPSQLAdmin(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating sqladmin client: %w", err)
+	}
+
+	return c.sqlAdminCli, err
 }
 
 func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {

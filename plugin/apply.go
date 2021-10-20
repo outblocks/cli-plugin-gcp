@@ -20,7 +20,7 @@ func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest
 		})
 	}
 
-	err = a.Apply(ctx, r.Apps, cb)
+	err = a.Apply(ctx, r.Apps, r.Dependencies, cb)
 
 	_ = stream.Send(&plugin_go.ApplyDoneResponse{
 		PluginMap:        a.PluginMap,

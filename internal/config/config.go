@@ -12,6 +12,7 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/api/run/v1"
 	"google.golang.org/api/serviceusage/v1"
+	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
 func GoogleCredentials(ctx context.Context, scopes ...string) (*google.Credentials, error) {
@@ -40,4 +41,8 @@ func NewGCPServiceUsage(ctx context.Context, cred *google.Credentials) (*service
 
 func NewGCPCloudResourceManager(ctx context.Context, cred *google.Credentials) (*cloudresourcemanager.Service, error) {
 	return cloudresourcemanager.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPSQLAdmin(ctx context.Context, cred *google.Credentials) (*sqladmin.Service, error) {
+	return sqladmin.NewService(ctx, option.WithCredentials(cred))
 }

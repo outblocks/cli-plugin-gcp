@@ -29,16 +29,16 @@ type StaticAppArgs struct {
 	Region    string
 }
 
-func NewStaticApp(app *types.App) *StaticApp {
-	opts := &StaticAppOptions{}
-	if err := opts.Decode(app.Properties); err != nil {
-		panic(err)
+func NewStaticApp(app *types.App) (*StaticApp, error) {
+	opts, err := NewStaticAppOptions(app.Properties)
+	if err != nil {
+		return nil, err
 	}
 
 	return &StaticApp{
 		App:  app,
 		Opts: opts,
-	}
+	}, nil
 }
 
 type StaticAppOptions struct {
@@ -53,11 +53,12 @@ type StaticAppOptions struct {
 	} `mapstructure:"cdn"`
 }
 
-func (o *StaticAppOptions) Decode(in interface{}) error {
-	return mapstructure.Decode(in, o)
+func NewStaticAppOptions(in interface{}) (*StaticAppOptions, error) {
+	o := &StaticAppOptions{}
+	return o, mapstructure.Decode(in, o)
 }
 
-func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs, verify bool) error {
+func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
 	buildDir := filepath.Join(o.App.Dir, o.Opts.Build.Dir)
 
 	buildPath, ok := plugin_util.CheckDir(buildDir)

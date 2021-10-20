@@ -13,7 +13,7 @@ func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.
 		return nil, err
 	}
 
-	deployPlan, err := a.Plan(ctx, r.Apps)
+	deployPlan, err := a.Plan(ctx, r.Apps, r.Dependencies)
 	if err != nil {
 		return nil, err
 	}

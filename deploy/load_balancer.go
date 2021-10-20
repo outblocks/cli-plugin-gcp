@@ -85,6 +85,10 @@ func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Regis
 
 func (o *LoadBalancer) processServiceApps(pctx *config.PluginContext, r *registry.Registry, service map[string]*ServiceApp, c *LoadBalancerArgs) error {
 	for _, app := range service {
+		if !app.CloudRun.IsPublic.Wanted() {
+			continue
+		}
+
 		err := o.addCloudRun(pctx, r, app.App, app.CloudRun.Name, app.Opts.CDN.Enabled, c)
 		if err != nil {
 			return err
@@ -105,7 +109,7 @@ func (o *LoadBalancer) processStaticApps(pctx *config.PluginContext, r *registry
 	return nil
 }
 
-func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, c *LoadBalancerArgs, verify bool) error {
+func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, c *LoadBalancerArgs) error {
 	if len(static) == 0 && len(service) == 0 {
 		return nil
 	}
