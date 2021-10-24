@@ -12,7 +12,7 @@ const (
 	OperationDone = "DONE"
 
 	GCSProxyImageName   = "nginx-gcs-static-proxy"
-	GCSProxyVersion     = "1.21-v3"
+	GCSProxyVersion     = "1.21-v4"
 	GCSProxyDockerImage = "docker.io/outblocks/nginx-gcs-static-proxy:" + GCSProxyVersion
 
 	DefaultConcurrency = 5
