@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.20](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.19...v0.1.20)
+
+> 2021-10-24
+
+### FEATURES
+
+[`cf8ff29`](https://github.com/outblocks/cli-plugin-gcp/commit/cf8ff2923b91d79ee6b84fdc54508b5316e47ce9) new nginx proxy image, fixed cache
+
+
 ## [v0.1.19](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.18...v0.1.19)
 
 > 2021-10-20
