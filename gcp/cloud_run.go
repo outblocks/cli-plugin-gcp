@@ -20,7 +20,10 @@ type CloudRun struct {
 	Region    fields.StringInputField `state:"force_new"`
 	Image     fields.StringInputField
 	IsPublic  fields.BoolInputField
-	URL       fields.StringOutputField
+
+	URL           fields.StringOutputField
+	Ready         fields.BoolOutputField
+	StatusMessage fields.StringOutputField
 
 	CloudSQLInstances    fields.StringInputField
 	MinScale             fields.IntInputField    `default:"0"`
@@ -33,11 +36,15 @@ type CloudRun struct {
 	EnvVars              fields.MapInputField
 }
 
+func (o *CloudRun) UniqueID() string {
+	return fields.GenerateID("locations/%s/namespaces/%s/services/%s", o.Region, o.ProjectID, o.Name)
+}
+
 func (o *CloudRun) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
+func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint: gocyclo
 	pctx := meta.(*config.PluginContext)
 
 	projectID := o.ProjectID.Any()
@@ -60,8 +67,6 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
 		return fmt.Errorf("error fetching cloud run service status: %w", err)
 	}
 
-	isNew := o.IsNew()
-
 	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
@@ -81,6 +86,15 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
 		o.EnvVars.UnsetCurrent()
 
 		return nil
+	}
+
+	for _, cond := range svc.Status.Conditions {
+		if cond.Type != CloudRunReady {
+			continue
+		}
+
+		o.Ready.SetCurrent(cond.Status == CloudRunStatusTrue)
+		o.StatusMessage.SetCurrent(cond.Message)
 	}
 
 	o.Image.SetCurrent(svc.Spec.Template.Spec.Containers[0].Image)
@@ -106,8 +120,15 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error {
 
 	o.EnvVars.SetCurrent(envVars)
 
-	if isNew {
-		o.IsPublic.UnsetCurrent()
+	pol, err := cli.Projects.Locations.Services.GetIamPolicy(fmt.Sprintf("projects/%s/locations/%s/services/%s", projectID, region, name)).Do()
+	if err != nil && !ErrIs404(err) {
+		return err
+	}
+
+	if err == nil && pol != nil && len(pol.Bindings) == 1 && len(pol.Bindings[0].Members) == 1 && pol.Bindings[0].Role == "roles/run.invoker" && pol.Bindings[0].Members[0] == "allUsers" {
+		o.IsPublic.SetCurrent(true)
+	} else {
+		o.IsPublic.SetCurrent(false)
 	}
 
 	return nil
@@ -131,16 +152,13 @@ func (o *CloudRun) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	err = waitForRunServiceReady(ctx, cli, projectID, name)
+	svc, ready, msg, err := waitForRunServiceReady(ctx, cli, projectID, name)
 	if err != nil {
 		return err
 	}
 
-	svc, err := getRunService(cli, projectID, name)
-	if err != nil {
-		return err
-	}
-
+	o.Ready.SetCurrent(ready)
+	o.StatusMessage.SetCurrent(msg)
 	o.URL.SetCurrent(svc.Status.Address.Url)
 
 	return setRunServiceIAMPolicy(cli, projectID, region, name, isPublic)
@@ -163,13 +181,16 @@ func (o *CloudRun) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	err = waitForRunServiceReady(ctx, cli, projectID, name)
+	_, ready, msg, err := waitForRunServiceReady(ctx, cli, projectID, name)
 	if err != nil {
 		return err
 	}
 
+	o.Ready.SetCurrent(ready)
+	o.StatusMessage.SetCurrent(msg)
+
 	if o.IsPublic.IsChanged() {
-		return setRunServiceIAMPolicy(cli, o.ProjectID.Wanted(), o.Name.Wanted(), o.Region.Wanted(), o.IsPublic.Wanted())
+		return setRunServiceIAMPolicy(cli, projectID, region, name, o.IsPublic.Wanted())
 	}
 
 	return nil
@@ -280,28 +301,27 @@ func setRunServiceIAMPolicy(cli *run.APIService, project, region, name string, p
 	return err
 }
 
-func waitForRunServiceReady(ctx context.Context, cli *run.APIService, project, name string) error {
+func waitForRunServiceReady(ctx context.Context, cli *run.APIService, project, name string) (svc *run.Service, ready bool, msg string, err error) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, false, "", ctx.Err()
 		case <-t.C:
 			svc, err := getRunService(cli, project, name)
 			if err != nil {
-				return fmt.Errorf("failed to query run service for readiness: %w", err)
+				return nil, false, "", fmt.Errorf("failed to query run service for readiness: %w", err)
 			}
 
 			for _, c := range svc.Status.Conditions {
-				if c.Type == "Ready" {
-					if c.Status == "True" {
-						return nil
-					} else if c.Status == "False" {
-						return fmt.Errorf("service could not become ready (status:%s) (reason:%s) %s",
-							c.Status, c.Reason, c.Message)
+				if c.Type == CloudRunReady {
+					if c.Status == CloudRunStatusTrue {
+						return svc, true, "", nil
 					}
+
+					return svc, false, c.Message, nil
 				}
 			}
 		}

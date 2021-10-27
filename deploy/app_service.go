@@ -21,7 +21,7 @@ type ServiceApp struct {
 	CloudRun *gcp.CloudRun
 
 	App        *types.App
-	Opts       *ServiceAppOptions
+	Props      *types.ServiceAppProperties
 	DeployOpts *ServiceAppDeployOptions
 }
 
@@ -33,29 +33,11 @@ type ServiceAppArgs struct {
 	Databases []*DatabaseDep
 }
 
-func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
-	opts, err := NewServiceAppOptions(plan.App.Properties)
-	if err != nil {
-		return nil, err
-	}
-
-	deployOpts, err := NewServiceAppDeployOptions(plan.Properties)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ServiceApp{
-		App:        plan.App,
-		Opts:       opts,
-		DeployOpts: deployOpts,
-	}, nil
-}
-
 type ServiceAppDeployOptions struct {
-	CPULimit    int `mapstructure:"cpu-limit" default:"1"`
-	MemoryLimit int `mapstructure:"memory-limit" default:"128"`
-	MinScale    int `mapstructure:"min-scale" default:"0"`
-	MaxScale    int `mapstructure:"max-scale" default:"100"`
+	CPULimit    float64 `mapstructure:"cpu_limit" default:"1"`
+	MemoryLimit int     `mapstructure:"memory_limit" default:"128"`
+	MinScale    int     `mapstructure:"min_scale" default:"0"`
+	MaxScale    int     `mapstructure:"max_scale" default:"100"`
 }
 
 func NewServiceAppDeployOptions(in interface{}) (*ServiceAppDeployOptions, error) {
@@ -72,44 +54,33 @@ func NewServiceAppDeployOptions(in interface{}) (*ServiceAppDeployOptions, error
 	}
 
 	return o, validation.ValidateStruct(o,
-		validation.Field(&o.CPULimit, validation.In(1, 2, 4)),
+		validation.Field(&o.CPULimit, validation.In(1.0, 2.0, 4.0)),
 		validation.Field(&o.MemoryLimit, validation.Min(128), validation.Max(8192)),
 		validation.Field(&o.MinScale, validation.Min(0), validation.Max(100)),
 		validation.Field(&o.MaxScale, validation.Min(1)),
 	)
 }
 
-type ServiceAppOptions struct {
-	Build struct {
-		Dockerfile    string `mapstructure:"dockerfile"`
-		DockerContext string `mapstructure:"context"`
-	} `mapstructure:"build"`
-
-	Container struct {
-		Port int `mapstructure:"port" default:"80"`
-	} `mapstructure:"container"`
-
-	LocalDockerImage string `mapstructure:"local_docker_image"`
-	LocalDockerHash  string `mapstructure:"local_docker_hash"`
-
-	CDN struct {
-		Enabled bool `mapstructure:"enabled"`
-	} `mapstructure:"cdn"`
-}
-
-func NewServiceAppOptions(in interface{}) (*ServiceAppOptions, error) {
-	o := &ServiceAppOptions{}
-
-	err := mapstructure.Decode(in, o)
+func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
+	opts, err := types.NewServiceAppProperties(plan.App.Properties)
 	if err != nil {
 		return nil, err
 	}
 
-	return o, defaults.Set(o)
+	deployOpts, err := NewServiceAppDeployOptions(plan.Properties)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ServiceApp{
+		App:        plan.App,
+		Props:      opts,
+		DeployOpts: deployOpts,
+	}, nil
 }
 
 func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs) error {
-	dockerfile := filepath.Join(o.App.Dir, o.Opts.Build.Dockerfile)
+	dockerfile := filepath.Join(o.App.Dir, o.Props.Build.Dockerfile)
 
 	if !plugin_util.FileExists(dockerfile) {
 		return fmt.Errorf("app '%s' dockerfile '%s' does not exist", o.App.Name, dockerfile)
@@ -117,18 +88,18 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.String(o.Opts.LocalDockerImage),
+		Name:      fields.String(o.Props.LocalDockerImage),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
-		Source:    fields.String(o.Opts.LocalDockerImage),
+		Source:    fields.String(o.Props.LocalDockerImage),
 		Pull:      false,
 	}
 
-	if o.Opts.LocalDockerHash != "" {
-		o.Image.SourceHash = fields.String(o.Opts.LocalDockerHash)
+	if o.Props.LocalDockerHash != "" {
+		o.Image.SourceHash = fields.String(o.Props.LocalDockerHash)
 	}
 
-	err := r.Register(o.Image, o.App.ID, o.Opts.LocalDockerImage)
+	err := r.RegisterAppResource(o.App, o.Props.LocalDockerImage, o.Image)
 	if err != nil {
 		return err
 	}
@@ -157,21 +128,21 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 
 	o.CloudRun = &gcp.CloudRun{
 		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), o.App.ID)),
-		Port:      fields.Int(o.Opts.Container.Port),
+		Port:      fields.Int(o.Props.Container.Port),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),
-		IsPublic:  fields.Bool(true),
+		IsPublic:  fields.Bool(o.Props.Public),
 		EnvVars:   fields.Map(envVars),
 
 		CloudSQLInstances: fields.Sprintf(strings.Join(cloudSQLconnFmt, ","), cloudSQLconnNames...),
 		MinScale:          fields.Int(o.DeployOpts.MinScale),
 		MaxScale:          fields.Int(o.DeployOpts.MaxScale),
 		MemoryLimit:       fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
-		CPULimit:          fields.String(fmt.Sprintf("%dm", o.DeployOpts.CPULimit*1000)),
+		CPULimit:          fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
 	}
 
-	err = r.Register(o.CloudRun, o.App.ID, "cloud_run")
+	err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
 	if err != nil {
 		return err
 	}

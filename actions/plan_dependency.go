@@ -41,7 +41,13 @@ func (p *PlanAction) planDatabaseDepDeploy(depPlan *types.DependencyPlan, needs 
 		Needs:     depNeeds,
 	})
 
-	return depDeploy, err
+	if err != nil {
+		return nil, err
+	}
+
+	p.depDeployIDMap[depPlan.Dependency.ID] = depDeploy
+
+	return depDeploy, nil
 }
 
 func (p *PlanAction) planDatabaseDepsDeploy(depPlans []*types.DependencyPlan, allNeeds map[string]map[*types.App]*types.AppNeed) (ret map[string]*deploy.DatabaseDep, err error) {
@@ -53,7 +59,7 @@ func (p *PlanAction) planDatabaseDepsDeploy(depPlans []*types.DependencyPlan, al
 			return ret, err
 		}
 
-		ret[plan.Dependency.ID] = dep
+		ret[plan.Dependency.Name] = dep
 	}
 
 	return ret, nil

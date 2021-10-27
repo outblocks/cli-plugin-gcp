@@ -42,13 +42,13 @@ func anyFileChanged(files []*gcp.BucketObject) bool {
 
 func (o *CacheInvalidate) CalculateDiff() registry.DiffType {
 	for _, app := range o.StaticApps {
-		if app.Opts.CDN.Enabled && anyFileChanged(app.Files) {
+		if app.Props.CDN.Enabled && anyFileChanged(app.Files) {
 			o.changedURLs = append(o.changedURLs, app.App.URL)
 		}
 	}
 
 	for _, app := range o.ServiceApps {
-		if app.Opts.CDN.Enabled && app.Image.Digest.IsChanged() {
+		if app.Props.CDN.Enabled && app.Image.Digest.IsChanged() {
 			o.changedURLs = append(o.changedURLs, app.App.URL)
 		}
 	}

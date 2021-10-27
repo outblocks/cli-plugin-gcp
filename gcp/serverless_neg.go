@@ -19,11 +19,15 @@ type ServerlessNEG struct {
 	CloudRun  fields.StringInputField `state:"force_new"`
 }
 
+func (o *ServerlessNEG) UniqueID() string {
+	return fields.GenerateID("projects/%s/regions/%s/networkEndpointGroups/%s", o.ProjectID, o.Region, o.Name)
+}
+
 func (o *ServerlessNEG) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *ServerlessNEG) ID() fields.StringInputField {
+func (o *ServerlessNEG) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/regions/%s/networkEndpointGroups/%s", o.ProjectID, o.Region, o.Name)
 }
 

@@ -19,6 +19,10 @@ type CloudSQLUser struct {
 	Password  fields.StringInputField
 }
 
+func (o *CloudSQLUser) UniqueID() string {
+	return fields.GenerateID("projects/%s/instances/%s/users/%s", o.ProjectID, o.Instance, o.Name)
+}
+
 func (o *CloudSQLUser) GetName() string {
 	return o.Name.Any()
 }
@@ -36,6 +40,11 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 	}
 
 	users, err := pctx.FuncCache(fmt.Sprintf("CloudSQLUsers:list:%s:%s", projectID, instance), func() (interface{}, error) {
+		_, err = cli.Instances.Get(projectID, instance).Do()
+		if ErrIs404(err) {
+			return nil, err
+		}
+
 		users, err := cli.Users.List(projectID, instance).Do()
 		if err != nil {
 			return nil, err
@@ -127,7 +136,7 @@ func (o *CloudSQLUser) Update(ctx context.Context, meta interface{}) error {
 }
 
 func (o *CloudSQLUser) Delete(ctx context.Context, meta interface{}) error {
-	key := instanceMutexKey(o.ProjectID.Wanted(), o.Instance.Wanted())
+	key := instanceMutexKey(o.ProjectID.Current(), o.Instance.Current())
 	o.Lock(key)
 	defer o.Unlock(key)
 

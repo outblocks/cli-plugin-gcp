@@ -3,7 +3,6 @@ package actions
 import (
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.ServiceApp, error) {
@@ -19,9 +18,10 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 		return nil, err
 	}
 
+	selfAppEnvVars := p.appEnvVars[appPlan.App.Type][appPlan.App.Name].(map[string]interface{})
 	vars := map[string]interface{}{
 		"app":  p.appEnvVars,
-		"self": p.appEnvVars[appPlan.App.Type][appPlan.App.Name],
+		"self": selfAppEnvVars,
 		"dep":  depVars,
 	}
 
@@ -36,12 +36,21 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 	err = appDeploy.Plan(pctx, p.registry, &deploy.ServiceAppArgs{
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
-		Env:       plugin_util.MergeStringMaps(appPlan.Env, p.appEnvVarsStr),
+		Env:       appPlan.Env,
 		Vars:      vars,
 		Databases: databases,
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return appDeploy, err
+	if !appDeploy.Props.Public {
+		selfAppEnvVars["url"] = appDeploy.CloudRun.URL.Input()
+	}
+
+	p.appDeployIDMap[appPlan.App.ID] = appDeploy
+
+	return appDeploy, nil
 }
 
 func (p *PlanAction) planServiceAppsDeploy(appPlans []*types.AppPlan) (ret map[string]*deploy.ServiceApp, err error) {

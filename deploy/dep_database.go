@@ -116,13 +116,13 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
-		Name:            fields.String(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID)),
+		Name:            fields.RandomStringWithPrefix(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID), true, false, true, false, 4),
 		ProjectID:       fields.String(c.ProjectID),
 		Region:          fields.String(c.Region),
 		DatabaseVersion: fields.String(databaseVersion),
 	}
 
-	err = r.Register(o.CloudSQL, o.Dep.ID, "cloud_sql")
+	err = r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
 	if err != nil {
 		return err
 	}
@@ -144,6 +144,10 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 }
 
 func (o *DatabaseDep) registerDatabase(r *registry.Registry, db string) error {
+	if _, ok := o.CloudSQLDatabases[db]; ok {
+		return nil
+	}
+
 	// Add cloud sql database.
 	o.CloudSQLDatabases[db] = &gcp.CloudSQLDatabase{
 		ProjectID: o.CloudSQL.ProjectID,
@@ -151,7 +155,7 @@ func (o *DatabaseDep) registerDatabase(r *registry.Registry, db string) error {
 		Name:      fields.String(db),
 	}
 
-	err := r.Register(o.CloudSQLDatabases[db], o.Dep.ID, db)
+	err := r.RegisterDependencyResource(o.Dep, db, o.CloudSQLDatabases[db])
 	if err != nil {
 		return err
 	}
@@ -160,6 +164,10 @@ func (o *DatabaseDep) registerDatabase(r *registry.Registry, db string) error {
 }
 
 func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) error {
+	if _, ok := o.CloudSQLUsers[user]; ok {
+		return nil
+	}
+
 	var passwordField fields.StringInputField
 	if password != "" {
 		passwordField = fields.String(password)
@@ -167,7 +175,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) 
 		randomPassword := &resources.RandomString{
 			Name: fields.Sprintf("%s password", user),
 		}
-		err := r.Register(randomPassword, o.Dep.ID, user)
+		err := r.RegisterDependencyResource(o.Dep, user, randomPassword)
 		if err != nil {
 			return err
 		}
@@ -183,7 +191,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) 
 		Password:  passwordField,
 	}
 
-	err := r.Register(o.CloudSQLUsers[user], o.Dep.ID, user)
+	err := r.RegisterDependencyResource(o.Dep, user, o.CloudSQLUsers[user])
 	if err != nil {
 		return err
 	}

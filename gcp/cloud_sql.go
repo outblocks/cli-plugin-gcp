@@ -17,7 +17,10 @@ type CloudSQL struct {
 	ProjectID       fields.StringInputField `state:"force_new"`
 	Region          fields.StringInputField `state:"force_new"`
 	DatabaseVersion fields.StringInputField `state:"force_new"`
-	ConnectionName  fields.StringOutputField
+
+	PublicIP       fields.StringOutputField
+	PrivateIP      fields.StringOutputField
+	ConnectionName fields.StringOutputField
 
 	Tier             fields.StringInputField `default:"db-f1-micro"`
 	AvailabilityZone fields.StringInputField `default:"ZONAL"`
@@ -32,6 +35,10 @@ type CloudSQL struct {
 	}
 
 	DatabaseFlags fields.MapInputField
+}
+
+func (o *CloudSQL) UniqueID() string {
+	return fields.GenerateID("projects/%s/instances/%s", o.ProjectID, o.Name)
 }
 
 func (o *CloudSQL) GetName() string {
@@ -65,7 +72,8 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	o.Name.SetCurrent(name)
 	o.Region.SetCurrent(inst.Region)
 	o.DatabaseVersion.SetCurrent(inst.DatabaseVersion)
-	o.ConnectionName.SetCurrent(inst.ConnectionName)
+
+	o.setOutputFields(inst)
 
 	o.Tier.SetCurrent(inst.Settings.Tier)
 	o.AvailabilityZone.SetCurrent(inst.Settings.AvailabilityType)
@@ -109,7 +117,7 @@ func (o *CloudSQL) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	o.ConnectionName.SetCurrent(inst.ConnectionName)
+	o.setOutputFields(inst)
 
 	return nil
 }
@@ -127,13 +135,26 @@ func (o *CloudSQL) Update(ctx context.Context, meta interface{}) error {
 	}
 
 	projectID := o.ProjectID.Wanted()
+	name := o.Name.Wanted()
 
 	op, err := cli.Instances.Update(projectID, o.Name.Current(), o.makeDatabaseInstance()).Do()
 	if err != nil {
 		return err
 	}
 
-	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
+	err = WaitForSQLOperation(ctx, cli, projectID, op.Name)
+	if err != nil {
+		return err
+	}
+
+	inst, err := cli.Instances.Get(projectID, name).Do()
+	if err != nil {
+		return err
+	}
+
+	o.setOutputFields(inst)
+
+	return nil
 }
 
 func (o *CloudSQL) Delete(ctx context.Context, meta interface{}) error {
@@ -179,6 +200,19 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 			DatabaseFlags: flags,
 		},
 	}
+}
+
+func (o *CloudSQL) setOutputFields(inst *sqladmin.DatabaseInstance) {
+	for _, ip := range inst.IpAddresses {
+		switch ip.Type {
+		case "PRIVATE":
+			o.PrivateIP.SetCurrent(ip.IpAddress)
+		case "PRIMARY":
+			o.PublicIP.SetCurrent(ip.IpAddress)
+		}
+	}
+
+	o.ConnectionName.SetCurrent(inst.ConnectionName)
 }
 
 func instanceMutexKey(project, instanceName string) string {

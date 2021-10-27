@@ -5,6 +5,8 @@ import (
 	"mime"
 	"path/filepath"
 
+	"github.com/creasty/defaults"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -20,8 +22,9 @@ type StaticApp struct {
 	Image    *gcp.Image
 	CloudRun *gcp.CloudRun
 
-	App  *types.App
-	Opts *StaticAppOptions
+	App        *types.App
+	Props      *types.StaticAppProperties
+	DeployOpts *StaticAppDeployOptions
 }
 
 type StaticAppArgs struct {
@@ -29,37 +32,50 @@ type StaticAppArgs struct {
 	Region    string
 }
 
-func NewStaticApp(app *types.App) (*StaticApp, error) {
-	opts, err := NewStaticAppOptions(app.Properties)
+type StaticAppDeployOptions struct {
+	MinScale int `mapstructure:"min_scale" default:"0"`
+	MaxScale int `mapstructure:"max_scale" default:"100"`
+}
+
+func NewStaticAppDeployOptions(in interface{}) (*StaticAppDeployOptions, error) {
+	o := &StaticAppDeployOptions{}
+
+	err := mapstructure.Decode(in, o)
+	if err != nil {
+		return nil, err
+	}
+
+	err = defaults.Set(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return o, validation.ValidateStruct(o,
+		validation.Field(&o.MinScale, validation.Min(0), validation.Max(100)),
+		validation.Field(&o.MaxScale, validation.Min(1)),
+	)
+}
+
+func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
+	opts, err := types.NewStaticAppProperties(plan.App.Properties)
+	if err != nil {
+		return nil, err
+	}
+
+	deployOpts, err := NewStaticAppDeployOptions(plan.Properties)
 	if err != nil {
 		return nil, err
 	}
 
 	return &StaticApp{
-		App:  app,
-		Opts: opts,
+		App:        plan.App,
+		Props:      opts,
+		DeployOpts: deployOpts,
 	}, nil
 }
 
-type StaticAppOptions struct {
-	Build struct {
-		Dir string `mapstructure:"dir"`
-	} `mapstructure:"build"`
-
-	Routing string `mapstructure:"routing"`
-
-	CDN struct {
-		Enabled bool `mapstructure:"enabled"`
-	} `mapstructure:"cdn"`
-}
-
-func NewStaticAppOptions(in interface{}) (*StaticAppOptions, error) {
-	o := &StaticAppOptions{}
-	return o, mapstructure.Decode(in, o)
-}
-
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
-	buildDir := filepath.Join(o.App.Dir, o.Opts.Build.Dir)
+	buildDir := filepath.Join(o.App.Dir, o.Props.Build.Dir)
 
 	buildPath, ok := plugin_util.CheckDir(buildDir)
 	if !ok {
@@ -74,7 +90,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Versioning: fields.Bool(false),
 	}
 
-	err := r.Register(o.Bucket, o.App.ID, "bucket")
+	err := r.RegisterAppResource(o.App, "bucket", o.Bucket)
 	if err != nil {
 		return err
 	}
@@ -97,11 +113,11 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 			ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
 		}
 
-		if !o.Opts.CDN.Enabled {
+		if !o.Props.CDN.Enabled {
 			obj.CacheControl = fields.String("private, max-age=0, no-transform")
 		}
 
-		err = r.Register(obj, o.App.ID, filePath)
+		err = r.RegisterAppResource(o.App, filePath, obj)
 		if err != nil {
 			return err
 		}
@@ -119,7 +135,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Pull:      true,
 	}
 
-	err = r.Register(o.Image, CommonName, gcp.GCSProxyImageName)
+	err = r.RegisterPluginResource(CommonName, gcp.GCSProxyImageName, o.Image)
 	if err != nil {
 		return err
 	}
@@ -127,7 +143,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	envVars := map[string]fields.Field{
 		"GCS_BUCKET":  o.Bucket.Name,
 		"FORCE_HTTPS": fields.String("1"),
-		"ROUTING":     fields.String(o.Opts.Routing),
+		"ROUTING":     fields.String(o.Props.Routing),
 	}
 
 	// Add cloud run service.
@@ -138,9 +154,12 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Image:     o.Image.ImageName(),
 		IsPublic:  fields.Bool(true),
 		EnvVars:   fields.Map(envVars),
+
+		MinScale: fields.Int(o.DeployOpts.MinScale),
+		MaxScale: fields.Int(o.DeployOpts.MaxScale),
 	}
 
-	err = r.Register(o.CloudRun, o.App.ID, "cloud_run")
+	err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
 	if err != nil {
 		return err
 	}

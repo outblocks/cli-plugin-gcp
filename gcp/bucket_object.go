@@ -27,6 +27,10 @@ type BucketObject struct {
 	Path string `state:"-"`
 }
 
+func (o *BucketObject) UniqueID() string {
+	return fields.GenerateID("buckets/%s/objects/%s", o.BucketName, o.Name)
+}
+
 func (o *BucketObject) GetName() string {
 	return o.Name.Any()
 }

@@ -15,14 +15,16 @@ import (
 )
 
 type PlanAction struct {
-	pluginCtx   *config.PluginContext
-	log         log.Logger
-	apiRegistry *registry.Registry
-	registry    *registry.Registry
-	appIDMap    map[string]*types.App
+	pluginCtx      *config.PluginContext
+	log            log.Logger
+	apiRegistry    *registry.Registry
+	registry       *registry.Registry
+	appIDMap       map[string]*types.App
+	appDeployIDMap map[string]interface{}
+	appEnvVars     map[string]map[string]interface{} // type->name->value
 
-	appEnvVarsStr map[string]string
-	appEnvVars    map[string]map[string]interface{} // type->name->value
+	depIDMap       map[string]*types.Dependency
+	depDeployIDMap map[string]interface{}
 
 	staticApps   map[string]*deploy.StaticApp
 	serviceApps  map[string]*deploy.ServiceApp
@@ -58,13 +60,16 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 	}
 
 	return &PlanAction{
-		pluginCtx:     pctx,
-		log:           logger,
-		apiRegistry:   registry.NewRegistry(),
-		registry:      r,
-		appIDMap:      make(map[string]*types.App),
-		appEnvVarsStr: make(map[string]string),
-		appEnvVars:    make(map[string]map[string]interface{}),
+		pluginCtx:      pctx,
+		log:            logger,
+		apiRegistry:    registry.NewRegistry(),
+		registry:       r,
+		appIDMap:       make(map[string]*types.App),
+		appDeployIDMap: make(map[string]interface{}),
+		appEnvVars:     make(map[string]map[string]interface{}),
+
+		depIDMap:       make(map[string]*types.Dependency),
+		depDeployIDMap: make(map[string]interface{}),
 
 		PluginMap:        state,
 		AppStates:        appStates,
@@ -82,20 +87,10 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 	)
 
 	for _, app := range appPlans {
-		prefix := app.App.EnvPrefix()
 		p.appIDMap[app.App.ID] = app.App
 
-		p.appEnvVarsStr[fmt.Sprintf("%sURL", prefix)] = app.App.URL
-
-		u, err := url.Parse(app.App.URL)
-		if err != nil {
-			return err
-		}
-
 		appEnvVars := map[string]interface{}{
-			"url":  fields.String(app.App.URL),
-			"host": fields.String(u.Host),
-			"path": fields.String(u.Path),
+			"url": fields.String(app.App.URL),
 		}
 
 		if _, ok := p.appEnvVars[app.App.Type]; !ok {
@@ -153,6 +148,8 @@ func (p *PlanAction) planDependencies(appPlans []*types.AppPlan, depPlans []*typ
 	)
 
 	for _, dep := range depPlans {
+		p.depIDMap[dep.Dependency.ID] = dep.Dependency
+
 		switch dep.Dependency.Type {
 		case DepTypePostgresql, DepTypeMySQL:
 			databasePlan = append(databasePlan, dep)
@@ -175,7 +172,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	for _, api := range gcp.APISRequired {
 		s := &gcp.APIService{Name: fields.String(api)}
 
-		err := p.apiRegistry.Register(s, deploy.APIName, api)
+		err := p.apiRegistry.RegisterPluginResource(deploy.APIName, api, s)
 		if err != nil {
 			return err
 		}
@@ -250,41 +247,37 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, dep
 	return nil
 }
 
-func (p *PlanAction) diff(ctx context.Context) (appPlanActions []*types.AppPlanActions, pluginPlanActions []*types.PluginPlanActions, err error) {
-	// Process diffs.
+func (p *PlanAction) diff(ctx context.Context) (actions []*types.PlanAction, err error) {
 	diff, err := p.registry.Diff(ctx, p.destroy)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	appPlanMap := make(map[string]*types.AppPlanActions)
-	pluginPlanMap := make(map[string]*types.PluginPlanActions)
 
 	for _, d := range diff {
-		ns := d.Object.Namespace
-
-		if app, ok := p.appIDMap[ns]; ok {
-			appPlan, ok := appPlanMap[ns]
-			if !ok {
-				appPlan = types.NewAppPlanActions(app)
-				appPlanMap[ns] = appPlan
-				appPlanActions = append(appPlanActions, appPlan)
-			}
-
-			appPlan.Actions = append(appPlan.Actions, d.ToPlanAction())
-		} else {
-			pluginPlan, ok := pluginPlanMap[ns]
-			if !ok {
-				pluginPlan = types.NewPluginPlanActions(d.Object.Namespace)
-				pluginPlanMap[ns] = pluginPlan
-				pluginPlanActions = append(pluginPlanActions, pluginPlan)
-			}
-
-			pluginPlan.Actions = append(pluginPlan.Actions, d.ToPlanAction())
-		}
+		actions = append(actions, d.ToPlanAction())
 	}
 
-	return appPlanActions, pluginPlanActions, nil
+	return actions, nil
+}
+
+func (p *PlanAction) getAppState(app *types.App) *types.AppState {
+	state, ok := p.AppStates[app.ID]
+	if !ok {
+		state = types.NewAppState(app)
+		p.AppStates[app.ID] = state
+	}
+
+	return state
+}
+
+func (p *PlanAction) getDependencyState(dep *types.Dependency) *types.DependencyState {
+	state, ok := p.DependencyStates[dep.ID]
+	if !ok {
+		state = types.NewDependencyState(dep)
+		p.DependencyStates[dep.ID] = state
+	}
+
+	return state
 }
 
 func (p *PlanAction) save() error {
@@ -301,14 +294,11 @@ func (p *PlanAction) save() error {
 
 	curMapping := p.loadBalancer.URLMaps[0].AppMapping.Current()
 
+	// App SSL states.
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
 
-		state, ok := p.AppStates[id]
-		if !ok {
-			state = types.NewAppState(p.appIDMap[id])
-		}
-
+		state := p.getAppState(p.appIDMap[id])
 		u, _ := url.Parse(mapURL)
 		domain := u.Hostname()
 
@@ -333,15 +323,53 @@ func (p *PlanAction) save() error {
 			}
 		}
 
-		state.DNS = &types.DNS{
+		state.DNS = &types.DNSState{
 			IP:            p.loadBalancer.Addresses[0].IP.Current(),
 			URL:           mapURL,
 			Manual:        true,
 			SSLStatus:     sslStatus,
 			SSLStatusInfo: sslStatusInfo,
 		}
+	}
 
-		p.AppStates[id] = state
+	// App states.
+	for id, app := range p.appDeployIDMap {
+		state := p.getAppState(p.appIDMap[id])
+
+		switch appDeploy := app.(type) {
+		case *deploy.StaticApp:
+			state.Ready = appDeploy.CloudRun.Ready.Current()
+			state.Message = appDeploy.CloudRun.StatusMessage.Current()
+		case *deploy.ServiceApp:
+			state.Ready = appDeploy.CloudRun.Ready.Current()
+			state.Message = appDeploy.CloudRun.StatusMessage.Current()
+		}
+	}
+
+	// Dependency states.
+	for id, dep := range p.depDeployIDMap {
+		state := p.getDependencyState(p.depIDMap[id])
+
+		switch depDeploy := dep.(type) { //nolint:gocritic
+		case *deploy.DatabaseDep:
+			connInfo := depDeploy.CloudSQL.PublicIP.Current()
+			if connInfo == "" {
+				connInfo = depDeploy.CloudSQL.PrivateIP.Current()
+			}
+
+			if connInfo != "" {
+				connInfo = fmt.Sprintf("%s (%s)", connInfo, depDeploy.CloudSQL.ConnectionName.Current())
+			}
+
+			state.DNS = &types.DNSState{
+				IP:             depDeploy.CloudSQL.PublicIP.Current(),
+				InternalIP:     depDeploy.CloudSQL.PrivateIP.Current(),
+				ConnectionInfo: connInfo,
+				Properties: map[string]interface{}{
+					"connection_name": depDeploy.CloudSQL.ConnectionName.Current(),
+				},
+			}
+		}
 	}
 
 	return nil
@@ -358,7 +386,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 		return nil, err
 	}
 
-	appPlanActions, pluginPlanActions, err := p.diff(ctx)
+	actions, err := p.diff(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -369,8 +397,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 	}
 
 	return &types.Plan{
-		Apps:   appPlanActions,
-		Plugin: pluginPlanActions,
+		Actions: actions,
 	}, nil
 }
 

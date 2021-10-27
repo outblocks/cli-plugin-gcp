@@ -15,7 +15,11 @@ type Address struct {
 
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
-	IP        fields.StringInputField
+	IP        fields.StringOutputField
+}
+
+func (o *Address) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/addresses/%s", o.ProjectID, o.Name)
 }
 
 func (o *Address) GetName() string {

@@ -20,11 +20,15 @@ type ManagedSSL struct {
 	DomainStatus fields.MapOutputField
 }
 
+func (o *ManagedSSL) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
+}
+
 func (o *ManagedSSL) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *ManagedSSL) ID() fields.StringInputField {
+func (o *ManagedSSL) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 

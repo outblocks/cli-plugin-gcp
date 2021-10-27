@@ -21,11 +21,15 @@ type URLMap struct {
 	Fingerprint string `state:"-"`
 }
 
+func (o *URLMap) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/urlMaps/%s", o.ProjectID, o.Name)
+}
+
 func (o *URLMap) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *URLMap) ID() fields.StringInputField {
+func (o *URLMap) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/urlMaps/%s", o.ProjectID, o.Name)
 }
 

@@ -36,7 +36,11 @@ func (o *BackendService) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *BackendService) ID() fields.StringInputField {
+func (o *BackendService) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/backendServices/%s", o.ProjectID, o.Name)
+}
+
+func (o *BackendService) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/backendServices/%s", o.ProjectID, o.Name)
 }
 

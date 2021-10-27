@@ -19,11 +19,15 @@ type TargetHTTPProxy struct {
 	Fingerprint string `state:"-"`
 }
 
+func (o *TargetHTTPProxy) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
+}
+
 func (o *TargetHTTPProxy) GetName() string {
 	return o.Name.Any()
 }
 
-func (o *TargetHTTPProxy) ID() fields.StringInputField {
+func (o *TargetHTTPProxy) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
 }
 

@@ -21,8 +21,8 @@ import (
 type Image struct {
 	registry.ResourceBase
 
-	Name       fields.StringInputField
-	Tag        fields.StringInputField
+	Name       fields.StringInputField `state:"force_new"`
+	Tag        fields.StringInputField `state:"force_new"`
 	ProjectID  fields.StringInputField `state:"force_new"`
 	GCR        fields.StringInputField `state:"force_new"`
 	Digest     fields.StringOutputField
@@ -30,6 +30,10 @@ type Image struct {
 	SourceHash fields.StringInputField
 
 	Pull bool `state:"-"`
+}
+
+func (o *Image) UniqueID() string {
+	return fields.GenerateID("image/%s/%s/%s", o.GCR, o.ProjectID, o.Name)
 }
 
 func (o *Image) GetName() string {

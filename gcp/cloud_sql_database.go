@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -16,6 +17,10 @@ type CloudSQLDatabase struct {
 	ProjectID fields.StringInputField `state:"force_new"`
 	Instance  fields.StringInputField `state:"force_new"`
 	Name      fields.StringInputField `state:"force_new"`
+}
+
+func (o *CloudSQLDatabase) UniqueID() string {
+	return fields.GenerateID("projects/%s/instances/%s/databases/%s", o.ProjectID, o.Instance, o.Name)
 }
 
 func (o *CloudSQLDatabase) GetName() string {
@@ -32,6 +37,13 @@ func (o *CloudSQLDatabase) Read(ctx context.Context, meta interface{}) error {
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	_, err = cli.Instances.Get(projectID, instance).Do()
+	if ErrIs404(err) {
+		o.MarkAsNew()
+
+		return nil
 	}
 
 	_, err = cli.Databases.Get(projectID, instance, name).Do()
@@ -84,7 +96,8 @@ func (o *CloudSQLDatabase) Update(ctx context.Context, meta interface{}) error {
 }
 
 func (o *CloudSQLDatabase) Delete(ctx context.Context, meta interface{}) error {
-	key := instanceMutexKey(o.ProjectID.Wanted(), o.Instance.Wanted())
+	fmt.Fprintln(os.Stderr, o.Instance.Current(), o.Instance.Any(), o.ProjectID.Any(), o.ProjectID.Current())
+	key := instanceMutexKey(o.ProjectID.Current(), o.Instance.Current())
 	o.Lock(key)
 	defer o.Unlock(key)
 

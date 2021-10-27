@@ -66,6 +66,7 @@ linters:
     - nakedret
     - noctx
     - nolintlint
+    - revive
     - rowserrcheck
     - staticcheck
     - structcheck
@@ -90,4 +91,3 @@ linters:
     # - lll
     # - maligned
     # - nestif
-    # - revive

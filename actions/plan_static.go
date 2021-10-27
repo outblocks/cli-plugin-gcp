@@ -6,7 +6,7 @@ import (
 )
 
 func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.StaticApp, error) {
-	appDeploy, err := deploy.NewStaticApp(appPlan.App)
+	appDeploy, err := deploy.NewStaticApp(appPlan)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,13 @@ func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.Static
 		Region:    pctx.Settings().Region,
 	})
 
-	return appDeploy, err
+	if err != nil {
+		return nil, err
+	}
+
+	p.appDeployIDMap[appPlan.App.ID] = appDeploy
+
+	return appDeploy, nil
 }
 
 func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret map[string]*deploy.StaticApp, err error) {

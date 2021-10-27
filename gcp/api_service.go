@@ -13,7 +13,12 @@ import (
 type APIService struct {
 	registry.ResourceBase
 
-	Name fields.StringInputField `state:"force_new"`
+	ProjectNumber fields.IntInputField    `state:"force_new"`
+	Name          fields.StringInputField `state:"force_new"`
+}
+
+func (o *APIService) UniqueID() string {
+	return fields.GenerateID("projects/%d/services/%s", o.ProjectNumber, o.Name)
 }
 
 func (o *APIService) GetName() string {
@@ -29,7 +34,9 @@ func (o *APIService) Read(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	res, err := apiCli.Services.Get(fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, name)).Do()
+	id := fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, name)
+
+	res, err := apiCli.Services.Get(id).Do()
 	if err != nil {
 		return err
 	}
@@ -53,7 +60,9 @@ func (o *APIService) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	op, err := cli.Services.Enable(fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, o.Name.Wanted()), &serviceusage.EnableServiceRequest{}).Do()
+	id := fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, o.Name.Wanted())
+
+	op, err := cli.Services.Enable(id, &serviceusage.EnableServiceRequest{}).Do()
 	if err != nil {
 		return err
 	}

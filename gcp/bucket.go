@@ -22,6 +22,10 @@ type Bucket struct {
 	Versioning fields.BoolInputField
 }
 
+func (o *Bucket) UniqueID() string {
+	return o.Name.Any()
+}
+
 func (o *Bucket) GetName() string {
 	return o.Name.Any()
 }

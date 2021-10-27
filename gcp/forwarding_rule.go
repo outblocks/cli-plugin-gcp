@@ -21,6 +21,10 @@ type ForwardingRule struct {
 	Fingerprint string `state:"-"`
 }
 
+func (o *ForwardingRule) UniqueID() string {
+	return fields.GenerateID("projects/%s/global/forwardingRules/%s", o.ProjectID, o.Name)
+}
+
 func (o *ForwardingRule) GetName() string {
 	return o.Name.Any()
 }
