@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.21](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.20...v0.1.21)
+
+> 2021-10-27
+
+### FEATURES
+
+[`99a6fc3`](https://github.com/outblocks/cli-plugin-gcp/commit/99a6fc3d1f97572b0b16d50b64ee20b21080a6cc) resource merging support, dependency and app states, cloudsql id prefix
+
+
 ## [v0.1.20](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.19...v0.1.20)
 
 > 2021-10-24
