@@ -36,7 +36,7 @@ type PlanAction struct {
 	verify, destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, targetApps []string, verify, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, targetApps, skipApps []string, verify, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
@@ -45,6 +45,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		Destroy:         destroy,
 		Read:            verify,
 		TargetApps:      targetApps,
+		SkipApps:        skipApps,
 		AllowDuplicates: true,
 	})
 
