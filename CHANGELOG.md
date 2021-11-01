@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.23](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.22...v0.1.23)
+
+> 2021-11-01
+
+### FEATURES
+
+[`ff2191f`](https://github.com/outblocks/cli-plugin-gcp/commit/ff2191fc265ce05d2cc1501c82ace88d0a8f5a7c) target deployment mode, registry refactor
+
+
 ## [v0.1.22](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.21...v0.1.22)
 
 > 2021-10-28
