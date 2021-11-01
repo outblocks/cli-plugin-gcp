@@ -1,5 +1,16 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.24](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.23...v0.1.24)
+
+> 2021-11-01
+
+### FEATURES
+
+[`b261001`](https://github.com/outblocks/cli-plugin-gcp/commit/b261001f0680290c03d2685993d020e446a342e5) sdk bump
+[`7dd7281`](https://github.com/outblocks/cli-plugin-gcp/commit/7dd72810e5060dc3f612dc1aeee66be1543312be) plugin sdk bump
+[`409ec84`](https://github.com/outblocks/cli-plugin-gcp/commit/409ec84c46ee12e9ad76c6ee101b29d24f6c938a) add skip apps, sdk update
+
+
 ## [v0.1.23](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.22...v0.1.23)
 
 > 2021-11-01
