@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/creasty/defaults"
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -49,7 +50,7 @@ func NewDatabaseDepNeed(in interface{}) (*DatabaseDepNeed, error) {
 }
 
 func NewDatabaseDep(dep *types.Dependency) (*DatabaseDep, error) {
-	opts, err := NewDatabaseDepOptions(dep.Properties)
+	opts, err := NewDatabaseDepOptions(dep.Properties, dep.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -63,18 +64,37 @@ func NewDatabaseDep(dep *types.Dependency) (*DatabaseDep, error) {
 }
 
 type DatabaseDepOptions struct {
-	Version string `mapstructure:"version"`
+	Version         string `mapstructure:"version"`
+	HA              bool   `mapstructure:"high_availability"`
+	Tier            string `mapstructure:"tier" default:"db-f1-micro"`
+	DatabaseVersion string `mapstructure:"-"`
 }
 
-func NewDatabaseDepOptions(in interface{}) (*DatabaseDepOptions, error) {
+func NewDatabaseDepOptions(in interface{}, typ string) (*DatabaseDepOptions, error) {
 	o := &DatabaseDepOptions{}
-	return o, mapstructure.Decode(in, o)
+
+	err := mapstructure.Decode(in, o)
+	if err != nil {
+		return nil, err
+	}
+
+	err = defaults.Set(o)
+	if err != nil {
+		return nil, err
+	}
+
+	o.DatabaseVersion, err = o.databaseVersion(typ)
+	if err != nil {
+		return nil, err
+	}
+
+	return o, nil
 }
 
-func (o *DatabaseDep) databaseVersion() (string, error) {
-	version := strings.ToUpper(o.Opts.Version)
+func (o *DatabaseDepOptions) databaseVersion(typ string) (string, error) {
+	version := strings.ToUpper(o.Version)
 
-	switch strings.ToUpper(o.Dep.Type) {
+	switch strings.ToUpper(typ) {
 	case "POSTGRES", "POSTGRESQL":
 		switch version {
 		case "9", "9.6", "9_6":
@@ -103,26 +123,31 @@ func (o *DatabaseDep) databaseVersion() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("unknown database version '%s' and type '%s' combination", o.Opts.Version, o.Dep.Type)
+	return "", fmt.Errorf("unknown database version '%s' and type '%s' combination", o.Version, typ)
+}
+
+func (o *DatabaseDepOptions) AvailabilityZone() string {
+	if o.HA {
+		return "REGIONAL"
+	}
+
+	return "ZONAL"
 }
 
 func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *DatabaseDepArgs) error {
-	databaseVersion, err := o.databaseVersion()
-	if err != nil {
-		return err
-	}
-
 	o.Needs = c.Needs
 
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
-		Name:            fields.RandomStringWithPrefix(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID), true, false, true, false, 4),
-		ProjectID:       fields.String(c.ProjectID),
-		Region:          fields.String(c.Region),
-		DatabaseVersion: fields.String(databaseVersion),
+		Name:             fields.RandomStringWithPrefix(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID), true, false, true, false, 4),
+		ProjectID:        fields.String(c.ProjectID),
+		Region:           fields.String(c.Region),
+		DatabaseVersion:  fields.String(o.Opts.DatabaseVersion),
+		Tier:             fields.String(o.Opts.Tier),
+		AvailabilityZone: fields.String(o.Opts.AvailabilityZone()),
 	}
 
-	err = r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
+	err := r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
 	if err != nil {
 		return err
 	}

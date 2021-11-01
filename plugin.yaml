@@ -16,4 +16,5 @@ supports:
   - static
 supported_types:
   - type: postgresql
+  - type: mysql
   - type: storage

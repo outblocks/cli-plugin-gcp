@@ -2,7 +2,6 @@ package actions
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
@@ -37,20 +36,17 @@ type PlanAction struct {
 	verify, destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, appStates map[string]*types.AppState, depStates map[string]*types.DependencyState, verify, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, targetApps []string, verify, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
 
-	if appStates == nil {
-		appStates = make(map[string]*types.AppState)
-	}
-
-	if depStates == nil {
-		depStates = make(map[string]*types.DependencyState)
-	}
-
-	r := registry.NewRegistry()
+	r := registry.NewRegistry(&registry.Options{
+		Destroy:         destroy,
+		Read:            verify,
+		TargetApps:      targetApps,
+		AllowDuplicates: true,
+	})
 
 	for _, t := range gcp.Types {
 		err := r.RegisterType(t)
@@ -60,9 +56,11 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 	}
 
 	return &PlanAction{
-		pluginCtx:      pctx,
-		log:            logger,
-		apiRegistry:    registry.NewRegistry(),
+		pluginCtx: pctx,
+		log:       logger,
+		apiRegistry: registry.NewRegistry(&registry.Options{
+			Read: fullCheck,
+		}),
 		registry:       r,
 		appIDMap:       make(map[string]*types.App),
 		appDeployIDMap: make(map[string]interface{}),
@@ -72,8 +70,8 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		depDeployIDMap: make(map[string]interface{}),
 
 		PluginMap:        state,
-		AppStates:        appStates,
-		DependencyStates: depStates,
+		AppStates:        make(map[string]*types.AppState),
+		DependencyStates: make(map[string]*types.DependencyState),
 		verify:           verify,
 		destroy:          destroy,
 		fullCheck:        fullCheck,
@@ -181,14 +179,12 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	apiReg := p.PluginMap["api_registry"]
 
 	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
-	err := p.apiRegistry.Load(ctx, apiReg, p.pluginCtx, &registry.Options{
-		Read: p.fullCheck,
-	})
+	err := p.apiRegistry.Load(ctx, apiReg, p.pluginCtx)
 	if err != nil {
 		return err
 	}
 
-	diff, err := p.apiRegistry.Diff(ctx, false)
+	diff, err := p.apiRegistry.Diff(ctx)
 	if err != nil {
 		return err
 	}
@@ -237,9 +233,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, dep
 	// Process registry.
 	reg := p.PluginMap["registry"]
 
-	err = p.registry.Load(ctx, reg, p.pluginCtx, &registry.Options{
-		Read: p.verify,
-	})
+	err = p.registry.Load(ctx, reg, p.pluginCtx)
 	if err != nil {
 		return err
 	}
@@ -247,20 +241,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, dep
 	return nil
 }
 
-func (p *PlanAction) diff(ctx context.Context) (actions []*types.PlanAction, err error) {
-	diff, err := p.registry.Diff(ctx, p.destroy)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, d := range diff {
-		actions = append(actions, d.ToPlanAction())
-	}
-
-	return actions, nil
-}
-
-func (p *PlanAction) getAppState(app *types.App) *types.AppState {
+func (p *PlanAction) getOrCreateAppState(app *types.App) *types.AppState {
 	state, ok := p.AppStates[app.ID]
 	if !ok {
 		state = types.NewAppState(app)
@@ -270,7 +251,7 @@ func (p *PlanAction) getAppState(app *types.App) *types.AppState {
 	return state
 }
 
-func (p *PlanAction) getDependencyState(dep *types.Dependency) *types.DependencyState {
+func (p *PlanAction) getOrCreateDependencyState(dep *types.Dependency) *types.DependencyState {
 	state, ok := p.DependencyStates[dep.ID]
 	if !ok {
 		state = types.NewDependencyState(dep)
@@ -298,7 +279,7 @@ func (p *PlanAction) save() error {
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
 
-		state := p.getAppState(p.appIDMap[id])
+		state := p.getOrCreateAppState(p.appIDMap[id])
 		u, _ := url.Parse(mapURL)
 		domain := u.Hostname()
 
@@ -334,42 +315,24 @@ func (p *PlanAction) save() error {
 
 	// App states.
 	for id, app := range p.appDeployIDMap {
-		state := p.getAppState(p.appIDMap[id])
-
-		switch appDeploy := app.(type) {
-		case *deploy.StaticApp:
-			state.Ready = appDeploy.CloudRun.Ready.Current()
-			state.Message = appDeploy.CloudRun.StatusMessage.Current()
-		case *deploy.ServiceApp:
-			state.Ready = appDeploy.CloudRun.Ready.Current()
-			state.Message = appDeploy.CloudRun.StatusMessage.Current()
+		deployState := computeAppDeploymentState(app)
+		if deployState == nil {
+			continue
 		}
+
+		state := p.getOrCreateAppState(p.appIDMap[id])
+		state.Deployment = deployState
 	}
 
 	// Dependency states.
 	for id, dep := range p.depDeployIDMap {
-		state := p.getDependencyState(p.depIDMap[id])
-
-		switch depDeploy := dep.(type) { //nolint:gocritic
-		case *deploy.DatabaseDep:
-			connInfo := depDeploy.CloudSQL.PublicIP.Current()
-			if connInfo == "" {
-				connInfo = depDeploy.CloudSQL.PrivateIP.Current()
-			}
-
-			if connInfo != "" {
-				connInfo = fmt.Sprintf("%s (%s)", connInfo, depDeploy.CloudSQL.ConnectionName.Current())
-			}
-
-			state.DNS = &types.DNSState{
-				IP:             depDeploy.CloudSQL.PublicIP.Current(),
-				InternalIP:     depDeploy.CloudSQL.PrivateIP.Current(),
-				ConnectionInfo: connInfo,
-				Properties: map[string]interface{}{
-					"connection_name": depDeploy.CloudSQL.ConnectionName.Current(),
-				},
-			}
+		dnsState := computeDependencyDNSState(dep)
+		if dnsState == nil {
+			continue
 		}
+
+		state := p.getOrCreateDependencyState(p.depIDMap[id])
+		state.DNS = dnsState
 	}
 
 	return nil
@@ -386,9 +349,14 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 		return nil, err
 	}
 
-	actions, err := p.diff(ctx)
+	diff, err := p.registry.Diff(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var actions []*types.PlanAction
+	for _, d := range diff {
+		actions = append(actions, d.ToPlanAction())
 	}
 
 	err = p.save()
@@ -412,7 +380,7 @@ func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, depPl
 		return err
 	}
 
-	diff, err := p.registry.Diff(ctx, p.destroy)
+	diff, err := p.registry.Diff(ctx)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, stream *plugin_go.ReceiverStream) error {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginMap, r.AppStates, r.DependencyStates, false, r.Destroy, false)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginMap, r.TargetApps, false, r.Destroy, false)
 	if err != nil {
 		return err
 	}

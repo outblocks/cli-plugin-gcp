@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -96,7 +95,6 @@ func (o *CloudSQLDatabase) Update(ctx context.Context, meta interface{}) error {
 }
 
 func (o *CloudSQLDatabase) Delete(ctx context.Context, meta interface{}) error {
-	fmt.Fprintln(os.Stderr, o.Instance.Current(), o.Instance.Any(), o.ProjectID.Any(), o.ProjectID.Current())
 	key := instanceMutexKey(o.ProjectID.Current(), o.Instance.Current())
 	o.Lock(key)
 	defer o.Unlock(key)
