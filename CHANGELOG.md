@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.25](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.24...v0.1.25)
+
+> 2021-11-02
+
+### BUG FIXES
+
+[`1a8ddb4`](https://github.com/outblocks/cli-plugin-gcp/commit/1a8ddb47b194bc6a326170f6ec09b58f4c78be16) cloud run fixes
+
+
 ## [v0.1.24](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.23...v0.1.24)
 
 > 2021-11-01
