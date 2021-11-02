@@ -9,9 +9,10 @@ const (
 	ACLPublicRead     = "publicRead"
 	ACLProjectPrivate = "projectPrivate"
 
-	OperationDone      = "DONE"
-	CloudRunReady      = "Ready"
-	CloudRunStatusTrue = "True"
+	OperationDone       = "DONE"
+	CloudRunReady       = "Ready"
+	CloudRunStatusTrue  = "True"
+	CloudRunStatusFalse = "False"
 
 	GCSProxyImageName   = "nginx-gcs-static-proxy"
 	GCSProxyVersion     = "1.21-v4"

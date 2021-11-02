@@ -98,7 +98,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 	}
 
 	o.Image.SetCurrent(svc.Spec.Template.Spec.Containers[0].Image)
-	o.URL.SetCurrent(svc.Status.Address.Url)
+	o.URL.SetCurrent(svc.Status.Url)
 	o.CloudSQLInstances.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cloudsql-instances"])
 	o.CPULimit.SetCurrent(svc.Spec.Template.Spec.Containers[0].Resources.Limits["cpu"])
 	o.MemoryLimit.SetCurrent(svc.Spec.Template.Spec.Containers[0].Resources.Limits["memory"])
@@ -159,7 +159,7 @@ func (o *CloudRun) Create(ctx context.Context, meta interface{}) error {
 
 	o.Ready.SetCurrent(ready)
 	o.StatusMessage.SetCurrent(msg)
-	o.URL.SetCurrent(svc.Status.Address.Url)
+	o.URL.SetCurrent(svc.Status.Url)
 
 	return setRunServiceIAMPolicy(cli, projectID, region, name, isPublic)
 }
@@ -315,13 +315,18 @@ func waitForRunServiceReady(ctx context.Context, cli *run.APIService, project, n
 				return nil, false, "", fmt.Errorf("failed to query run service for readiness: %w", err)
 			}
 
+			if svc.Metadata == nil || svc.Status.ObservedGeneration != svc.Metadata.Generation {
+				continue
+			}
+
 			for _, c := range svc.Status.Conditions {
 				if c.Type == CloudRunReady {
-					if c.Status == CloudRunStatusTrue {
+					switch c.Status {
+					case CloudRunStatusTrue:
 						return svc, true, "", nil
+					case CloudRunStatusFalse:
+						return svc, false, c.Message, nil
 					}
-
-					return svc, false, c.Message, nil
 				}
 			}
 		}

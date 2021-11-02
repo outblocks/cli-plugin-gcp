@@ -15,10 +15,10 @@ func computeAppDeploymentState(app interface{}) *types.DeploymentState {
 
 	switch appDeploy := app.(type) {
 	case *deploy.StaticApp:
-		ok, ready = appDeploy.CloudRun.Ready.LookupCurrent()
+		ready, ok = appDeploy.CloudRun.Ready.LookupCurrent()
 		message = appDeploy.CloudRun.StatusMessage.Current()
 	case *deploy.ServiceApp:
-		ok, ready = appDeploy.CloudRun.Ready.LookupCurrent()
+		ready, ok = appDeploy.CloudRun.Ready.LookupCurrent()
 		message = appDeploy.CloudRun.StatusMessage.Current()
 	}
 

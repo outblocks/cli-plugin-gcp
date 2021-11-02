@@ -44,10 +44,6 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 		return nil, err
 	}
 
-	if !appDeploy.Props.Public {
-		selfAppEnvVars["url"] = appDeploy.CloudRun.URL.Input()
-	}
-
 	p.appDeployIDMap[appPlan.App.ID] = appDeploy
 
 	return appDeploy, nil
