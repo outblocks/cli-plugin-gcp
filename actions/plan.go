@@ -279,8 +279,13 @@ func (p *PlanAction) save() error {
 	// App SSL states.
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
+		app := p.appIDMap[id]
 
-		state := p.getOrCreateAppState(p.appIDMap[id])
+		if app == nil {
+			continue
+		}
+
+		state := p.getOrCreateAppState(app)
 		u, _ := url.Parse(mapURL)
 		domain := u.Hostname()
 
