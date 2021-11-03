@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.29](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.28...v0.1.29)
+
+> 2021-11-03
+
+### FEATURES
+
+[`2cbb0e6`](https://github.com/outblocks/cli-plugin-gcp/commit/2cbb0e66c5c6b38b8c94d689850e5b41af889cbe) do not require dir to be valid, just skip it
+[`15f8f39`](https://github.com/outblocks/cli-plugin-gcp/commit/15f8f39ecc05d7d5addce11e61b31200feb49c6d) relative dir, raw state
+
+
 ## [v0.1.28](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.27...v0.1.28)
 
 > 2021-11-03
