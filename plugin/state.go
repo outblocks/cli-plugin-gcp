@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -166,16 +165,8 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		}
 	}
 
-	// Decode state.
-	stateData := &types.StateData{}
-	if len(state) > 0 {
-		if err := json.Unmarshal(state, &stateData); err != nil {
-			return nil, fmt.Errorf("cannot decode state file: %w", err)
-		}
-	}
-
 	return &plugin_go.GetStateResponse{
-		State:    stateData,
+		State:    state,
 		LockInfo: lockinfo,
 		Source: &types.StateSource{
 			Name:    bucket,
@@ -206,12 +197,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 	b := cli.Bucket(bucket)
 	w := b.Object(p.statefile(p.env.Env())).NewWriter(ctx)
 
-	data, err := json.Marshal(r.State)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = w.Write(data)
+	_, err = w.Write(r.State)
 	if err != nil {
 		return nil, err
 	}

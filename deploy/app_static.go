@@ -75,7 +75,7 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 }
 
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
-	buildDir := filepath.Join(o.App.Dir, o.Props.Build.Dir)
+	buildDir := filepath.Join(pctx.Env().ProjectDir(), o.App.Dir, o.Props.Build.Dir)
 
 	buildPath, ok := plugin_util.CheckDir(buildDir)
 	if !ok {
