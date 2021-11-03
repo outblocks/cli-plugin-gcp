@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"fmt"
 	"mime"
 	"path/filepath"
 
@@ -77,10 +76,7 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
 	buildDir := filepath.Join(pctx.Env().ProjectDir(), o.App.Dir, o.Props.Build.Dir)
 
-	buildPath, ok := plugin_util.CheckDir(buildDir)
-	if !ok {
-		return fmt.Errorf("app '%s' build dir '%s' does not exist", o.App.Name, buildDir)
-	}
+	buildPath, includeFiles := plugin_util.CheckDir(buildDir)
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
@@ -96,33 +92,35 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	}
 
 	// Add bucket contents.
-	files, err := findFiles(buildPath)
-	if err != nil {
-		return err
-	}
-
-	for filePath, hash := range files {
-		path := filepath.Join(buildPath, filePath)
-
-		obj := &gcp.BucketObject{
-			BucketName:  o.Bucket.Name,
-			Name:        fields.String(filePath),
-			Hash:        fields.String(hash),
-			Path:        path,
-			IsPublic:    fields.Bool(true),
-			ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
-		}
-
-		if !o.Props.CDN.Enabled {
-			obj.CacheControl = fields.String("private, max-age=0, no-transform")
-		}
-
-		err = r.RegisterAppResource(o.App, filePath, obj)
+	if includeFiles {
+		files, err := findFiles(buildPath)
 		if err != nil {
 			return err
 		}
 
-		o.Files = append(o.Files, obj)
+		for filePath, hash := range files {
+			path := filepath.Join(buildPath, filePath)
+
+			obj := &gcp.BucketObject{
+				BucketName:  o.Bucket.Name,
+				Name:        fields.String(filePath),
+				Hash:        fields.String(hash),
+				Path:        path,
+				IsPublic:    fields.Bool(true),
+				ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
+			}
+
+			if !o.Props.CDN.Enabled {
+				obj.CacheControl = fields.String("private, max-age=0, no-transform")
+			}
+
+			err = r.RegisterAppResource(o.App, filePath, obj)
+			if err != nil {
+				return err
+			}
+
+			o.Files = append(o.Files, obj)
+		}
 	}
 
 	// Add GCR docker image.

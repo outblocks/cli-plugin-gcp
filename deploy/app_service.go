@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/creasty/defaults"
@@ -13,7 +12,6 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 type ServiceApp struct {
@@ -80,12 +78,6 @@ func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
 }
 
 func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs) error {
-	dockerfile := filepath.Join(o.App.Dir, o.Props.Build.Dockerfile)
-
-	if !plugin_util.FileExists(dockerfile) {
-		return fmt.Errorf("app '%s' dockerfile '%s' does not exist", o.App.Name, dockerfile)
-	}
-
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
 		Name:      fields.String(o.Props.LocalDockerImage),
