@@ -123,7 +123,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 
 	for i, db := range c.Databases {
 		cloudSQLconnFmt[i] = "%s"
-		cloudSQLconnNames[i] = db.CloudSQL.ConnectionName.Input()
+		cloudSQLconnNames[i] = db.CloudSQL.ConnectionName
 	}
 
 	o.CloudRun = &gcp.CloudRun{
