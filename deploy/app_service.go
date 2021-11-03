@@ -67,7 +67,7 @@ func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
 		return nil, err
 	}
 
-	deployOpts, err := NewServiceAppDeployOptions(plan.Properties)
+	deployOpts, err := NewServiceAppDeployOptions(plan.App.Properties)
 	if err != nil {
 		return nil, err
 	}

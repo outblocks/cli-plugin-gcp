@@ -62,7 +62,7 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 		return nil, err
 	}
 
-	deployOpts, err := NewStaticAppDeployOptions(plan.Properties)
+	deployOpts, err := NewStaticAppDeployOptions(plan.App.Properties)
 	if err != nil {
 		return nil, err
 	}

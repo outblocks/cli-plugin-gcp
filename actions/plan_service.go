@@ -36,7 +36,7 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 	err = appDeploy.Plan(pctx, p.registry, &deploy.ServiceAppArgs{
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
-		Env:       appPlan.Env,
+		Env:       appPlan.App.Env,
 		Vars:      vars,
 		Databases: databases,
 	})
