@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.30](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.29...v0.1.30)
+
+> 2021-11-04
+
+### FEATURES
+
+[`5591b49`](https://github.com/outblocks/cli-plugin-gcp/commit/5591b49a9a770365f3e83c81d0d5c5c17bef3622) fix for targeted mode
+
+
 ## [v0.1.29](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.28...v0.1.29)
 
 > 2021-11-03
