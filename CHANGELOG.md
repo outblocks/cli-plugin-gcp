@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.31](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.30...v0.1.31)
+
+> 2021-11-05
+
+### FEATURES
+
+[`55c001e`](https://github.com/outblocks/cli-plugin-gcp/commit/55c001e355c84bb436121d142e6279fdc9c59505) sdk update, unique image name and util fix
+
+
 ## [v0.1.30](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.29...v0.1.30)
 
 > 2021-11-04
