@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.32](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.31...v0.1.32)
+
+> 2021-11-05
+
+### FEATURES
+
+[`d133d95`](https://github.com/outblocks/cli-plugin-gcp/commit/d133d95be5461a6a70ad2528236c2a1ce6be058b) lockwait support
+
+
 ## [v0.1.31](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.30...v0.1.31)
 
 > 2021-11-05
