@@ -555,8 +555,8 @@ github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d/go.m
 github.com/opencontainers/runtime-tools v0.0.0-20181011054405-1d69bd0f9c39/go.mod h1:r3f7wjNzSs2extwzU3Y+6pKfobzPh+kKFJ3ofN+3nfs=
 github.com/opencontainers/selinux v1.6.0/go.mod h1:VVGKuOLlE7v4PJyT6h7mNWvq1rzqiriPsEqVhc+svHE=
 github.com/opencontainers/selinux v1.8.0/go.mod h1:RScLhm78qiWa2gbVCcGkC7tCGdgk3ogry1nUQF8Evvo=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20211105155114-b35f8c9e6f92 h1:gJ2aibob6YL17j0UJ9N5Ls4ir4q+xlXjl1sCyE0k79M=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20211105155114-b35f8c9e6f92/go.mod h1:xosanOIc+3GlRA9b90/xRoYWzRgdhbew9T7+yTeI/TQ=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20211105203955-c6e9129fb56e h1:3GfAdNIrAtrFH1JcF5+0Pb5bj69QGZ/8cNwROlz1sEk=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20211105203955-c6e9129fb56e/go.mod h1:xosanOIc+3GlRA9b90/xRoYWzRgdhbew9T7+yTeI/TQ=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.8.1/go.mod h1:T2/BmBdy8dvIRq1a/8aqjN41wvWlN4lrapLU/GW4pbc=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
