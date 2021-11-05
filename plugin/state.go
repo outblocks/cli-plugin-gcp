@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"time"
 
 	"cloud.google.com/go/storage"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
@@ -158,10 +159,35 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 
 	// Lock if needed.
 	var lockinfo string
+
 	if r.Lock {
-		lockinfo, err = acquireLock(ctx, b.Object(p.lockfile(p.env.Env())))
-		if err != nil {
-			return nil, err
+		start := time.Now()
+		t := time.NewTicker(time.Second)
+		first := true
+
+		defer t.Stop()
+
+		for {
+			lockinfo, err = acquireLock(ctx, b.Object(p.lockfile(p.env.Env())))
+			if err == nil {
+				break
+			}
+
+			if err != nil && (r.LockWait == 0 || time.Since(start) > r.LockWait) {
+				return nil, err
+			}
+
+			if first {
+				p.log.Infoln("Lock is acquired. Waiting for it to be free...")
+
+				first = false
+			}
+
+			select {
+			case <-ctx.Done():
+				return nil, err
+			case <-t.C:
+			}
 		}
 	}
 
