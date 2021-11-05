@@ -35,6 +35,8 @@ type CloudSQL struct {
 	}
 
 	DatabaseFlags fields.MapInputField
+
+	SettingsVersion int64 `state:"-"`
 }
 
 func (o *CloudSQL) UniqueID() string {
@@ -87,6 +89,7 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	}
 
 	o.DatabaseFlags.SetCurrent(flags)
+	o.SettingsVersion = inst.Settings.SettingsVersion
 
 	return nil
 }
@@ -136,6 +139,16 @@ func (o *CloudSQL) Update(ctx context.Context, meta interface{}) error {
 
 	projectID := o.ProjectID.Wanted()
 	name := o.Name.Wanted()
+
+	// Check settings version.
+	if o.SettingsVersion == 0 {
+		inst, err := cli.Instances.Get(projectID, name).Do()
+		if err != nil {
+			return err
+		}
+
+		o.SettingsVersion = inst.Settings.SettingsVersion
+	}
 
 	op, err := cli.Instances.Update(projectID, o.Name.Current(), o.makeDatabaseInstance()).Do()
 	if err != nil {
@@ -197,7 +210,8 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 				StartTime: o.BackupConfiguration.StartTime.Wanted(),
 				Location:  o.Region.Wanted()[:2],
 			},
-			DatabaseFlags: flags,
+			DatabaseFlags:   flags,
+			SettingsVersion: o.SettingsVersion,
 		},
 	}
 }

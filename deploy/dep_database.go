@@ -64,10 +64,11 @@ func NewDatabaseDep(dep *types.Dependency) (*DatabaseDep, error) {
 }
 
 type DatabaseDepOptions struct {
-	Version         string `mapstructure:"version"`
-	HA              bool   `mapstructure:"high_availability"`
-	Tier            string `mapstructure:"tier" default:"db-f1-micro"`
-	DatabaseVersion string `mapstructure:"-"`
+	Version         string            `mapstructure:"version"`
+	HA              bool              `mapstructure:"high_availability"`
+	Tier            string            `mapstructure:"tier" default:"db-f1-micro"`
+	Flags           map[string]string `mapstructure:"flags"`
+	DatabaseVersion string            `mapstructure:"-"`
 }
 
 func NewDatabaseDepOptions(in interface{}, typ string) (*DatabaseDepOptions, error) {
@@ -137,6 +138,11 @@ func (o *DatabaseDepOptions) AvailabilityZone() string {
 func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *DatabaseDepArgs) error {
 	o.Needs = c.Needs
 
+	flags := make(map[string]fields.Field, len(o.Opts.Flags))
+	for k, v := range o.Opts.Flags {
+		flags[k] = fields.String(v)
+	}
+
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
 		Name:             fields.RandomStringWithPrefix(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID), true, false, true, false, 4),
@@ -145,6 +151,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 		DatabaseVersion:  fields.String(o.Opts.DatabaseVersion),
 		Tier:             fields.String(o.Opts.Tier),
 		AvailabilityZone: fields.String(o.Opts.AvailabilityZone()),
+		DatabaseFlags:    fields.Map(flags),
 	}
 
 	err := r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
