@@ -125,7 +125,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.String(gcp.GCSProxyImageName),
+		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env()), gcp.GCSProxyImageName),
 		Tag:       fields.String(gcp.GCSProxyVersion),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),

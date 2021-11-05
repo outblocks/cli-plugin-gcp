@@ -274,7 +274,10 @@ func (p *PlanAction) save() error {
 		return nil
 	}
 
-	curMapping := p.loadBalancer.URLMaps[0].AppMapping.Current()
+	var curMapping map[string]interface{}
+	if len(p.loadBalancer.URLMaps) > 0 {
+		curMapping = p.loadBalancer.URLMaps[0].AppMapping.Current()
+	}
 
 	// App SSL states.
 	for mapURL, appID := range curMapping {

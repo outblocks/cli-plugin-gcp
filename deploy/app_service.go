@@ -12,6 +12,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 type ServiceApp struct {
@@ -80,7 +81,7 @@ func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
 func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs) error {
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.String(o.Props.LocalDockerImage),
+		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env()), plugin_util.SanitizeName(o.App.ID)),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
 		Source:    fields.String(o.Props.LocalDockerImage),
