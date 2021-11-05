@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.34](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.33...v0.1.34)
+
+> 2021-11-05
+
+### FEATURES
+
+[`953d628`](https://github.com/outblocks/cli-plugin-gcp/commit/953d62862fe6ff5ba1ff49c4546a90095e882125) support for database flags
+
+
 ## [v0.1.33](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.32...v0.1.33)
 
 > 2021-11-05
