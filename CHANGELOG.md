@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.36](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.35...v0.1.36)
+
+> 2021-11-07
+
+### FEATURES
+
+[`955dfcc`](https://github.com/outblocks/cli-plugin-gcp/commit/955dfccc0063fd77a1c65f3a23959d7c5ea538d6) proper resource skipping
+
+
 ## [v0.1.35](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.34...v0.1.35)
 
 > 2021-11-06
