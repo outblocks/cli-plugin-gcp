@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.35](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.34...v0.1.35)
+
+> 2021-11-06
+
+### FEATURES
+
+[`a443500`](https://github.com/outblocks/cli-plugin-gcp/commit/a4435006ce088e223be3bb4fd33d8b9398e9829c) adapt for state changes
+
+
 ## [v0.1.34](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.33...v0.1.34)
 
 > 2021-11-05
