@@ -118,7 +118,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 				Hash:        fields.String(hash),
 				Path:        path,
 				IsPublic:    fields.Bool(true),
-				ContentType: fields.String(contentTypefi),
+				ContentType: fields.String(contentType),
 			}
 
 			if !o.Props.CDN.Enabled {
