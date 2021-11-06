@@ -5,10 +5,11 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/actions"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	"github.com/outblocks/outblocks-plugin-go/registry"
 )
 
-func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest) (plugin_go.Response, error) {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.StateMap, r.TargetApps, r.SkipApps, r.Verify, r.Destroy, false)
+func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest, reg *registry.Registry) (plugin_go.Response, error) {
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.StateMap, reg, r.Destroy, false)
 	if err != nil {
 		return nil, err
 	}

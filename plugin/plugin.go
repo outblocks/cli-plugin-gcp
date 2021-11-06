@@ -32,6 +32,10 @@ func (p *Plugin) Handler() *plugin_go.ReqHandler {
 		ReleaseLock:            p.ReleaseLock,
 		Plan:                   p.Plan,
 		ApplyInteractive:       p.ApplyInteractive,
+
+		Options: plugin_go.ReqHandlerOptions{
+			RegistryAllowDuplicates: true,
+		},
 	}
 }
 

@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"fmt"
 	"mime"
 	"path/filepath"
 
@@ -22,6 +23,7 @@ type StaticApp struct {
 	CloudRun *gcp.CloudRun
 
 	App        *types.App
+	SkipFiles  bool
 	Props      *types.StaticAppProperties
 	DeployOpts *StaticAppDeployOptions
 }
@@ -68,6 +70,7 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 
 	return &StaticApp{
 		App:        &plan.App.App,
+		SkipFiles:  plan.Skip,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil
@@ -75,8 +78,6 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
 	buildDir := filepath.Join(pctx.Env().ProjectDir(), o.App.Dir, o.Props.Build.Dir)
-
-	buildPath, includeFiles := plugin_util.CheckDir(buildDir)
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
@@ -92,7 +93,12 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	}
 
 	// Add bucket contents.
-	if includeFiles {
+	if !o.SkipFiles {
+		buildPath, ok := plugin_util.CheckDir(buildDir)
+		if !ok {
+			return fmt.Errorf("app '%s' build dir '%s' does not exist", o.App.Name, buildDir)
+		}
+
 		files, err := findFiles(buildPath)
 		if err != nil {
 			return err
@@ -101,13 +107,18 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		for filePath, hash := range files {
 			path := filepath.Join(buildPath, filePath)
 
+			mime := mime.TypeByExtension(filepath.Ext(path))
+			if mime == "" {
+				mime = "text/plain; charset=utf-8"
+			}
+
 			obj := &gcp.BucketObject{
 				BucketName:  o.Bucket.Name,
 				Name:        fields.String(filePath),
 				Hash:        fields.String(hash),
 				Path:        path,
 				IsPublic:    fields.Bool(true),
-				ContentType: fields.String(mime.TypeByExtension(filepath.Ext(path))),
+				ContentType: fields.String(mime),
 			}
 
 			if !o.Props.CDN.Enabled {

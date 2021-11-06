@@ -30,27 +30,19 @@ type PlanAction struct {
 	databaseDeps map[string]*deploy.DatabaseDep
 	loadBalancer *deploy.LoadBalancer
 
-	PluginMap                  types.PluginStateMap
-	AppStates                  map[string]*types.AppState
-	DependencyStates           map[string]*types.DependencyState
-	verify, destroy, fullCheck bool
+	PluginMap          types.PluginStateMap
+	AppStates          map[string]*types.AppState
+	DependencyStates   map[string]*types.DependencyState
+	destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, targetApps, skipApps []string, verify, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = make(types.PluginStateMap)
 	}
 
-	r := registry.NewRegistry(&registry.Options{
-		Destroy:         destroy,
-		Read:            verify,
-		TargetApps:      targetApps,
-		SkipApps:        skipApps,
-		AllowDuplicates: true,
-	})
-
 	for _, t := range gcp.Types {
-		err := r.RegisterType(t)
+		err := reg.RegisterType(t)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +54,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		apiRegistry: registry.NewRegistry(&registry.Options{
 			Read: fullCheck,
 		}),
-		registry:       r,
+		registry:       reg,
 		appIDMap:       make(map[string]*types.App),
 		appDeployIDMap: make(map[string]interface{}),
 		appEnvVars:     make(map[string]map[string]interface{}),
@@ -73,9 +65,9 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		PluginMap:        state,
 		AppStates:        make(map[string]*types.AppState),
 		DependencyStates: make(map[string]*types.DependencyState),
-		verify:           verify,
-		destroy:          destroy,
-		fullCheck:        fullCheck,
+
+		destroy:   destroy,
+		fullCheck: fullCheck,
 	}, nil
 }
 

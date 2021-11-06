@@ -5,11 +5,12 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/actions"
 	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
-func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, stream *plugin_go.ReceiverStream) error {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.StateMap, r.TargetApps, r.SkipApps, false, r.Destroy, false)
+func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, reg *registry.Registry, stream *plugin_go.ReceiverStream) error {
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.StateMap, reg, r.Destroy, false)
 	if err != nil {
 		return err
 	}
