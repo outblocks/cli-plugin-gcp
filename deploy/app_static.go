@@ -107,9 +107,9 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		for filePath, hash := range files {
 			path := filepath.Join(buildPath, filePath)
 
-			mime := mime.TypeByExtension(filepath.Ext(path))
-			if mime == "" {
-				mime = "text/plain; charset=utf-8"
+			contentType := mime.TypeByExtension(filepath.Ext(path))
+			if contentType == "" {
+				contentType = "text/plain; charset=utf-8"
 			}
 
 			obj := &gcp.BucketObject{
@@ -118,7 +118,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 				Hash:        fields.String(hash),
 				Path:        path,
 				IsPublic:    fields.Bool(true),
-				ContentType: fields.String(mime),
+				ContentType: fields.String(contentTypefi),
 			}
 
 			if !o.Props.CDN.Enabled {
