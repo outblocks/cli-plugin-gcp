@@ -4,6 +4,10 @@
 
 > 2021-11-07
 
+### BUG FIXES
+
+[`daac11d`](https://github.com/outblocks/cli-plugin-gcp/commit/daac11d8730b1b311c9cd7fef9a0f6664688e4c5) lint
+
 ### FEATURES
 
 [`955dfcc`](https://github.com/outblocks/cli-plugin-gcp/commit/955dfccc0063fd77a1c65f3a23959d7c5ea538d6) proper resource skipping
