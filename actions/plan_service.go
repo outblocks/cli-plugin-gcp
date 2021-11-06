@@ -13,7 +13,7 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 
 	pctx := p.pluginCtx
 
-	depVars, err := p.findDependenciesEnvVars(appPlan.App)
+	depVars, err := p.findDependenciesEnvVars(&appPlan.App.App)
 	if err != nil {
 		return nil, err
 	}

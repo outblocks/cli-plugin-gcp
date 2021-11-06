@@ -67,7 +67,7 @@ func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
 	}
 
 	return &StaticApp{
-		App:        plan.App,
+		App:        &plan.App.App,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil

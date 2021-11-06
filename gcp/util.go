@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/resources"
 	"github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
@@ -17,6 +18,7 @@ import (
 )
 
 var Types = []registry.Resource{
+	(*resources.RandomString)(nil),
 	(*Address)(nil),
 	(*APIService)(nil),
 	(*BackendService)(nil),

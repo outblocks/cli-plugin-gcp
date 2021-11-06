@@ -86,7 +86,7 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 	)
 
 	for _, app := range appPlans {
-		p.appIDMap[app.App.ID] = app.App
+		p.appIDMap[app.App.ID] = &app.App.App
 
 		appEnvVars := map[string]interface{}{
 			"url": fields.String(app.App.URL),
@@ -138,7 +138,7 @@ func (p *PlanAction) planDependencies(appPlans []*types.AppPlan, depPlans []*typ
 				allNeeds[n.Dependency] = make(map[*types.App]*types.AppNeed)
 			}
 
-			allNeeds[n.Dependency][d.App] = n
+			allNeeds[n.Dependency][&d.App.App] = n
 		}
 	}
 
@@ -147,7 +147,7 @@ func (p *PlanAction) planDependencies(appPlans []*types.AppPlan, depPlans []*typ
 	)
 
 	for _, dep := range depPlans {
-		p.depIDMap[dep.Dependency.ID] = dep.Dependency
+		p.depIDMap[dep.Dependency.ID] = &dep.Dependency.Dependency
 
 		switch dep.Dependency.Type {
 		case DepTypePostgresql, DepTypeMySQL:

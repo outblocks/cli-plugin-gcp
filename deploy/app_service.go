@@ -72,7 +72,7 @@ func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
 	}
 
 	return &ServiceApp{
-		App:        plan.App,
+		App:        &plan.App.App,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil

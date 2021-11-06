@@ -9,7 +9,7 @@ import (
 )
 
 func (p *PlanAction) planDatabaseDepDeploy(depPlan *types.DependencyPlan, needs map[*types.App]*types.AppNeed) (*deploy.DatabaseDep, error) {
-	depDeploy, err := deploy.NewDatabaseDep(depPlan.Dependency)
+	depDeploy, err := deploy.NewDatabaseDep(&depPlan.Dependency.Dependency)
 	if err != nil {
 		return nil, err
 	}
