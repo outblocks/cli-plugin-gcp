@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.37](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.36...v0.1.37)
+
+> 2021-11-07
+
+### FEATURES
+
+[`d2c277b`](https://github.com/outblocks/cli-plugin-gcp/commit/d2c277b0bc334659adaaa026fc425a658b3788ae) random lazy id for gcp objects, verbose field
+
+
 ## [v0.1.36](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.35...v0.1.36)
 
 > 2021-11-07
