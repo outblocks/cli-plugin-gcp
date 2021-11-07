@@ -145,7 +145,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
-		Name:             fields.RandomStringWithPrefix(gcp.ID(pctx.Env().ProjectID(), o.Dep.ID), true, false, true, false, 4),
+		Name:             gcp.IDField(pctx.Env(), o.Dep.ID),
 		ProjectID:        fields.String(c.ProjectID),
 		Region:           fields.String(c.Region),
 		DatabaseVersion:  fields.String(o.Opts.DatabaseVersion),

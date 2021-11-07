@@ -24,7 +24,7 @@ func (o *ServerlessNEG) UniqueID() string {
 }
 
 func (o *ServerlessNEG) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *ServerlessNEG) RefField() fields.StringInputField {

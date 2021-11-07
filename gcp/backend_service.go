@@ -14,7 +14,7 @@ type BackendService struct {
 
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
-	NEG       fields.StringInputField
+	NEG       fields.StringInputField `state:"force_new"`
 
 	CDN struct {
 		Enabled        fields.BoolInputField
@@ -33,7 +33,7 @@ type BackendService struct {
 }
 
 func (o *BackendService) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *BackendService) UniqueID() string {

@@ -37,8 +37,8 @@ func (o *Image) UniqueID() string {
 }
 
 func (o *Image) GetName() string {
-	tag := o.Tag.Any()
-	name := o.Name.Any()
+	tag := fields.VerboseString(o.Tag)
+	name := fields.VerboseString(o.Name)
 
 	if tag != "" {
 		name = fmt.Sprintf("%s:%s", name, tag)

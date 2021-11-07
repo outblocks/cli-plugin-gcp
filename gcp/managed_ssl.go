@@ -25,7 +25,7 @@ func (o *ManagedSSL) UniqueID() string {
 }
 
 func (o *ManagedSSL) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *ManagedSSL) RefField() fields.StringInputField {

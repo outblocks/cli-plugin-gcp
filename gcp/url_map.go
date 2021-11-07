@@ -26,7 +26,7 @@ func (o *URLMap) UniqueID() string {
 }
 
 func (o *URLMap) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *URLMap) RefField() fields.StringInputField {
@@ -246,11 +246,11 @@ func (o *URLMap) makeURLMap() *compute.UrlMap {
 
 		urlMap.HostRules = append(urlMap.HostRules, &compute.HostRule{
 			Hosts:       []string{host},
-			PathMatcher: ID(name, host),
+			PathMatcher: GenericID(name, host),
 		})
 
 		pathMatcher := &compute.PathMatcher{
-			Name: ID(name, host),
+			Name: GenericID(name, host),
 		}
 
 		urlMap.PathMatchers = append(urlMap.PathMatchers, pathMatcher)

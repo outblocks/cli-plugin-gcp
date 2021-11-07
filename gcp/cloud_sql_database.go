@@ -23,7 +23,7 @@ func (o *CloudSQLDatabase) UniqueID() string {
 }
 
 func (o *CloudSQLDatabase) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *CloudSQLDatabase) Read(ctx context.Context, meta interface{}) error {

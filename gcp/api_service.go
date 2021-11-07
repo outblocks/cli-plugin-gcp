@@ -22,7 +22,7 @@ func (o *APIService) UniqueID() string {
 }
 
 func (o *APIService) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *APIService) Read(ctx context.Context, meta interface{}) error {

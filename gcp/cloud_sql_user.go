@@ -24,7 +24,7 @@ func (o *CloudSQLUser) UniqueID() string {
 }
 
 func (o *CloudSQLUser) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {

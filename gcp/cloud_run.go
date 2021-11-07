@@ -41,7 +41,7 @@ func (o *CloudRun) UniqueID() string {
 }
 
 func (o *CloudRun) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint: gocyclo

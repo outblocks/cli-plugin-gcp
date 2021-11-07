@@ -120,7 +120,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 	}
 
 	o.CloudRun = &gcp.CloudRun{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), o.App.ID)),
+		Name:      gcp.IDField(pctx.Env(), o.App.ID),
 		Port:      fields.Int(o.Props.Container.Port),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),

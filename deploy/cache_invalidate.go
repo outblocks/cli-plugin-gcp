@@ -23,7 +23,7 @@ type CacheInvalidate struct {
 }
 
 func (o *CacheInvalidate) GetName() string {
-	return o.URLMapName.Any()
+	return fields.VerboseString(o.URLMapName)
 }
 
 func (o *CacheInvalidate) SkipState() bool {

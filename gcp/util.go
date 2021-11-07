@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/outblocks/outblocks-plugin-go/env"
 	"github.com/outblocks/outblocks-plugin-go/registry"
+	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/resources"
 	"github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
@@ -37,22 +39,38 @@ var Types = []registry.Resource{
 	(*URLMap)(nil),
 }
 
-func ID(projectID, resourceID string) string {
-	sanitizedID := util.SanitizeName(resourceID)
+func GenericID(id string, suffixes ...string) string {
+	sanitizedID := util.SanitizeName(id)
 
-	if len(sanitizedID) > 45 {
-		sanitizedID = util.LimitString(sanitizedID, 40)
+	return fmt.Sprintf("%s-%s", sanitizedID, ShortShaID(strings.Join(suffixes, "-")))
+}
+
+func IDField(e env.Enver, resourceID string) fields.StringInputField {
+	return fields.RandomStringWithPrefix(ID(e, resourceID), true, false, true, false, 4)
+}
+
+func ID(e env.Enver, resourceID string) string {
+	sanitizedID := util.SanitizeName(resourceID)
+	sanitizedEnv := util.LimitString(util.SanitizeName(e.Env()), 4)
+
+	if len(sanitizedID) > 44 {
+		sanitizedID = util.LimitString(sanitizedID, 40) + ShortShaID(sanitizedID)
 	}
 
-	return fmt.Sprintf("%s-%s", sanitizedID, ShortShaID(projectID))
+	return fmt.Sprintf("%s-%s-%s", sanitizedID, sanitizedEnv, ShortShaID(e.ProjectID()))
 }
 
 func ShortShaID(id string) string {
 	return util.LimitString(util.SHAString(id), 4)
 }
 
-func GlobalID(project, gcpProject, id string) string {
-	return ID(project, id) + util.LimitString(util.SHAString(gcpProject), 4)
+func GlobalIDField(e env.Enver, gcpProject, resourceID string) fields.StringInputField {
+	return fields.RandomStringWithPrefix(GlobalID(e, gcpProject, resourceID), true, false, true, false, 4)
+}
+
+func GlobalID(e env.Enver, gcpProject, id string) string {
+	id = ID(e, id)
+	return id[:len(id)-2] + util.LimitString(util.SHAString(gcpProject), 2)
 }
 
 func RegionToGCR(region string) string {

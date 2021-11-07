@@ -27,7 +27,7 @@ func (o *Bucket) UniqueID() string {
 }
 
 func (o *Bucket) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *Bucket) Read(ctx context.Context, meta interface{}) error {

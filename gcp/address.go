@@ -23,7 +23,7 @@ func (o *Address) UniqueID() string {
 }
 
 func (o *Address) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *Address) Read(ctx context.Context, meta interface{}) error {

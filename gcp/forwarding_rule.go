@@ -26,7 +26,7 @@ func (o *ForwardingRule) UniqueID() string {
 }
 
 func (o *ForwardingRule) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *ForwardingRule) Read(ctx context.Context, meta interface{}) error {

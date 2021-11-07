@@ -24,7 +24,7 @@ func (o *TargetHTTPProxy) UniqueID() string {
 }
 
 func (o *TargetHTTPProxy) GetName() string {
-	return o.Name.Any()
+	return fields.VerboseString(o.Name)
 }
 
 func (o *TargetHTTPProxy) RefField() fields.StringInputField {

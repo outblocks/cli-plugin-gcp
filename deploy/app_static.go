@@ -81,7 +81,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
-		Name:       fields.String(gcp.GlobalID(pctx.Env().ProjectID(), c.ProjectID, o.App.ID)),
+		Name:       gcp.GlobalIDField(pctx.Env(), c.ProjectID, o.App.ID),
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
@@ -157,7 +157,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), o.App.ID)),
+		Name:      gcp.IDField(pctx.Env(), o.App.ID),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),

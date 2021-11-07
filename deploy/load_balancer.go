@@ -42,7 +42,7 @@ func NewLoadBalancer() *LoadBalancer {
 func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Registry, app *types.App, cloudrun fields.StringInputField, cdnEnabled bool, c *LoadBalancerArgs) error {
 	// Serverless NEGs.
 	neg := &gcp.ServerlessNEG{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), app.ID)),
+		Name:      gcp.IDField(pctx.Env(), app.ID),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		CloudRun:  cloudrun,
@@ -57,7 +57,7 @@ func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Regis
 
 	// Backend Services.
 	svc := &gcp.BackendService{
-		Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), app.ID)),
+		Name:      gcp.IDField(pctx.Env(), app.ID),
 		ProjectID: fields.String(c.ProjectID),
 		NEG:       neg.RefField(),
 	}
@@ -114,13 +114,12 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		return nil
 	}
 
-	lbID := gcp.ID(pctx.Env().ProjectID(), c.Name)
 	staticApps := make([]*StaticApp, 0, len(static))
 	serviceApps := make([]*ServiceApp, 0, len(service))
 
 	// IP Address.
 	addr := &gcp.Address{
-		Name:      fields.String(lbID + "-0"),
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-0"),
 		ProjectID: fields.String(c.ProjectID),
 	}
 
@@ -158,7 +157,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	for _, domain := range domainList {
 		cert := &gcp.ManagedSSL{
-			Name:      fields.String(gcp.ID(pctx.Env().ProjectID(), domain)),
+			Name:      gcp.IDField(pctx.Env(), domain),
 			ProjectID: fields.String(c.ProjectID),
 			Domains:   fields.Array([]fields.Field{fields.String(domain)}),
 		}
@@ -185,7 +184,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	// URL Map.
 	m := &gcp.URLMap{
-		Name:       fields.String(lbID + "-0"),
+		Name:       gcp.IDField(pctx.Env(), c.Name+"-0"),
 		ProjectID:  fields.String(c.ProjectID),
 		URLMapping: fields.Map(o.urlMap),
 		AppMapping: fields.Map(o.appMap),
@@ -196,7 +195,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		return err
 	}
 
-	err = r.RegisterPluginResource(LoadBalancerName, lbID, &CacheInvalidate{
+	err = r.RegisterPluginResource(LoadBalancerName, c.Name, &CacheInvalidate{
 		URLMapName:  m.Name,
 		ProjectID:   fields.String(c.ProjectID),
 		StaticApps:  staticApps,
@@ -210,7 +209,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	// Target HTTP Proxy.
 	proxy := &gcp.TargetHTTPProxy{
-		Name:      fields.String(lbID + "-0"),
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-0"),
 		ProjectID: fields.String(c.ProjectID),
 		URLMap:    m.RefField(),
 	}
@@ -229,7 +228,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	}
 
 	sproxy := &gcp.TargetHTTPSProxy{
-		Name:            fields.String(lbID + "-0"),
+		Name:            gcp.IDField(pctx.Env(), c.Name+"-0"),
 		ProjectID:       fields.String(c.ProjectID),
 		URLMap:          m.RefField(),
 		SSLCertificates: fields.Array(certs),
@@ -244,7 +243,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	// HTTP forwarding Rules.
 	rule := &gcp.ForwardingRule{
-		Name:      fields.String(lbID + "-http-0"),
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-http-0"),
 		ProjectID: fields.String(c.ProjectID),
 		IPAddress: addr.IP.Input(),
 		Target:    proxy.RefField(),
@@ -260,7 +259,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	// HTTPS forwarding rule.
 	rule = &gcp.ForwardingRule{
-		Name:      fields.String(lbID + "-https-0"),
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-https-0"),
 		ProjectID: fields.String(c.ProjectID),
 		IPAddress: addr.IP.Input(),
 		Target:    sproxy.RefField(),
