@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.38](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.37...v0.1.38)
+
+> 2021-11-12
+
+### FEATURES
+
+[`98882fd`](https://github.com/outblocks/cli-plugin-gcp/commit/98882fd742cd8f8ddff1402e49e71428c7cd0a5a) static output fields, new sdk
+
+
 ## [v0.1.37](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.36...v0.1.37)
 
 > 2021-11-07
