@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.40](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.39...v0.1.40)
+
+> 2021-11-15
+
+### BUG FIXES
+
+[`81493bd`](https://github.com/outblocks/cli-plugin-gcp/commit/81493bdf4d21620653f5bb2b47ef5ff12823d056) state locking
+
+
 ## [v0.1.39](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.38...v0.1.39)
 
 > 2021-11-15
