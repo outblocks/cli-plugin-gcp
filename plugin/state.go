@@ -141,19 +141,12 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 
 	// Read state.
 	b := cli.Bucket(bucket)
-	created := false
-	state, err := readBucketFile(ctx, b, p.statefile(p.env.Env()))
 
-	if err == storage.ErrObjectNotExist {
-		created, err = ensureBucket(ctx, b, project, &storage.BucketAttrs{
-			Location:          p.Settings.Region,
-			VersioningEnabled: true,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-	} else if err != nil {
+	created, err := ensureBucket(ctx, b, project, &storage.BucketAttrs{
+		Location:          p.Settings.Region,
+		VersioningEnabled: true,
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -189,6 +182,11 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 			case <-t.C:
 			}
 		}
+	}
+
+	state, err := readBucketFile(ctx, b, p.statefile(p.env.Env()))
+	if err != nil {
+		return nil, err
 	}
 
 	return &plugin_go.GetStateResponse{
