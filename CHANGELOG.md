@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.39](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.38...v0.1.39)
+
+> 2021-11-15
+
+### FEATURES
+
+[`9fc6b39`](https://github.com/outblocks/cli-plugin-gcp/commit/9fc6b397ae8ad32fcef834fa20829b6bfdbd3745) app vars, critical flag support, updated sdk
+
+
 ## [v0.1.38](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.37...v0.1.38)
 
 > 2021-11-12
