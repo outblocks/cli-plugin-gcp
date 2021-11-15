@@ -18,13 +18,6 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 		return nil, err
 	}
 
-	selfAppEnvVars := p.appEnvVars[appPlan.App.Type][appPlan.App.Name].(map[string]interface{})
-	vars := map[string]interface{}{
-		"app":  p.appEnvVars,
-		"self": selfAppEnvVars,
-		"dep":  depVars,
-	}
-
 	var databases []*deploy.DatabaseDep
 
 	for _, need := range appPlan.App.Needs {
@@ -37,7 +30,7 @@ func (p *PlanAction) planServiceAppDeploy(appPlan *types.AppPlan) (*deploy.Servi
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
 		Env:       appPlan.App.Env,
-		Vars:      vars,
+		Vars:      types.VarsForApp(p.appEnvVars, &appPlan.App.App, depVars),
 		Databases: databases,
 	})
 	if err != nil {

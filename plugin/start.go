@@ -61,7 +61,7 @@ func (p *Plugin) StartInteractive(ctx context.Context, r *plugin_go.StartRequest
 
 		create := res.(*plugin_go.PromptConfirmationAnswer).Confirmed
 		if !create {
-			return fmt.Errorf("unable to proceed without GCP project")
+			return fmt.Errorf("unable to proceed without access to a GCP project")
 		}
 
 		op, err := crmCli.Projects.Create(&cloudresourcemanager.Project{

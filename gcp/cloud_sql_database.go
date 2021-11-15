@@ -115,3 +115,7 @@ func (o *CloudSQLDatabase) Delete(ctx context.Context, meta interface{}) error {
 
 	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
 }
+
+func (o *CloudSQLDatabase) IsCritical(t registry.DiffType, fieldList []string) bool {
+	return t == registry.DiffTypeDelete || t == registry.DiffTypeRecreate
+}

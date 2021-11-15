@@ -20,7 +20,7 @@ type PlanAction struct {
 	registry       *registry.Registry
 	appIDMap       map[string]*types.App
 	appDeployIDMap map[string]interface{}
-	appEnvVars     map[string]map[string]interface{} // type->name->value
+	appEnvVars     types.AppVars
 
 	depIDMap       map[string]*types.Dependency
 	depDeployIDMap map[string]interface{}
@@ -57,7 +57,6 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		registry:       reg,
 		appIDMap:       make(map[string]*types.App),
 		appDeployIDMap: make(map[string]interface{}),
-		appEnvVars:     make(map[string]map[string]interface{}),
 
 		depIDMap:       make(map[string]*types.Dependency),
 		depDeployIDMap: make(map[string]interface{}),
@@ -77,20 +76,11 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 		serviceAppsPlan []*types.AppPlan
 	)
 
+	apps := make([]*types.App, 0, len(appPlans))
+
 	for _, app := range appPlans {
 		p.appIDMap[app.App.ID] = &app.App.App
-
-		appEnvVars := map[string]interface{}{
-			"url": fields.String(app.App.URL),
-		}
-
-		if _, ok := p.appEnvVars[app.App.Type]; !ok {
-			p.appEnvVars[app.App.Type] = map[string]interface{}{
-				app.App.Name: appEnvVars,
-			}
-		} else {
-			p.appEnvVars[app.App.Type][app.App.Name] = appEnvVars
-		}
+		apps = append(apps, &app.App.App)
 
 		if !app.IsDeploy {
 			continue
@@ -103,6 +93,8 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 			serviceAppsPlan = append(serviceAppsPlan, app)
 		}
 	}
+
+	p.appEnvVars = types.AppVarsFromApps(apps)
 
 	var err error
 

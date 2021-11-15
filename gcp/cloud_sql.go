@@ -229,6 +229,10 @@ func (o *CloudSQL) setOutputFields(inst *sqladmin.DatabaseInstance) {
 	o.ConnectionName.SetCurrent(inst.ConnectionName)
 }
 
+func (o *CloudSQL) IsCritical(t registry.DiffType, fieldList []string) bool {
+	return t == registry.DiffTypeDelete || t == registry.DiffTypeRecreate
+}
+
 func instanceMutexKey(project, instanceName string) string {
 	return fmt.Sprintf("google-sql-database-instance-%s-%s", project, instanceName)
 }
