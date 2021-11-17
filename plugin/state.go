@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"sort"
 	"strconv"
 	"time"
 
@@ -18,8 +19,8 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-func (p *Plugin) defaultBucket(gcpProject string) string {
-	return fmt.Sprintf("%s-%s", plugin_util.LimitString(plugin_util.SanitizeName(p.env.ProjectName()), 51), plugin_util.LimitString(plugin_util.SHAString(gcpProject), 8))
+func (p *Plugin) defaultBucket(gcpProject, suffix string) string {
+	return fmt.Sprintf("%s%s-%s", plugin_util.LimitString(plugin_util.SanitizeName(p.env.ProjectName()), 51), suffix, plugin_util.LimitString(plugin_util.SHAString(gcpProject), 8))
 }
 
 func ensureBucket(ctx context.Context, b *storage.BucketHandle, project string, attrs *storage.BucketAttrs) (bool, error) {
@@ -82,7 +83,11 @@ func acquireLock(ctx context.Context, o *storage.ObjectHandle) (string, error) {
 				return "", err
 			}
 
-			return "", &plugin_go.LockErrorResponse{Owner: string(lockdata), LockInfo: strconv.FormatInt(attrs.Generation, 10)}
+			return "", &plugin_go.LockErrorResponse{
+				Owner:     string(lockdata),
+				CreatedAt: attrs.Created,
+				LockInfo:  strconv.FormatInt(attrs.Generation, 10),
+			}
 		}
 
 		return "", fmt.Errorf("unable to acquire lock: %w", err)
@@ -94,17 +99,17 @@ func acquireLock(ctx context.Context, o *storage.ObjectHandle) (string, error) {
 func releaseLock(ctx context.Context, o *storage.ObjectHandle, lockID string) error {
 	gen, err := strconv.ParseInt(lockID, 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid lock id")
 	}
 
 	err = o.If(storage.Conditions{GenerationMatch: gen}).Delete(ctx)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			return fmt.Errorf("state lock already released")
+			return fmt.Errorf("lock already released")
 		}
 
 		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusPreconditionFailed {
-			return fmt.Errorf("state lock id doesn't match")
+			return fmt.Errorf("lock id doesn't match")
 		}
 
 		return err
@@ -113,12 +118,21 @@ func releaseLock(ctx context.Context, o *storage.ObjectHandle, lockID string) er
 	return nil
 }
 
-func (p *Plugin) statefile(env string) string {
-	return fmt.Sprintf("%s/%s/state", env, p.env.ProjectName())
+func (p *Plugin) statefile() string {
+	return fmt.Sprintf("%s/%s/state", p.env.Env(), p.env.ProjectName())
 }
 
-func (p *Plugin) lockfile(env string) string {
-	return fmt.Sprintf("%s/%s/lock", env, p.env.ProjectName())
+func (p *Plugin) lockfile(name string) string {
+	if name != "" {
+		sanitizedName := fmt.Sprintf("%s-%s", plugin_util.SanitizeName(name), plugin_util.LimitString(plugin_util.SHAString(name), 4))
+		return fmt.Sprintf("%s/%s/locks/%s", p.env.Env(), p.env.ProjectName(), sanitizedName)
+	}
+
+	return fmt.Sprintf("%s/%s/lock", p.env.Env(), p.env.ProjectName())
+}
+
+func (p *Plugin) defaultStateBucket(project string) string {
+	return p.defaultBucket(project, "")
 }
 
 func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (plugin_go.Response, error) {
@@ -127,7 +141,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		return res, nil
 	}
 
-	res, bucket := validate.OptionalString(p.defaultBucket(project), r.Properties, "bucket", "bucket must be a string")
+	res, bucket := validate.OptionalString(p.defaultStateBucket(project), r.Properties, "bucket", "bucket must be a string")
 	if res != nil {
 		return res, nil
 	}
@@ -161,7 +175,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		defer t.Stop()
 
 		for {
-			lockinfo, err = acquireLock(ctx, b.Object(p.lockfile(p.env.Env())))
+			lockinfo, err = acquireLock(ctx, b.Object(p.lockfile("")))
 			if err == nil {
 				break
 			}
@@ -184,7 +198,7 @@ func (p *Plugin) GetState(ctx context.Context, r *plugin_go.GetStateRequest) (pl
 		}
 	}
 
-	state, err := readBucketFile(ctx, b, p.statefile(p.env.Env()))
+	state, err := readBucketFile(ctx, b, p.statefile())
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +219,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 		return res, nil
 	}
 
-	res, bucket := validate.OptionalString(p.defaultBucket(project), r.Properties, "project", "bucket must be a string")
+	res, bucket := validate.OptionalString(p.defaultStateBucket(project), r.Properties, "project", "bucket must be a string")
 	if res != nil {
 		return res, nil
 	}
@@ -219,7 +233,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 
 	// Write state.
 	b := cli.Bucket(bucket)
-	w := b.Object(p.statefile(p.env.Env())).NewWriter(ctx)
+	w := b.Object(p.statefile()).NewWriter(ctx)
 
 	_, err = w.Write(r.State)
 	if err != nil {
@@ -234,13 +248,13 @@ func (p *Plugin) SaveState(ctx context.Context, r *plugin_go.SaveStateRequest) (
 	return &plugin_go.SaveStateResponse{}, nil
 }
 
-func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockRequest) (plugin_go.Response, error) {
+func (p *Plugin) ReleaseStateLock(ctx context.Context, r *plugin_go.ReleaseStateLockRequest) (plugin_go.Response, error) {
 	res, project := validate.OptionalString(p.Settings.ProjectID, r.Properties, "project", "GCP project must be a string")
 	if res != nil {
 		return res, nil
 	}
 
-	res, bucket := validate.OptionalString(p.defaultBucket(project), r.Properties, "project", "bucket must be a string")
+	res, bucket := validate.OptionalString(p.defaultStateBucket(project), r.Properties, "project", "bucket must be a string")
 	if res != nil {
 		return res, nil
 	}
@@ -253,7 +267,109 @@ func (p *Plugin) ReleaseLock(ctx context.Context, r *plugin_go.ReleaseLockReques
 	}
 
 	b := cli.Bucket(bucket)
-	err = releaseLock(ctx, b.Object(p.lockfile(p.env.Env())), r.LockID)
+	err = releaseLock(ctx, b.Object(p.lockfile("")), r.LockInfo)
+
+	return &plugin_go.EmptyResponse{}, err
+}
+
+// Locking.
+
+func (p *Plugin) defaultLocksBucket(project string) string {
+	return p.defaultBucket(project, "-locks")
+}
+
+func (p *Plugin) AcquireLocks(ctx context.Context, r *plugin_go.AcquireLocksRequest) (plugin_go.Response, error) {
+	res, project := validate.OptionalString(p.Settings.ProjectID, r.Properties, "project", "GCP project must be a string")
+	if res != nil {
+		return res, nil
+	}
+
+	bucket := p.defaultLocksBucket(project)
+	pctx := p.PluginContext()
+
+	cli, err := pctx.StorageClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b := cli.Bucket(bucket)
+
+	_, err = ensureBucket(ctx, b, project, &storage.BucketAttrs{
+		Location: p.Settings.Region,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
+	t := time.NewTicker(time.Second)
+
+	defer t.Stop()
+
+	lockfiles := make([]string, len(r.LockNames))
+
+	for i, n := range r.LockNames {
+		lockfiles[i] = p.lockfile(n)
+	}
+
+	sort.Strings(lockfiles)
+
+	lockInfos := make([]string, 0, len(lockfiles))
+
+	for _, lockfile := range lockfiles {
+		lockObject := b.Object(lockfile)
+
+		for {
+			lockInfo, err := acquireLock(ctx, lockObject)
+			if err == nil {
+				lockInfos = append(lockInfos, lockInfo)
+			}
+
+			if err != nil && (r.LockWait == 0 || time.Since(start) > r.LockWait) {
+				return nil, err
+			}
+
+			select {
+			case <-ctx.Done():
+				return nil, err
+			case <-t.C:
+			}
+		}
+	}
+
+	return &plugin_go.LocksAcquiredResponse{LockInfo: lockInfos}, nil
+}
+
+func (p *Plugin) ReleaseLocks(ctx context.Context, r *plugin_go.ReleaseLocksRequest) (plugin_go.Response, error) {
+	res, project := validate.OptionalString(p.Settings.ProjectID, r.Properties, "project", "GCP project must be a string")
+	if res != nil {
+		return res, nil
+	}
+
+	bucket := p.defaultLocksBucket(project)
+	pctx := p.PluginContext()
+
+	cli, err := pctx.StorageClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b := cli.Bucket(bucket)
+
+	lockMap := make(map[string]string, len(r.Locks))
+
+	for name, info := range r.Locks {
+		lockMap[p.lockfile(name)] = info
+	}
+
+	var firstErr error
+
+	for name, info := range lockMap {
+		err = releaseLock(ctx, b.Object(name), info)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
 
 	return &plugin_go.EmptyResponse{}, err
 }

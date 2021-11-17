@@ -8,6 +8,7 @@ cmd:
 actions:
   - deploy
   - dns
+  - locking
 state_types:
   - gcp
 supports:

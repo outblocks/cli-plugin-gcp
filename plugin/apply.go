@@ -10,7 +10,7 @@ import (
 )
 
 func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest, reg *registry.Registry, stream *plugin_go.ReceiverStream) error {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.StateMap, reg, r.Destroy, false)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginState, reg, r.Destroy, false)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (p *Plugin) ApplyInteractive(ctx context.Context, r *plugin_go.ApplyRequest
 	err = a.Apply(ctx, r.Apps, r.Dependencies, cb)
 
 	_ = stream.Send(&plugin_go.ApplyDoneResponse{
-		PluginMap:        a.PluginMap,
+		PluginState:      a.State,
 		AppStates:        a.AppStates,
 		DependencyStates: a.DependencyStates,
 	})

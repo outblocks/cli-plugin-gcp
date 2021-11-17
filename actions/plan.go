@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
@@ -30,15 +31,15 @@ type PlanAction struct {
 	databaseDeps map[string]*deploy.DatabaseDep
 	loadBalancer *deploy.LoadBalancer
 
-	PluginMap          types.PluginStateMap
+	State              *types.PluginState
 	AppStates          map[string]*types.AppState
 	DependencyStates   map[string]*types.DependencyState
 	destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginStateMap, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state *types.PluginState, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
-		state = make(types.PluginStateMap)
+		state = types.NewPluginState()
 	}
 
 	for _, t := range gcp.Types {
@@ -61,7 +62,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state types.PluginSt
 		depIDMap:       make(map[string]*types.Dependency),
 		depDeployIDMap: make(map[string]interface{}),
 
-		PluginMap:        state,
+		State:            state,
 		AppStates:        make(map[string]*types.AppState),
 		DependencyStates: make(map[string]*types.DependencyState),
 
@@ -161,10 +162,19 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 		}
 	}
 
-	apiReg := p.PluginMap["api_registry"]
+	if p.State.Other == nil {
+		p.State.Other = make(map[string]json.RawMessage)
+	}
+
+	apiReg := p.State.Other["api_registry"]
 
 	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
-	err := p.apiRegistry.Load(ctx, apiReg, p.pluginCtx)
+	err := p.apiRegistry.Load(ctx, apiReg)
+	if err != nil {
+		return err
+	}
+
+	err = p.apiRegistry.Process(ctx, p.pluginCtx)
 	if err != nil {
 		return err
 	}
@@ -188,13 +198,21 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 		return err
 	}
 
-	p.PluginMap["api_registry"] = data
+	p.State.Other["api_registry"] = data
 
 	return nil
 }
 
 func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) error {
-	err := p.planDependencies(appPlans, depPlans)
+	reg := p.State.Registry
+
+	err := p.registry.Load(ctx, reg)
+	if err != nil {
+		return err
+	}
+
+	// Plan all.
+	err = p.planDependencies(appPlans, depPlans)
 	if err != nil {
 		return err
 	}
@@ -216,9 +234,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, dep
 	}
 
 	// Process registry.
-	reg := p.PluginMap["registry"]
-
-	err = p.registry.Load(ctx, reg, p.pluginCtx)
+	err = p.registry.Process(ctx, p.pluginCtx)
 	if err != nil {
 		return err
 	}
@@ -252,7 +268,7 @@ func (p *PlanAction) save() error {
 		return err
 	}
 
-	p.PluginMap["registry"] = data
+	p.State.Registry = data
 
 	if p.destroy {
 		return nil
@@ -352,9 +368,11 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 		actions = append(actions, d.ToPlanAction())
 	}
 
-	err = p.save()
-	if err != nil {
-		return nil, err
+	if len(diff) == 0 {
+		err = p.save()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &types.Plan{

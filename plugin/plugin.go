@@ -29,7 +29,9 @@ func (p *Plugin) Handler() *plugin_go.ReqHandler {
 		StartInteractive:       p.StartInteractive,
 		GetState:               p.GetState,
 		SaveState:              p.SaveState,
-		ReleaseLock:            p.ReleaseLock,
+		ReleaseStateLock:       p.ReleaseStateLock,
+		AcquireLocks:           p.AcquireLocks,
+		ReleaseLocks:           p.ReleaseLocks,
 		Plan:                   p.Plan,
 		ApplyInteractive:       p.ApplyInteractive,
 
