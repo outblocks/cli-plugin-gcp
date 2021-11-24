@@ -6,11 +6,8 @@ import (
 )
 
 func main() {
-	s := plugin_go.NewServer()
-	p := plugin.NewPlugin(s.Log(), s.Env())
-
-	err := s.Start(p.Handler())
+	err := plugin_go.Serve(plugin.NewPlugin(), plugin_go.WithRegistryAllowDuplicates(true))
 	if err != nil {
-		s.Log().Errorln(err)
+		panic(err)
 	}
 }

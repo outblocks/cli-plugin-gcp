@@ -10,6 +10,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
@@ -22,7 +23,7 @@ type StaticApp struct {
 	Image    *gcp.Image
 	CloudRun *gcp.CloudRun
 
-	App        *types.App
+	App        *apiv1.App
 	SkipFiles  bool
 	Props      *types.StaticAppProperties
 	DeployOpts *StaticAppDeployOptions
@@ -38,7 +39,7 @@ type StaticAppDeployOptions struct {
 	MaxScale int `mapstructure:"max_scale" default:"100"`
 }
 
-func NewStaticAppDeployOptions(in interface{}) (*StaticAppDeployOptions, error) {
+func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptions, error) {
 	o := &StaticAppDeployOptions{}
 
 	err := mapstructure.Decode(in, o)
@@ -57,19 +58,19 @@ func NewStaticAppDeployOptions(in interface{}) (*StaticAppDeployOptions, error) 
 	)
 }
 
-func NewStaticApp(plan *types.AppPlan) (*StaticApp, error) {
-	opts, err := types.NewStaticAppProperties(plan.App.Properties)
+func NewStaticApp(plan *apiv1.AppPlan) (*StaticApp, error) {
+	opts, err := types.NewStaticAppProperties(plan.State.App.Properties.AsMap())
 	if err != nil {
 		return nil, err
 	}
 
-	deployOpts, err := NewStaticAppDeployOptions(plan.App.Properties)
+	deployOpts, err := NewStaticAppDeployOptions(plan.State.App.Properties.AsMap())
 	if err != nil {
 		return nil, err
 	}
 
 	return &StaticApp{
-		App:        &plan.App.App,
+		App:        plan.State.App,
 		SkipFiles:  plan.Skip,
 		Props:      opts,
 		DeployOpts: deployOpts,
@@ -81,7 +82,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
-		Name:       gcp.GlobalIDField(pctx.Env(), c.ProjectID, o.App.ID),
+		Name:       gcp.GlobalIDField(pctx.Env(), c.ProjectID, o.App.Id),
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
@@ -157,7 +158,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      gcp.IDField(pctx.Env(), o.App.ID),
+		Name:      gcp.IDField(pctx.Env(), o.App.Id),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),

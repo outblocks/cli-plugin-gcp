@@ -11,7 +11,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	gcrauthn "github.com/google/go-containerregistry/pkg/authn"
 	gcrname "github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	apiv1 "github.com/google/go-containerregistry/pkg/v1"
 	gcrremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -55,7 +55,7 @@ func (o *Image) ImageName() fields.StringInputField {
 	return fields.Sprintf("%s/%s/%s@%s", o.GCR, o.ProjectID, o.Name, o.Digest)
 }
 
-func (o *Image) readImage(ctx context.Context, meta interface{}) (*v1.Descriptor, error) {
+func (o *Image) readImage(ctx context.Context, meta interface{}) (*apiv1.Descriptor, error) {
 	pctx := meta.(*config.PluginContext)
 
 	token, err := pctx.GoogleCredentials().TokenSource.Token()

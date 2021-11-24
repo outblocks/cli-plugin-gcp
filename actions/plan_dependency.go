@@ -4,32 +4,32 @@ import (
 	"fmt"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
-	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
-func (p *PlanAction) planDatabaseDepDeploy(depPlan *types.DependencyPlan, needs map[*types.App]*types.AppNeed) (*deploy.DatabaseDep, error) {
-	depDeploy, err := deploy.NewDatabaseDep(&depPlan.Dependency.Dependency)
+func (p *PlanAction) planDatabaseDepDeploy(depPlan *apiv1.DependencyPlan, needs map[*apiv1.App]*apiv1.AppNeed) (*deploy.DatabaseDep, error) {
+	depDeploy, err := deploy.NewDatabaseDep(depPlan.State.Dependency)
 	if err != nil {
 		return nil, err
 	}
 
 	pctx := p.pluginCtx
 
-	depNeeds := make(map[*types.App]*deploy.DatabaseDepNeed, len(needs))
+	depNeeds := make(map[*apiv1.App]*deploy.DatabaseDepNeed, len(needs))
 
 	for app, n := range needs {
-		need, err := deploy.NewDatabaseDepNeed(n.Properties)
+		need, err := deploy.NewDatabaseDepNeed(n.Properties.AsMap())
 		if err != nil {
 			return nil, err
 		}
 
 		if need.User == "" {
-			need.User = app.ID
+			need.User = app.Id
 		}
 
 		if need.Database == "" {
-			need.Database = app.ID
+			need.Database = app.Id
 		}
 
 		depNeeds[app] = need
@@ -45,27 +45,27 @@ func (p *PlanAction) planDatabaseDepDeploy(depPlan *types.DependencyPlan, needs 
 		return nil, err
 	}
 
-	p.depDeployIDMap[depPlan.Dependency.ID] = depDeploy
+	p.depDeployIDMap[depPlan.State.Dependency.Id] = depDeploy
 
 	return depDeploy, nil
 }
 
-func (p *PlanAction) planDatabaseDepsDeploy(depPlans []*types.DependencyPlan, allNeeds map[string]map[*types.App]*types.AppNeed) (ret map[string]*deploy.DatabaseDep, err error) {
+func (p *PlanAction) planDatabaseDepsDeploy(depPlans []*apiv1.DependencyPlan, allNeeds map[string]map[*apiv1.App]*apiv1.AppNeed) (ret map[string]*deploy.DatabaseDep, err error) {
 	ret = make(map[string]*deploy.DatabaseDep, len(depPlans))
 
 	for _, plan := range depPlans {
-		dep, err := p.planDatabaseDepDeploy(plan, allNeeds[plan.Dependency.Name])
+		dep, err := p.planDatabaseDepDeploy(plan, allNeeds[plan.State.Dependency.Name])
 		if err != nil {
 			return ret, err
 		}
 
-		ret[plan.Dependency.Name] = dep
+		ret[plan.State.Dependency.Name] = dep
 	}
 
 	return ret, nil
 }
 
-func (p *PlanAction) findDependencyEnvVars(app *types.App, need *types.AppNeed) (map[string]interface{}, error) {
+func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) (map[string]interface{}, error) {
 	if dep, ok := p.databaseDeps[need.Dependency]; ok {
 		depNeed := dep.Needs[app]
 
@@ -83,7 +83,7 @@ func (p *PlanAction) findDependencyEnvVars(app *types.App, need *types.AppNeed) 
 	return nil, fmt.Errorf("unable to find dependency '%s'", need.Dependency)
 }
 
-func (p *PlanAction) findDependenciesEnvVars(app *types.App) (map[string]interface{}, error) {
+func (p *PlanAction) findDependenciesEnvVars(app *apiv1.App) (map[string]interface{}, error) {
 	depVars := make(map[string]interface{})
 
 	for _, need := range app.Needs {

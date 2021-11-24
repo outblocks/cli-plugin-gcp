@@ -2,12 +2,12 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
@@ -19,11 +19,11 @@ type PlanAction struct {
 	log            log.Logger
 	apiRegistry    *registry.Registry
 	registry       *registry.Registry
-	appIDMap       map[string]*types.App
+	appIDMap       map[string]*apiv1.App
 	appDeployIDMap map[string]interface{}
 	appEnvVars     types.AppVars
 
-	depIDMap       map[string]*types.Dependency
+	depIDMap       map[string]*apiv1.Dependency
 	depDeployIDMap map[string]interface{}
 
 	staticApps   map[string]*deploy.StaticApp
@@ -31,13 +31,13 @@ type PlanAction struct {
 	databaseDeps map[string]*deploy.DatabaseDep
 	loadBalancer *deploy.LoadBalancer
 
-	State              *types.PluginState
-	AppStates          map[string]*types.AppState
-	DependencyStates   map[string]*types.DependencyState
+	State              *apiv1.PluginState
+	AppStates          map[string]*apiv1.AppState
+	DependencyStates   map[string]*apiv1.DependencyState
 	destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state *types.PluginState, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginState, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = types.NewPluginState()
 	}
@@ -56,42 +56,42 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *types.PluginS
 			Read: fullCheck,
 		}),
 		registry:       reg,
-		appIDMap:       make(map[string]*types.App),
+		appIDMap:       make(map[string]*apiv1.App),
 		appDeployIDMap: make(map[string]interface{}),
 
-		depIDMap:       make(map[string]*types.Dependency),
+		depIDMap:       make(map[string]*apiv1.Dependency),
 		depDeployIDMap: make(map[string]interface{}),
 
 		State:            state,
-		AppStates:        make(map[string]*types.AppState),
-		DependencyStates: make(map[string]*types.DependencyState),
+		AppStates:        make(map[string]*apiv1.AppState),
+		DependencyStates: make(map[string]*apiv1.DependencyState),
 
 		destroy:   destroy,
 		fullCheck: fullCheck,
 	}, nil
 }
 
-func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
+func (p *PlanAction) planApps(appPlans []*apiv1.AppPlan) error {
 	var (
-		staticAppsPlan  []*types.AppPlan
-		serviceAppsPlan []*types.AppPlan
+		staticAppsPlan  []*apiv1.AppPlan
+		serviceAppsPlan []*apiv1.AppPlan
 	)
 
-	apps := make([]*types.App, 0, len(appPlans))
+	apps := make([]*apiv1.App, 0, len(appPlans))
 
-	for _, app := range appPlans {
-		p.appIDMap[app.App.ID] = &app.App.App
-		apps = append(apps, &app.App.App)
+	for _, plan := range appPlans {
+		p.appIDMap[plan.State.App.Id] = plan.State.App
+		apps = append(apps, plan.State.App)
 
-		if !app.IsDeploy {
+		if !plan.IsDeploy {
 			continue
 		}
 
-		switch app.App.Type {
+		switch plan.State.App.Type {
 		case TypeStatic:
-			staticAppsPlan = append(staticAppsPlan, app)
+			staticAppsPlan = append(staticAppsPlan, plan)
 		case TypeService:
-			serviceAppsPlan = append(serviceAppsPlan, app)
+			serviceAppsPlan = append(serviceAppsPlan, plan)
 		}
 	}
 
@@ -114,29 +114,29 @@ func (p *PlanAction) planApps(appPlans []*types.AppPlan) error {
 	return nil
 }
 
-func (p *PlanAction) planDependencies(appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) error {
-	allNeeds := make(map[string]map[*types.App]*types.AppNeed)
+func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) error {
+	allNeeds := make(map[string]map[*apiv1.App]*apiv1.AppNeed)
 
-	for _, d := range appPlans {
-		for _, n := range d.App.Needs {
+	for _, plan := range appPlans {
+		for _, n := range plan.State.App.Needs {
 			if _, ok := allNeeds[n.Dependency]; !ok {
-				allNeeds[n.Dependency] = make(map[*types.App]*types.AppNeed)
+				allNeeds[n.Dependency] = make(map[*apiv1.App]*apiv1.AppNeed)
 			}
 
-			allNeeds[n.Dependency][&d.App.App] = n
+			allNeeds[n.Dependency][plan.State.App] = n
 		}
 	}
 
 	var (
-		databasePlan []*types.DependencyPlan
+		databasePlan []*apiv1.DependencyPlan
 	)
 
-	for _, dep := range depPlans {
-		p.depIDMap[dep.Dependency.ID] = &dep.Dependency.Dependency
+	for _, plan := range depPlans {
+		p.depIDMap[plan.State.Dependency.Id] = plan.State.Dependency
 
-		switch dep.Dependency.Type {
+		switch plan.State.Dependency.Type {
 		case DepTypePostgresql, DepTypeMySQL:
-			databasePlan = append(databasePlan, dep)
+			databasePlan = append(databasePlan, plan)
 		}
 	}
 
@@ -163,7 +163,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	}
 
 	if p.State.Other == nil {
-		p.State.Other = make(map[string]json.RawMessage)
+		p.State.Other = make(map[string][]byte)
 	}
 
 	apiReg := p.State.Other["api_registry"]
@@ -203,7 +203,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	return nil
 }
 
-func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) error {
+func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) error {
 	reg := p.State.Registry
 
 	err := p.registry.Load(ctx, reg)
@@ -242,21 +242,25 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*types.AppPlan, dep
 	return nil
 }
 
-func (p *PlanAction) getOrCreateAppState(app *types.App) *types.AppState {
-	state, ok := p.AppStates[app.ID]
+func (p *PlanAction) getOrCreateAppState(app *apiv1.App) *apiv1.AppState {
+	state, ok := p.AppStates[app.Id]
 	if !ok {
-		state = types.NewAppState(app)
-		p.AppStates[app.ID] = state
+		state = &apiv1.AppState{
+			App: app,
+		}
+		p.AppStates[app.Id] = state
 	}
 
 	return state
 }
 
-func (p *PlanAction) getOrCreateDependencyState(dep *types.Dependency) *types.DependencyState {
-	state, ok := p.DependencyStates[dep.ID]
+func (p *PlanAction) getOrCreateDependencyState(dep *apiv1.Dependency) *apiv1.DependencyState {
+	state, ok := p.DependencyStates[dep.Id]
 	if !ok {
-		state = types.NewDependencyState(dep)
-		p.DependencyStates[dep.ID] = state
+		state = &apiv1.DependencyState{
+			Dependency: dep,
+		}
+		p.DependencyStates[dep.Id] = state
 	}
 
 	return state
@@ -293,19 +297,19 @@ func (p *PlanAction) save() error {
 		domain := u.Hostname()
 
 		ssl := p.loadBalancer.ManagedSSLDomainMap[domain]
-		sslStatus := types.SSLStatusUnknown
+		sslStatus := apiv1.DNSState_SSL_STATUS_UNSPECIFIED
 		sslStatusInfo := ""
 
 		if ssl != nil {
 			switch ssl.Status.Current() {
 			case "ACTIVE":
-				sslStatus = types.SSLStatusOK
+				sslStatus = apiv1.DNSState_SSL_STATUS_OK
 			case "PROVISIONING":
-				sslStatus = types.SSLStatusProvisioning
+				sslStatus = apiv1.DNSState_SSL_STATUS_PROVISIONING
 			case "PROVISIONING_FAILED", "PROVISIONING_FAILED_PERMANENTLY":
-				sslStatus = types.SSLStatusProvisioningFailed
+				sslStatus = apiv1.DNSState_SSL_STATUS_PROVISIONING_FAILED
 			case "RENEWAL_FAILED":
-				sslStatus = types.SSLStatusRenewalFailed
+				sslStatus = apiv1.DNSState_SSL_STATUS_RENEWAL_FAILED
 			}
 
 			if v, ok := ssl.DomainStatus.Current()[domain]; ok {
@@ -313,12 +317,12 @@ func (p *PlanAction) save() error {
 			}
 		}
 
-		state.DNS = &types.DNSState{
-			IP:            p.loadBalancer.Addresses[0].IP.Current(),
-			URL:           mapURL,
+		state.Dns = &apiv1.DNSState{
+			Ip:            p.loadBalancer.Addresses[0].IP.Current(),
+			Url:           mapURL,
 			Manual:        true,
-			SSLStatus:     sslStatus,
-			SSLStatusInfo: sslStatusInfo,
+			SslStatus:     sslStatus,
+			SslStatusInfo: sslStatusInfo,
 		}
 	}
 
@@ -341,13 +345,13 @@ func (p *PlanAction) save() error {
 		}
 
 		state := p.getOrCreateDependencyState(p.depIDMap[id])
-		state.DNS = dnsState
+		state.Dns = dnsState
 	}
 
 	return nil
 }
 
-func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan) (*types.Plan, error) {
+func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) (*apiv1.Plan, error) {
 	err := p.enableAPIs(ctx)
 	if err != nil {
 		return nil, err
@@ -363,7 +367,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 		return nil, err
 	}
 
-	var actions []*types.PlanAction
+	var actions []*apiv1.PlanAction
 	for _, d := range diff {
 		actions = append(actions, d.ToPlanAction())
 	}
@@ -375,12 +379,12 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*types.AppPlan, depPla
 		}
 	}
 
-	return &types.Plan{
+	return &apiv1.Plan{
 		Actions: actions,
 	}, nil
 }
 
-func (p *PlanAction) Apply(ctx context.Context, appPlans []*types.AppPlan, depPlans []*types.DependencyPlan, cb func(a *types.ApplyAction)) error {
+func (p *PlanAction) Apply(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, cb func(a *apiv1.ApplyAction)) error {
 	err := p.enableAPIs(ctx)
 	if err != nil {
 		return err

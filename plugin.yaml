@@ -9,6 +9,7 @@ actions:
   - deploy
   - dns
   - locking
+  - state
 state_types:
   - gcp
 supports:

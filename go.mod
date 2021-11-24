@@ -9,7 +9,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.5.1
 	github.com/mitchellh/mapstructure v1.4.2
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20211115132657-c42fed05643f
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20211124144941-9ea202c0b522
 	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
 	google.golang.org/api v0.59.0
 )
@@ -39,8 +39,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211008145708-270636b82663 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/grpc v1.42.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 
-replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go
+// replace github.com/outblocks/outblocks-plugin-go => ../outblocks-plugin-go

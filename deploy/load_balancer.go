@@ -6,9 +6,9 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
-	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 type LoadBalancer struct {
@@ -39,16 +39,16 @@ func NewLoadBalancer() *LoadBalancer {
 	}
 }
 
-func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Registry, app *types.App, cloudrun fields.StringInputField, cdnEnabled bool, c *LoadBalancerArgs) error {
+func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Registry, app *apiv1.App, cloudrun fields.StringInputField, cdnEnabled bool, c *LoadBalancerArgs) error {
 	// Serverless NEGs.
 	neg := &gcp.ServerlessNEG{
-		Name:      gcp.IDField(pctx.Env(), app.ID),
+		Name:      gcp.IDField(pctx.Env(), app.Id),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		CloudRun:  cloudrun,
 	}
 
-	err := r.RegisterPluginResource(LoadBalancerName, app.ID, neg)
+	err := r.RegisterPluginResource(LoadBalancerName, app.Id, neg)
 	if err != nil {
 		return err
 	}
@@ -57,14 +57,14 @@ func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Regis
 
 	// Backend Services.
 	svc := &gcp.BackendService{
-		Name:      gcp.IDField(pctx.Env(), app.ID),
+		Name:      gcp.IDField(pctx.Env(), app.Id),
 		ProjectID: fields.String(c.ProjectID),
 		NEG:       neg.RefField(),
 	}
 
 	svc.CDN.Enabled = fields.Bool(cdnEnabled)
 
-	err = r.RegisterPluginResource(LoadBalancerName, app.ID, svc)
+	err = r.RegisterPluginResource(LoadBalancerName, app.Id, svc)
 	if err != nil {
 		return err
 	}
@@ -72,13 +72,13 @@ func (o *LoadBalancer) addCloudRun(pctx *config.PluginContext, r *registry.Regis
 	o.BackendServices = append(o.BackendServices, svc)
 
 	// URL Mapping.
-	host, path := gcp.SplitURL(app.URL)
+	host, path := gcp.SplitURL(app.Url)
 
 	o.urlMap[host+path] = fields.Map(map[string]fields.Field{
 		gcp.URLPathMatcherServiceIDKey:         svc.RefField(),
 		gcp.URLPathMatcherPathPrefixRewriteKey: fields.String(app.PathRedirect),
 	})
-	o.appMap[app.URL] = fields.String(app.ID)
+	o.appMap[app.Url] = fields.String(app.Id)
 
 	return nil
 }
@@ -134,14 +134,14 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	domains := make(map[string]struct{})
 
 	for _, app := range static {
-		u, _ := url.Parse(app.App.URL)
+		u, _ := url.Parse(app.App.Url)
 		domains[u.Hostname()] = struct{}{}
 
 		staticApps = append(staticApps, app)
 	}
 
 	for _, app := range service {
-		u, _ := url.Parse(app.App.URL)
+		u, _ := url.Parse(app.App.Url)
 		domains[u.Hostname()] = struct{}{}
 
 		serviceApps = append(serviceApps, app)

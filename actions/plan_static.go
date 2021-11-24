@@ -2,10 +2,10 @@ package actions
 
 import (
 	"github.com/outblocks/cli-plugin-gcp/deploy"
-	"github.com/outblocks/outblocks-plugin-go/types"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 )
 
-func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.StaticApp, error) {
+func (p *PlanAction) planStaticAppDeploy(appPlan *apiv1.AppPlan) (*deploy.StaticApp, error) {
 	appDeploy, err := deploy.NewStaticApp(appPlan)
 	if err != nil {
 		return nil, err
@@ -22,12 +22,12 @@ func (p *PlanAction) planStaticAppDeploy(appPlan *types.AppPlan) (*deploy.Static
 		return nil, err
 	}
 
-	p.appDeployIDMap[appPlan.App.ID] = appDeploy
+	p.appDeployIDMap[appPlan.State.App.Id] = appDeploy
 
 	return appDeploy, nil
 }
 
-func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret map[string]*deploy.StaticApp, err error) {
+func (p *PlanAction) planStaticAppsDeploy(appPlans []*apiv1.AppPlan) (ret map[string]*deploy.StaticApp, err error) {
 	ret = make(map[string]*deploy.StaticApp, len(appPlans))
 
 	for _, plan := range appPlans {
@@ -36,7 +36,7 @@ func (p *PlanAction) planStaticAppsDeploy(appPlans []*types.AppPlan) (ret map[st
 			return ret, err
 		}
 
-		ret[plan.App.ID] = app
+		ret[plan.State.App.Id] = app
 	}
 
 	return ret, nil

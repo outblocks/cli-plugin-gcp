@@ -9,6 +9,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
@@ -19,7 +20,7 @@ type ServiceApp struct {
 	Image    *gcp.Image
 	CloudRun *gcp.CloudRun
 
-	App        *types.App
+	App        *apiv1.App
 	Props      *types.ServiceAppProperties
 	DeployOpts *ServiceAppDeployOptions
 }
@@ -39,7 +40,7 @@ type ServiceAppDeployOptions struct {
 	MaxScale    int     `mapstructure:"max_scale" default:"100"`
 }
 
-func NewServiceAppDeployOptions(in interface{}) (*ServiceAppDeployOptions, error) {
+func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOptions, error) {
 	o := &ServiceAppDeployOptions{}
 
 	err := mapstructure.Decode(in, o)
@@ -60,19 +61,19 @@ func NewServiceAppDeployOptions(in interface{}) (*ServiceAppDeployOptions, error
 	)
 }
 
-func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
-	opts, err := types.NewServiceAppProperties(plan.App.Properties)
+func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
+	opts, err := types.NewServiceAppProperties(plan.State.App.Properties.AsMap())
 	if err != nil {
 		return nil, err
 	}
 
-	deployOpts, err := NewServiceAppDeployOptions(plan.App.Properties)
+	deployOpts, err := NewServiceAppDeployOptions(plan.State.App.Properties.AsMap())
 	if err != nil {
 		return nil, err
 	}
 
 	return &ServiceApp{
-		App:        &plan.App.App,
+		App:        plan.State.App,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil
@@ -81,7 +82,7 @@ func NewServiceApp(plan *types.AppPlan) (*ServiceApp, error) {
 func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs) error {
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env()), plugin_util.SanitizeName(o.App.ID)),
+		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env()), plugin_util.SanitizeName(o.App.Id)),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
 		Source:    fields.String(o.Props.LocalDockerImage),
@@ -120,7 +121,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 	}
 
 	o.CloudRun = &gcp.CloudRun{
-		Name:      gcp.IDField(pctx.Env(), o.App.ID),
+		Name:      gcp.IDField(pctx.Env(), o.App.Id),
 		Port:      fields.Int(o.Props.Container.Port),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),

@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
-	"github.com/outblocks/outblocks-plugin-go/types"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
-func computeAppDeploymentState(app interface{}) *types.DeploymentState {
+func computeAppDeploymentState(app interface{}) *apiv1.DeploymentState {
 	var (
 		ok, ready bool
 		message   string
@@ -26,14 +27,14 @@ func computeAppDeploymentState(app interface{}) *types.DeploymentState {
 		return nil
 	}
 
-	return &types.DeploymentState{
+	return &apiv1.DeploymentState{
 		Ready:   ready,
 		Message: message,
 	}
 }
 
-func computeDependencyDNSState(dep interface{}) *types.DNSState {
-	var dns *types.DNSState
+func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
+	var dns *apiv1.DNSState
 
 	switch depDeploy := dep.(type) { //nolint:gocritic
 	case *deploy.DatabaseDep:
@@ -50,13 +51,15 @@ func computeDependencyDNSState(dep interface{}) *types.DNSState {
 			connInfo = fmt.Sprintf("%s (%s)", connInfo, depDeploy.CloudSQL.ConnectionName.Current())
 		}
 
-		dns = &types.DNSState{
-			IP:             depDeploy.CloudSQL.PublicIP.Current(),
-			InternalIP:     depDeploy.CloudSQL.PrivateIP.Current(),
+		props := plugin_util.MustNewStruct(map[string]interface{}{
+			"connection_name": depDeploy.CloudSQL.ConnectionName.Current(),
+		})
+
+		dns = &apiv1.DNSState{
+			Ip:             depDeploy.CloudSQL.PublicIP.Current(),
+			InternalIp:     depDeploy.CloudSQL.PrivateIP.Current(),
 			ConnectionInfo: connInfo,
-			Properties: map[string]interface{}{
-				"connection_name": depDeploy.CloudSQL.ConnectionName.Current(),
-			},
+			Properties:     props,
 		}
 	}
 

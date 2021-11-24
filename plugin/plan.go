@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/outblocks/cli-plugin-gcp/actions"
-	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 )
 
-func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest, reg *registry.Registry) (plugin_go.Response, error) {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginState, reg, r.Destroy, false)
+func (p *Plugin) Plan(ctx context.Context, reg *registry.Registry, r *apiv1.PlanRequest) (*apiv1.PlanResponse, error) {
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.State, reg, r.Destroy, false)
 	if err != nil {
 		return nil, err
 	}
@@ -19,10 +19,10 @@ func (p *Plugin) Plan(ctx context.Context, r *plugin_go.PlanRequest, reg *regist
 		return nil, err
 	}
 
-	return &plugin_go.PlanResponse{
-		DeployPlan: deployPlan,
+	return &apiv1.PlanResponse{
+		Deploy: deployPlan,
 
-		PluginState:      a.State,
+		State:            a.State,
 		AppStates:        a.AppStates,
 		DependencyStates: a.DependencyStates,
 	}, nil

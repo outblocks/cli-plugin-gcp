@@ -8,10 +8,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/resources"
-	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 type DatabaseDepUser struct {
@@ -28,15 +28,15 @@ type DatabaseDep struct {
 	CloudSQLDatabases map[string]*gcp.CloudSQLDatabase
 	CloudSQLUsers     map[string]*gcp.CloudSQLUser
 
-	Dep   *types.Dependency
+	Dep   *apiv1.Dependency
 	Opts  *DatabaseDepOptions
-	Needs map[*types.App]*DatabaseDepNeed
+	Needs map[*apiv1.App]*DatabaseDepNeed
 }
 
 type DatabaseDepArgs struct {
 	ProjectID string
 	Region    string
-	Needs     map[*types.App]*DatabaseDepNeed
+	Needs     map[*apiv1.App]*DatabaseDepNeed
 }
 
 type DatabaseDepNeed struct {
@@ -44,13 +44,13 @@ type DatabaseDepNeed struct {
 	Database string `mapstructure:"database"`
 }
 
-func NewDatabaseDepNeed(in interface{}) (*DatabaseDepNeed, error) {
+func NewDatabaseDepNeed(in map[string]interface{}) (*DatabaseDepNeed, error) {
 	o := &DatabaseDepNeed{}
 	return o, mapstructure.Decode(in, o)
 }
 
-func NewDatabaseDep(dep *types.Dependency) (*DatabaseDep, error) {
-	opts, err := NewDatabaseDepOptions(dep.Properties, dep.Type)
+func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
+	opts, err := NewDatabaseDepOptions(dep.Properties.AsMap(), dep.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ type DatabaseDepOptions struct {
 	DatabaseVersion string            `mapstructure:"-"`
 }
 
-func NewDatabaseDepOptions(in interface{}, typ string) (*DatabaseDepOptions, error) {
+func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
 	o := &DatabaseDepOptions{}
 
 	err := mapstructure.Decode(in, o)
@@ -145,7 +145,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
-		Name:             gcp.IDField(pctx.Env(), o.Dep.ID),
+		Name:             gcp.IDField(pctx.Env(), o.Dep.Id),
 		ProjectID:        fields.String(c.ProjectID),
 		Region:           fields.String(c.Region),
 		DatabaseVersion:  fields.String(o.Opts.DatabaseVersion),

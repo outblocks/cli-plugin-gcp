@@ -6,21 +6,31 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
-	plugin_go "github.com/outblocks/outblocks-plugin-go"
+	"github.com/outblocks/outblocks-plugin-go/env"
+	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
+	"github.com/outblocks/outblocks-plugin-go/log"
 	"github.com/outblocks/outblocks-plugin-go/validate"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 )
 
-func (p *Plugin) StartInteractive(ctx context.Context, r *plugin_go.StartRequest, stream *plugin_go.ReceiverStream) error {
-	res, project := validate.String(r.Properties, "project", "GCP 'project' is required")
-	if res != nil {
-		return stream.Send(res)
+func (p *Plugin) Init(ctx context.Context, e env.Enver, l log.Logger, cli apiv1.HostServiceClient) error {
+	p.env = e
+	p.hostCli = cli
+	p.log = l
+
+	return nil
+}
+
+func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.StartResponse, error) {
+	project, err := validate.String(r.Properties.Fields, "project", "GCP 'project' is required")
+	if err != nil {
+		return nil, err
 	}
 
-	res, region := validate.String(r.Properties, "region", "GCP 'region' is required")
-	if res != nil {
-		return stream.Send(res)
+	region, err := validate.String(r.Properties.Fields, "region", "GCP 'region' is required")
+	if err != nil {
+		return nil, err
 	}
 
 	p.Settings.ProjectID = project
@@ -28,40 +38,35 @@ func (p *Plugin) StartInteractive(ctx context.Context, r *plugin_go.StartRequest
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return fmt.Errorf("error getting google credentials, did you install and set up 'gcloud'?")
+		return nil, fmt.Errorf("error getting google credentials, did you install and set up 'gcloud'?")
 	}
 
 	p.gcred = cred
 
 	crmCli, err := config.NewGCPCloudResourceManager(ctx, p.gcred)
 	if err != nil {
-		return fmt.Errorf("error creating cloud resource manager client: %w", err)
+		return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
 	}
 
 	proj, err := crmCli.Projects.Get(p.Settings.ProjectID).Do()
 	if gcp.ErrIs404(err) || gcp.ErrIs403(err) {
-		_ = stream.Send(&plugin_go.MessageResponse{
-			Message:  fmt.Sprintf("Project '%s' not found or caller lacks permission!", p.Settings.ProjectID),
-			LogLevel: plugin_go.MessageLogLevelWarn,
-		})
+		p.log.Warnf("Project '%s' not found or caller lacks permission!\n", p.Settings.ProjectID)
 
 		crmCli, err := config.NewGCPCloudResourceManager(ctx, p.gcred)
 		if err != nil {
-			return fmt.Errorf("error creating cloud resource manager client: %w", err)
+			return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
 		}
 
-		_ = stream.Send(&plugin_go.PromptConfirmation{
+		res, err := p.hostCli.PromptConfirmation(ctx, &apiv1.PromptConfirmationRequest{
 			Message: "Do you want to create a new GCP Project?",
 		})
-
-		res, err := stream.Recv()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		create := res.(*plugin_go.PromptConfirmationAnswer).Confirmed
+		create := res.Confirmed
 		if !create {
-			return fmt.Errorf("unable to proceed without access to a GCP project")
+			return nil, fmt.Errorf("unable to proceed without access to a GCP project")
 		}
 
 		op, err := crmCli.Projects.Create(&cloudresourcemanager.Project{
@@ -69,18 +74,18 @@ func (p *Plugin) StartInteractive(ctx context.Context, r *plugin_go.StartRequest
 			ProjectId: project,
 		}).Do()
 		if err != nil {
-			return fmt.Errorf("unable to create GCP project: %w", err)
+			return nil, fmt.Errorf("unable to create GCP project: %w", err)
 		}
 
 		err = gcp.WaitForCloudResourceManagerOperation(crmCli, op)
 		if err != nil {
-			return fmt.Errorf("unable to create GCP project: %w", err)
+			return nil, fmt.Errorf("unable to create GCP project: %w", err)
 		}
 	} else if err != nil {
-		return fmt.Errorf("error getting project '%s': %w", p.Settings.ProjectID, err)
+		return nil, fmt.Errorf("error getting project '%s': %w", p.Settings.ProjectID, err)
 	}
 
 	p.Settings.ProjectNumber = proj.ProjectNumber
 
-	return nil
+	return &apiv1.StartResponse{}, nil
 }
