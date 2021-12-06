@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.41](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.40...v0.1.41)
+
+> 2021-11-25
+
+### FEATURES
+
+[`fe2073b`](https://github.com/outblocks/cli-plugin-gcp/commit/fe2073baddaf1cedcdb5ad69bfa06df29fff5219) new communication protocol, improvements all over
+[`9834e67`](https://github.com/outblocks/cli-plugin-gcp/commit/9834e677a9cf736ffae35b2d407d098ab17e1a35) locking
+
+
 ## [v0.1.40](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.39...v0.1.40)
 
 > 2021-11-15
