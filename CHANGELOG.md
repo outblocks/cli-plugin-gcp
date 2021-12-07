@@ -1,8 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.42](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.41...v0.1.42)
+
+> 2021-12-07
+
+### FEATURES
+
+[`62ae8bd`](https://github.com/outblocks/cli-plugin-gcp/commit/62ae8bd37468528a565a582e855c94b73e610250) sdk update, better id system
+
+
 ## [v0.1.41](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.40...v0.1.41)
 
-> 2021-11-25
+> 2021-12-06
 
 ### FEATURES
 
