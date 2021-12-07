@@ -19,7 +19,7 @@ type CloudSQLUser struct {
 	Password  fields.StringInputField
 }
 
-func (o *CloudSQLUser) UniqueID() string {
+func (o *CloudSQLUser) ReferenceID() string {
 	return fields.GenerateID("projects/%s/instances/%s/users/%s", o.ProjectID, o.Instance, o.Name)
 }
 

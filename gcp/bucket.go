@@ -22,7 +22,7 @@ type Bucket struct {
 	Versioning fields.BoolInputField
 }
 
-func (o *Bucket) UniqueID() string {
+func (o *Bucket) ReferenceID() string {
 	return o.Name.Any()
 }
 

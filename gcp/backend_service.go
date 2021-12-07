@@ -36,7 +36,7 @@ func (o *BackendService) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *BackendService) UniqueID() string {
+func (o *BackendService) ReferenceID() string {
 	return fields.GenerateID("projects/%s/global/backendServices/%s", o.ProjectID, o.Name)
 }
 

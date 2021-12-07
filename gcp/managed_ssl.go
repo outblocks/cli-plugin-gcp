@@ -20,7 +20,7 @@ type ManagedSSL struct {
 	DomainStatus fields.MapOutputField
 }
 
-func (o *ManagedSSL) UniqueID() string {
+func (o *ManagedSSL) ReferenceID() string {
 	return fields.GenerateID("projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 

@@ -39,7 +39,7 @@ type CloudSQL struct {
 	SettingsVersion int64 `state:"-"`
 }
 
-func (o *CloudSQL) UniqueID() string {
+func (o *CloudSQL) ReferenceID() string {
 	return fields.GenerateID("projects/%s/instances/%s", o.ProjectID, o.Name)
 }
 

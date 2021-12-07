@@ -19,7 +19,7 @@ type ServerlessNEG struct {
 	CloudRun  fields.StringInputField `state:"force_new"`
 }
 
-func (o *ServerlessNEG) UniqueID() string {
+func (o *ServerlessNEG) ReferenceID() string {
 	return fields.GenerateID("projects/%s/regions/%s/networkEndpointGroups/%s", o.ProjectID, o.Region, o.Name)
 }
 

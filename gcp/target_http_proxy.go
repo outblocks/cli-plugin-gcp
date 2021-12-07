@@ -19,7 +19,7 @@ type TargetHTTPProxy struct {
 	Fingerprint string `state:"-"`
 }
 
-func (o *TargetHTTPProxy) UniqueID() string {
+func (o *TargetHTTPProxy) ReferenceID() string {
 	return fields.GenerateID("projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
 }
 

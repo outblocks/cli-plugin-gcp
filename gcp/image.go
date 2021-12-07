@@ -32,7 +32,7 @@ type Image struct {
 	Pull bool `state:"-"`
 }
 
-func (o *Image) UniqueID() string {
+func (o *Image) ReferenceID() string {
 	return fields.GenerateID("image/%s/%s/%s", o.GCR, o.ProjectID, o.Name)
 }
 

@@ -36,7 +36,7 @@ type CloudRun struct {
 	EnvVars              fields.MapInputField
 }
 
-func (o *CloudRun) UniqueID() string {
+func (o *CloudRun) ReferenceID() string {
 	return fields.GenerateID("locations/%s/namespaces/%s/services/%s", o.Region, o.ProjectID, o.Name)
 }
 

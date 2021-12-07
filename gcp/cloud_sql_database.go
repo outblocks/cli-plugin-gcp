@@ -18,7 +18,7 @@ type CloudSQLDatabase struct {
 	Name      fields.StringInputField `state:"force_new"`
 }
 
-func (o *CloudSQLDatabase) UniqueID() string {
+func (o *CloudSQLDatabase) ReferenceID() string {
 	return fields.GenerateID("projects/%s/instances/%s/databases/%s", o.ProjectID, o.Instance, o.Name)
 }
 

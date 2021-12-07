@@ -84,16 +84,16 @@ func acquireLock(ctx context.Context, name string, o *storage.ObjectHandle) (str
 
 			if name == "state" {
 				return "", types.NewStateLockError(
-					string(lockdata),
 					strconv.FormatInt(attrs.Generation, 10),
+					string(lockdata),
 					attrs.Created,
 				)
 			}
 
 			return "", types.NewLockError(
 				name,
-				string(lockdata),
 				strconv.FormatInt(attrs.Generation, 10),
+				string(lockdata),
 				attrs.Created,
 			)
 		}

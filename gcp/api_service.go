@@ -17,7 +17,7 @@ type APIService struct {
 	Name          fields.StringInputField `state:"force_new"`
 }
 
-func (o *APIService) UniqueID() string {
+func (o *APIService) ReferenceID() string {
 	return fields.GenerateID("projects/%d/services/%s", o.ProjectNumber, o.Name)
 }
 

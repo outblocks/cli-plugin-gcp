@@ -21,7 +21,7 @@ type URLMap struct {
 	Fingerprint string `state:"-"`
 }
 
-func (o *URLMap) UniqueID() string {
+func (o *URLMap) ReferenceID() string {
 	return fields.GenerateID("projects/%s/global/urlMaps/%s", o.ProjectID, o.Name)
 }
 

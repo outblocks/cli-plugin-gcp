@@ -18,7 +18,7 @@ type Address struct {
 	IP        fields.StringOutputField
 }
 
-func (o *Address) UniqueID() string {
+func (o *Address) ReferenceID() string {
 	return fields.GenerateID("projects/%s/global/addresses/%s", o.ProjectID, o.Name)
 }
 
