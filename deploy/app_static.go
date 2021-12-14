@@ -88,7 +88,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Versioning: fields.Bool(false),
 	}
 
-	err := r.RegisterAppResource(o.App, "bucket", o.Bucket)
+	_, err := r.RegisterAppResource(o.App, "bucket", o.Bucket)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 				obj.CacheControl = fields.String("private, max-age=0, no-transform")
 			}
 
-			err = r.RegisterAppResource(o.App, filePath, obj)
+			_, err = r.RegisterAppResource(o.App, filePath, obj)
 			if err != nil {
 				return err
 			}
@@ -145,7 +145,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Pull:      true,
 	}
 
-	err = r.RegisterPluginResource(CommonName, gcp.GCSProxyImageName, o.Image)
+	_, err = r.RegisterPluginResource(CommonName, gcp.GCSProxyImageName, o.Image)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		MaxScale: fields.Int(o.DeployOpts.MaxScale),
 	}
 
-	err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
+	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
 	if err != nil {
 		return err
 	}

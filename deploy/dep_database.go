@@ -145,7 +145,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 
 	// Add cloud sql.
 	o.CloudSQL = &gcp.CloudSQL{
-		Name:             gcp.RandomIDField(pctx.Env(), o.Dep.Id),
+		Name:             gcp.IDField(pctx.Env(), o.Dep.Id),
 		ProjectID:        fields.String(c.ProjectID),
 		Region:           fields.String(c.Region),
 		DatabaseVersion:  fields.String(o.Opts.DatabaseVersion),
@@ -154,7 +154,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 		DatabaseFlags:    fields.Map(flags),
 	}
 
-	err := r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
+	_, err := r.RegisterDependencyResource(o.Dep, "cloud_sql", o.CloudSQL)
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (o *DatabaseDep) registerDatabase(r *registry.Registry, db string) error {
 		Name:      fields.String(db),
 	}
 
-	err := r.RegisterDependencyResource(o.Dep, db, o.CloudSQLDatabases[db])
+	_, err := r.RegisterDependencyResource(o.Dep, db, o.CloudSQLDatabases[db])
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) 
 		randomPassword := &resources.RandomString{
 			Name: fields.Sprintf("%s password", user),
 		}
-		err := r.RegisterDependencyResource(o.Dep, user, randomPassword)
+		_, err := r.RegisterDependencyResource(o.Dep, user, randomPassword)
 		if err != nil {
 			return err
 		}
@@ -223,7 +223,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) 
 		Password:  passwordField,
 	}
 
-	err := r.RegisterDependencyResource(o.Dep, user, o.CloudSQLUsers[user])
+	_, err := r.RegisterDependencyResource(o.Dep, user, o.CloudSQLUsers[user])
 	if err != nil {
 		return err
 	}

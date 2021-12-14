@@ -31,13 +31,17 @@ type PlanAction struct {
 	databaseDeps map[string]*deploy.DatabaseDep
 	loadBalancer *deploy.LoadBalancer
 
+	dnsRecordsMap map[string]*apiv1.DNSRecord
+
 	State              *apiv1.PluginState
+	domainMatcher      *types.DomainInfoMatcher
 	AppStates          map[string]*apiv1.AppState
 	DependencyStates   map[string]*apiv1.DependencyState
+	DNSRecords         []*apiv1.DNSRecord
 	destroy, fullCheck bool
 }
 
-func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginState, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
+func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginState, domains []*apiv1.DomainInfo, reg *registry.Registry, destroy, fullCheck bool) (*PlanAction, error) {
 	if state == nil {
 		state = types.NewPluginState()
 	}
@@ -61,8 +65,10 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 
 		depIDMap:       make(map[string]*apiv1.Dependency),
 		depDeployIDMap: make(map[string]interface{}),
+		dnsRecordsMap:  make(map[string]*apiv1.DNSRecord),
 
 		State:            state,
+		domainMatcher:    types.NewDomainInfoMatcher(domains),
 		AppStates:        make(map[string]*apiv1.AppState),
 		DependencyStates: make(map[string]*apiv1.DependencyState),
 
@@ -82,10 +88,6 @@ func (p *PlanAction) planApps(appPlans []*apiv1.AppPlan) error {
 	for _, plan := range appPlans {
 		p.appIDMap[plan.State.App.Id] = plan.State.App
 		apps = append(apps, plan.State.App)
-
-		if !plan.IsDeploy {
-			continue
-		}
 
 		switch plan.State.App.Type {
 		case TypeStatic:
@@ -156,7 +158,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	for _, api := range gcp.APISRequired {
 		s := &gcp.APIService{Name: fields.String(api)}
 
-		err := p.apiRegistry.RegisterPluginResource(deploy.APIName, api, s)
+		_, err := p.apiRegistry.RegisterPluginResource(deploy.APIName, api, s)
 		if err != nil {
 			return err
 		}
@@ -224,7 +226,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, dep
 
 	p.loadBalancer = deploy.NewLoadBalancer()
 
-	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, p.serviceApps, &deploy.LoadBalancerArgs{
+	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, p.serviceApps, p.domainMatcher, &deploy.LoadBalancerArgs{
 		Name:      "load_balancer",
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
@@ -284,6 +286,7 @@ func (p *PlanAction) save() error {
 	}
 
 	// App SSL states.
+
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
 		app := p.appIDMap[id]
@@ -320,10 +323,19 @@ func (p *PlanAction) save() error {
 		state.Dns = &apiv1.DNSState{
 			Ip:            p.loadBalancer.Addresses[0].IP.Current(),
 			Url:           mapURL,
-			Manual:        true,
 			SslStatus:     sslStatus,
 			SslStatusInfo: sslStatusInfo,
 		}
+
+		p.dnsRecordsMap[domain] = &apiv1.DNSRecord{
+			Record: domain,
+			Type:   apiv1.DNSRecord_TYPE_A,
+			Value:  p.loadBalancer.Addresses[0].IP.Current(),
+		}
+	}
+
+	for _, v := range p.dnsRecordsMap {
+		p.DNSRecords = append(p.DNSRecords, v)
 	}
 
 	// App states.
@@ -372,11 +384,9 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 		actions = append(actions, d.ToPlanAction())
 	}
 
-	if len(diff) == 0 {
-		err = p.save()
-		if err != nil {
-			return nil, err
-		}
+	err = p.save()
+	if err != nil {
+		return nil, err
 	}
 
 	return &apiv1.Plan{

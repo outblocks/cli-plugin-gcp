@@ -93,7 +93,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 		o.Image.SourceHash = fields.String(o.Props.LocalDockerHash)
 	}
 
-	err := r.RegisterAppResource(o.App, o.Props.LocalDockerImage, o.Image)
+	_, err := r.RegisterAppResource(o.App, o.Props.LocalDockerImage, o.Image)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (o *ServiceApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 		CPULimit:          fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
 	}
 
-	err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
+	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
 	if err != nil {
 		return err
 	}
