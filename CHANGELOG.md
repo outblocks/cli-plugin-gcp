@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.43](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.42...v0.1.43)
+
+> 2021-12-14
+
+### FEATURES
+
+[`08817be`](https://github.com/outblocks/cli-plugin-gcp/commit/08817be73bea4ce7be2dfb58a812ea97b1dd5e5e) dns, self managed cert
+
+
 ## [v0.1.42](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.41...v0.1.42)
 
 > 2021-12-07
