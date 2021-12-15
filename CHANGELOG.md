@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.44](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.43...v0.1.44)
+
+> 2021-12-15
+
+### BUG FIXES
+
+[`900bf50`](https://github.com/outblocks/cli-plugin-gcp/commit/900bf50588dbab928b3d0e0a5c515cca1e18e00a) empty state handling
+
+
 ## [v0.1.43](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.42...v0.1.43)
 
 > 2021-12-14
