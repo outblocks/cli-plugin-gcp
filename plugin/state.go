@@ -218,7 +218,11 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 
 	state, err := readBucketFile(ctx, b, p.statefile())
 	if err != nil {
-		return err
+		if err != storage.ErrObjectNotExist {
+			return err
+		}
+
+		created = true
 	}
 
 	return stream.Send(&apiv1.GetStateResponse{
