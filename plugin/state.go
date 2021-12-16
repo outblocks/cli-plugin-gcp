@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/user"
@@ -42,7 +42,7 @@ func readBucketFile(ctx context.Context, b *storage.BucketHandle, file string) (
 		return nil, err
 	}
 
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 func lockdata() string {
@@ -72,7 +72,7 @@ func acquireLock(ctx context.Context, name string, o *storage.ObjectHandle) (str
 				return "", err
 			}
 
-			lockdata, err := ioutil.ReadAll(r)
+			lockdata, err := io.ReadAll(r)
 			if err != nil {
 				return "", err
 			}
