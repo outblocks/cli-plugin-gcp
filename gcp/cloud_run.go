@@ -34,6 +34,7 @@ type CloudRun struct {
 	TimeoutSeconds       fields.IntInputField    `default:"300"`
 	Port                 fields.IntInputField    `default:"80"`
 	EnvVars              fields.MapInputField
+	Ingress              fields.StringInputField `default:"all"` // options: internal-and-cloud-load-balancing
 }
 
 func (o *CloudRun) ReferenceID() string {
@@ -84,6 +85,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 		o.MinScale.UnsetCurrent()
 		o.MaxScale.UnsetCurrent()
 		o.EnvVars.UnsetCurrent()
+		o.Ingress.UnsetCurrent()
 
 		return nil
 	}
@@ -105,6 +107,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 	o.ContainerConcurrency.SetCurrent(int(svc.Spec.Template.Spec.ContainerConcurrency))
 	o.TimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.TimeoutSeconds))
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
+	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
 	o.MinScale.SetCurrent(v)
@@ -228,7 +231,7 @@ func (o *CloudRun) makeRunService() *run.Service {
 		Metadata: &run.ObjectMeta{
 			Name: o.Name.Wanted(),
 			Annotations: map[string]string{
-				"run.googleapis.com/ingress": "internal-and-cloud-load-balancing",
+				"run.googleapis.com/ingress": o.Ingress.Wanted(),
 			},
 		},
 		Spec: &run.ServiceSpec{

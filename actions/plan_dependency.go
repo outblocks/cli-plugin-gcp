@@ -65,6 +65,55 @@ func (p *PlanAction) planDatabaseDepsDeploy(depPlans []*apiv1.DependencyPlan, al
 	return ret, nil
 }
 
+func (p *PlanAction) planStorageDepDeploy(depPlan *apiv1.DependencyPlan, needs map[*apiv1.App]*apiv1.AppNeed) (*deploy.StorageDep, error) {
+	depDeploy, err := deploy.NewStorageDep(depPlan.State.Dependency)
+	if err != nil {
+		return nil, err
+	}
+
+	pctx := p.pluginCtx
+
+	depNeeds := make(map[*apiv1.App]*deploy.StorageDepNeed, len(needs))
+
+	for app, n := range needs {
+		need, err := deploy.NewStorageDepNeed(n.Properties.AsMap())
+		if err != nil {
+			return nil, err
+		}
+
+		depNeeds[app] = need
+	}
+
+	err = depDeploy.Plan(pctx, p.registry, &deploy.StorageDepArgs{
+		ProjectID: pctx.Settings().ProjectID,
+		Region:    pctx.Settings().Region,
+		Needs:     depNeeds,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	p.depDeployIDMap[depPlan.State.Dependency.Id] = depDeploy
+
+	return depDeploy, nil
+}
+
+func (p *PlanAction) planStorageDepsDeploy(depPlans []*apiv1.DependencyPlan, allNeeds map[string]map[*apiv1.App]*apiv1.AppNeed) (ret map[string]*deploy.StorageDep, err error) {
+	ret = make(map[string]*deploy.StorageDep, len(depPlans))
+
+	for _, plan := range depPlans {
+		dep, err := p.planStorageDepDeploy(plan, allNeeds[plan.State.Dependency.Name])
+		if err != nil {
+			return ret, err
+		}
+
+		ret[plan.State.Dependency.Name] = dep
+	}
+
+	return ret, nil
+}
+
 func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) (map[string]interface{}, error) {
 	if dep, ok := p.databaseDeps[need.Dependency]; ok {
 		depNeed := dep.Needs[app]
@@ -76,6 +125,14 @@ func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) 
 		vars["port"] = fields.Int(5432)
 		vars["host"] = fields.Sprintf("/cloudsql/%s", dep.CloudSQL.ConnectionName)
 		vars["socket"] = fields.Sprintf("/cloudsql/%s", dep.CloudSQL.ConnectionName)
+
+		return vars, nil
+	}
+
+	if dep, ok := p.storageDeps[need.Dependency]; ok {
+		vars := make(map[string]interface{})
+		vars["name"] = dep.Bucket.Name
+		vars["url"] = fields.Sprintf("https://storage.cloud.google.com/%s/", dep.Bucket.Name)
 
 		return vars, nil
 	}

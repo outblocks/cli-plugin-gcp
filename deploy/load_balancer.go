@@ -184,6 +184,10 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	}
 
 	for _, app := range service {
+		if app.Props.Private {
+			continue
+		}
+
 		u, _ := url.Parse(app.App.Url)
 		domainsList[u.Hostname()] = struct{}{}
 

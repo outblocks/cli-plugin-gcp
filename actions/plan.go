@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
@@ -29,9 +30,11 @@ type PlanAction struct {
 	staticApps   map[string]*deploy.StaticApp
 	serviceApps  map[string]*deploy.ServiceApp
 	databaseDeps map[string]*deploy.DatabaseDep
+	storageDeps  map[string]*deploy.StorageDep
 	loadBalancer *deploy.LoadBalancer
 
-	dnsRecordsMap map[string]*apiv1.DNSRecord
+	cloudRunSettings *deploy.CloudRunSettings
+	dnsRecordsMap    map[string]*apiv1.DNSRecord
 
 	State              *apiv1.PluginState
 	domainMatcher      *types.DomainInfoMatcher
@@ -77,7 +80,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 	}, nil
 }
 
-func (p *PlanAction) planApps(appPlans []*apiv1.AppPlan) error {
+func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, apply bool) error {
 	var (
 		staticAppsPlan  []*apiv1.AppPlan
 		serviceAppsPlan []*apiv1.AppPlan
@@ -108,7 +111,7 @@ func (p *PlanAction) planApps(appPlans []*apiv1.AppPlan) error {
 	}
 
 	// Plan service app deployment.
-	p.serviceApps, err = p.planServiceAppsDeploy(serviceAppsPlan)
+	p.serviceApps, err = p.planServiceAppsDeploy(ctx, serviceAppsPlan, apply)
 	if err != nil {
 		return err
 	}
@@ -129,9 +132,7 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 		}
 	}
 
-	var (
-		databasePlan []*apiv1.DependencyPlan
-	)
+	var databasePlan, storagePlan []*apiv1.DependencyPlan
 
 	for _, plan := range depPlans {
 		p.depIDMap[plan.State.Dependency.Id] = plan.State.Dependency
@@ -139,6 +140,8 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 		switch plan.State.Dependency.Type {
 		case DepTypePostgresql, DepTypeMySQL:
 			databasePlan = append(databasePlan, plan)
+		case DepTypeStorage:
+			storagePlan = append(storagePlan, plan)
 		}
 	}
 
@@ -146,6 +149,11 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 
 	// Plan dependency deployment.
 	p.databaseDeps, err = p.planDatabaseDepsDeploy(databasePlan, allNeeds)
+	if err != nil {
+		return err
+	}
+
+	p.storageDeps, err = p.planStorageDepsDeploy(storagePlan, allNeeds)
 	if err != nil {
 		return err
 	}
@@ -205,7 +213,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	return nil
 }
 
-func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) error {
+func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, apply bool) error {
 	reg := p.State.Registry
 
 	err := p.registry.Load(ctx, reg)
@@ -219,7 +227,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, dep
 		return err
 	}
 
-	err = p.planApps(appPlans)
+	err = p.planApps(ctx, appPlans, apply)
 	if err != nil {
 		return err
 	}
@@ -347,6 +355,12 @@ func (p *PlanAction) save() error {
 
 		state := p.getOrCreateAppState(p.appIDMap[id])
 		state.Deployment = deployState
+
+		if serviceApp, ok := app.(*deploy.ServiceApp); ok && serviceApp.Props.Private {
+			state.Dns = &apiv1.DNSState{
+				InternalUrl: fmt.Sprintf("http://%s/", serviceApp.CloudRun.Name.Current()),
+			}
+		}
 	}
 
 	// Dependency states.
@@ -364,12 +378,17 @@ func (p *PlanAction) save() error {
 }
 
 func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) (*apiv1.Plan, error) {
-	err := p.enableAPIs(ctx)
+	err := p.prepareCloudRunURL(ctx, false)
 	if err != nil {
 		return nil, err
 	}
 
-	err = p.planAll(ctx, appPlans, depPlans)
+	err = p.enableAPIs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.planAll(ctx, appPlans, depPlans, false)
 	if err != nil {
 		return nil, err
 	}
@@ -395,12 +414,17 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 }
 
 func (p *PlanAction) Apply(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, cb func(a *apiv1.ApplyAction)) error {
-	err := p.enableAPIs(ctx)
+	err := p.prepareCloudRunURL(ctx, true)
 	if err != nil {
 		return err
 	}
 
-	err = p.planAll(ctx, appPlans, depPlans)
+	err = p.enableAPIs(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = p.planAll(ctx, appPlans, depPlans, true)
 	if err != nil {
 		return err
 	}

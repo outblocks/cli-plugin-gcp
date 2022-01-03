@@ -6,4 +6,5 @@ const (
 
 	DepTypePostgresql = "postgresql"
 	DepTypeMySQL      = "mysql"
+	DepTypeStorage    = "storage"
 )

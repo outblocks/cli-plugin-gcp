@@ -1,0 +1,222 @@
+version: 2.1
+orbs:
+  gcp-gcr: circleci/gcp-gcr@0.13.0
+  docker: circleci/docker@1.5.0
+  slack: circleci/slack@4.3.3
+
+executors:
+  node:
+    docker:
+      - image: node:12-stretch
+
+commands:
+  node_install:
+    steps:
+      - run:
+          name: Install pnpm
+          command: |
+            curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm
+      - run:
+          name: Copy checksum file
+          command: |
+            cp "pnpm-lock.yaml" /tmp/checksum
+      - restore_cache:
+          keys:
+            - v1-node-{{ arch }}-{{ checksum "/tmp/checksum" }}
+      - run:
+          name: Yarn install
+          command: |
+            pnpm install
+      - save_cache:
+          key: v1-node-{{ arch }}-{{ checksum "/tmp/checksum" }}
+          paths:
+            - node_modules
+
+  run_tests:
+    parameters:
+      app:
+        type: string
+    steps:
+      - run:
+          name: Run tests
+          command: |
+            yarn nx run << parameters.app >>:lint
+            yarn nx run << parameters.app >>:test
+      # - slack/notify:
+      #     event: fail
+      #     template: basic_fail_1
+
+jobs:
+  test:
+    executor: node
+    steps:
+      - checkout
+      - node_install
+      - run_tests:
+          app: shop
+      - run_tests:
+          app: storefront
+  build-deps:
+    executor:
+      name: docker/machine
+      dlc: false
+    environment:
+      DEP_GOOGLE_PROJECT_ID: zemepharm
+    steps:
+      - checkout
+      - gcp-gcr/gcr-auth
+      - run:
+          name: Rebuild dependencies docker image
+          command: |
+            export LOCK_SUM=$(md5sum pnpm-lock.yaml | cut -d ' ' -f 1)
+            existing_tags=$(gcloud container images list-tags --filter="tags:$LOCK_SUM" --format=json eu.gcr.io/${DEP_GOOGLE_PROJECT_ID}/deps)
+            if [[ "$existing_tags" == "[]" ]]; then
+              docker build -t eu.gcr.io/${DEP_GOOGLE_PROJECT_ID}/deps:$LOCK_SUM -f Dockerfile.deps .
+              docker push eu.gcr.io/${DEP_GOOGLE_PROJECT_ID}/deps:$LOCK_SUM
+            fi
+  deploy:
+    executor:
+      name: docker/machine
+      dlc: false
+    parameters:
+      app:
+        type: string
+      image_prefix:
+        type: string
+        default: ""
+    environment:
+      PROJECT: samarite
+      APP: << parameters.app >>
+      DEP_GOOGLE_PROJECT_ID: zemepharm
+    steps:
+      - checkout
+      - gcp-gcr/gcr-auth
+      - run:
+          name: Check docker image
+          command: |
+            export LOCK_SUM=$(md5sum pnpm-lock.yaml | cut -d ' ' -f 1)
+            sed -i "s/samarite-deps/eu.gcr.io\/${DEP_GOOGLE_PROJECT_ID}\/deps:$LOCK_SUM/g" apps/<< parameters.app >>/Dockerfile
+      - docker/build:
+          docker-context: .
+          dockerfile: apps/<< parameters.app >>/Dockerfile
+          image: $DOCKER_REPO/<< parameters.image_prefix >><< parameters.app >>
+      - docker/push:
+          image: << parameters.image_prefix >><< parameters.app >>
+          registry: $DOCKER_REPO
+          digest-path: /tmp/digest.txt
+      - run:
+          name: Setup kubeconfig
+          command: |
+            gcloud container clusters get-credentials $GOOGLE_CLUSTER_NAME --region=$GOOGLE_COMPUTE_REGION
+      - run:
+          name: Install kubectl
+          command: |
+            gcloud components install kubectl
+      - run:
+          name: Install yq
+          command: |
+            sudo curl -sL https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -o /usr/local/bin/yq
+            sudo chmod a+x /usr/local/bin/yq
+      - run:
+          name: Install envsubst
+          command: |
+            sudo curl -sL https://github.com/a8m/envsubst/releases/download/v1.2.0/envsubst-Linux-x86_64 -o /usr/local/bin/envsubst
+            sudo chmod a+x /usr/local/bin/envsubst
+      - run:
+          name: Install sops
+          command: |
+            sudo curl -sL https://github.com/mozilla/sops/releases/download/v3.7.1/sops-v3.7.1.linux -o /usr/local/bin/sops
+            sudo chmod a+x /usr/local/bin/sops
+      - run:
+          name: Autodeploy
+          command: |
+            export DEPLOY_IMAGE_SHA=$(</tmp/digest.txt)
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-service-key.json
+            ./ops/tools/auto_deploy.sh
+      # - slack/notify:
+      #     event: fail
+      #     template: basic_fail_1
+
+
+  tag:
+    docker:
+      - image: cimg/base:2020.01
+    parameters:
+      buildType:
+        type: string
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "f8:85:8e:29:ce:9d:cd:73:51:13:df:d5:9e:80:97:a1"
+      - run:
+          name: Tag build
+          command: |
+            git config user.email "dev@eyedea.io"
+            git config user.name "Eyedea CircleCI"
+            git tag -a build-<< parameters.buildType >>-${CIRCLE_BUILD_NUM} -m "Built successfuly by CircleCI #${CIRCLE_BUILD_NUM}"
+            git push origin build-<< parameters.buildType >>-${CIRCLE_BUILD_NUM}
+      - slack/notify:
+          event: pass
+          template: basic_success_1
+
+refs:
+  staging_master_ref: &staging_master_ref
+    context:
+      - samarite-staging
+    filters:
+      branches:
+        only: [master]
+
+  production_master_ref: &production_master_ref
+    context:
+      - samarite-production
+    filters:
+      branches:
+        only: [master]
+
+
+workflows:
+  test_and_deploy:
+    jobs:
+      - hold_production:
+          name: Deploy to Production
+          type: approval
+          filters:
+            branches:
+              only: [master]
+
+      - test
+      - build-deps:
+          name: build-deps
+          requires: [test]
+          <<: *staging_master_ref
+
+
+      - deploy:
+          name: shop-deploy-staging
+          app: shop
+          requires: [build-deps]
+          <<: *staging_master_ref
+      - deploy:
+          name: shop-deploy-production
+          app: shop
+          requires: [Deploy to Production, build-deps]
+          <<: *production_master_ref
+
+      - deploy:
+          name: storefront-deploy-staging
+          app: storefront
+          requires: [build-deps]
+          <<: *staging_master_ref
+      - deploy:
+          name: storefront-deploy-production
+          app: storefront
+          requires: [Deploy to Production, build-deps]
+          <<: *production_master_ref
+
+      # - tag:
+      #     buildType: staging
+      #     requires:
+      #     - shop-deploy-staging
+      #     - storefront-deploy-staging
