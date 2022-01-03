@@ -40,6 +40,7 @@ linters-settings:
     disabled-checks:
       - whyNoLint
       - commentedOutCode
+      - sprintfQuotedString
 
 linters:
   disable-all: true
