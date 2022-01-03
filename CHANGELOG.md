@@ -1,5 +1,18 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.46](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.45...v0.1.46)
+
+> 2022-01-03
+
+### BUG FIXES
+
+[`dd8854b`](https://github.com/outblocks/cli-plugin-gcp/commit/dd8854b059c722f74cb51e5ae360fdfa04234a1b) lint
+
+### FEATURES
+
+[`7b8df39`](https://github.com/outblocks/cli-plugin-gcp/commit/7b8df39edf129fe6662a96812b4d72c58eab4dea) private svc support, storage dependency
+
+
 ## [v0.1.45](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.44...v0.1.45)
 
 > 2021-12-16
