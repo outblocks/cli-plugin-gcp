@@ -193,7 +193,7 @@ ENTRYPOINT ["%s"]
 func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error {
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env()), plugin_util.SanitizeName(o.App.Id)),
+		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env(), false, false), plugin_util.SanitizeName(o.App.Id, false, false)),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
 		Pull:      false,

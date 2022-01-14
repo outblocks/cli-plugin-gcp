@@ -365,12 +365,13 @@ func (p *PlanAction) save() error {
 
 	// Dependency states.
 	for id, dep := range p.depDeployIDMap {
+		state := p.getOrCreateDependencyState(p.depIDMap[id])
+
 		dnsState := computeDependencyDNSState(dep)
 		if dnsState == nil {
 			continue
 		}
 
-		state := p.getOrCreateDependencyState(p.depIDMap[id])
 		state.Dns = dnsState
 	}
 

@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 )
 
 func (p *Plugin) defaultBucket(gcpProject, suffix string) string {
-	return fmt.Sprintf("%s%s-%s", plugin_util.LimitString(plugin_util.SanitizeName(p.env.ProjectName()), 51), suffix, plugin_util.LimitString(plugin_util.SHAString(gcpProject), 8))
+	return fmt.Sprintf("%s%s-%s", plugin_util.LimitString(plugin_util.SanitizeName(p.env.ProjectName(), false, false), 51), suffix, plugin_util.LimitString(plugin_util.SHAString(gcpProject), 8))
 }
 
 func ensureBucket(ctx context.Context, b *storage.BucketHandle, project string, attrs *storage.BucketAttrs) (bool, error) {
@@ -58,54 +59,58 @@ func lockdata() string {
 	return fmt.Sprintf("%s@%s", username, host)
 }
 
-func acquireLock(ctx context.Context, name string, o *storage.ObjectHandle) (string, error) {
+var (
+	errAcquireLockFailed   = errors.New("unable to acquire lock")
+	errReleaseLockFailed   = errors.New("lock already released")
+	errReleaseLockMismatch = errors.New("lock id doesn't match")
+)
+
+func acquireLock(ctx context.Context, o *storage.ObjectHandle) (lockinfo, owner string, createdAt time.Time, err error) {
 	w := o.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	lockdata := lockdata()
 
 	_, _ = w.Write([]byte(lockdata))
 
-	err := w.Close()
+	err = w.Close()
 	if err != nil { // nolint: nestif
 		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusPreconditionFailed {
-			r, err := o.NewReader(ctx)
+			lockinfo, owner, createdAt, err := checkLock(ctx, o)
 			if err != nil {
-				return "", err
+				return "", "", time.Time{}, fmt.Errorf("unable to acquire lock: %w", err)
 			}
 
-			lockdata, err := io.ReadAll(r)
-			if err != nil {
-				return "", err
-			}
-
-			attrs, err := o.Attrs(ctx)
-			if err != nil {
-				return "", err
-			}
-
-			if name == "state" {
-				return "", types.NewStateLockError(
-					strconv.FormatInt(attrs.Generation, 10),
-					string(lockdata),
-					attrs.Created,
-				)
-			}
-
-			return "", types.NewLockError(
-				name,
-				strconv.FormatInt(attrs.Generation, 10),
-				string(lockdata),
-				attrs.Created,
-			)
+			return lockinfo, owner, createdAt, errAcquireLockFailed
 		}
 
-		return "", fmt.Errorf("unable to acquire lock: %w", err)
+		return "", "", time.Time{}, fmt.Errorf("unable to acquire lock: %w", err)
 	}
 
-	return strconv.FormatInt(w.Attrs().Generation, 10), nil
+	return strconv.FormatInt(w.Attrs().Generation, 36), lockdata, w.Attrs().Created, nil
+}
+
+func checkLock(ctx context.Context, o *storage.ObjectHandle) (lockinfo, owner string, createdAt time.Time, err error) {
+	r, err := o.NewReader(ctx)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	lockdata, err := io.ReadAll(r)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	attrs, err := o.Attrs(ctx)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	lockinfo = strconv.FormatInt(attrs.Generation, 36)
+
+	return lockinfo, string(lockdata), attrs.Created, nil
 }
 
 func releaseLock(ctx context.Context, o *storage.ObjectHandle, lockID string) error {
-	gen, err := strconv.ParseInt(lockID, 10, 64)
+	gen, err := strconv.ParseInt(lockID, 36, 64)
 	if err != nil {
 		return fmt.Errorf("invalid lock id")
 	}
@@ -113,11 +118,11 @@ func releaseLock(ctx context.Context, o *storage.ObjectHandle, lockID string) er
 	err = o.If(storage.Conditions{GenerationMatch: gen}).Delete(ctx)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			return fmt.Errorf("lock already released")
+			return errReleaseLockFailed
 		}
 
 		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusPreconditionFailed {
-			return fmt.Errorf("lock id doesn't match")
+			return errReleaseLockMismatch
 		}
 
 		return err
@@ -130,12 +135,7 @@ func (p *Plugin) statefile() string {
 	return fmt.Sprintf("%s/%s/state", p.env.Env(), p.env.ProjectName())
 }
 
-func (p *Plugin) lockfile(name string) string {
-	if name != "" {
-		sanitizedName := fmt.Sprintf("%s-%s", plugin_util.SanitizeName(name), plugin_util.LimitString(plugin_util.SHAString(name), 4))
-		return fmt.Sprintf("%s/%s/locks/%s", p.env.Env(), p.env.ProjectName(), sanitizedName)
-	}
-
+func (p *Plugin) stateLockfile() string {
 	return fmt.Sprintf("%s/%s/lock", p.env.Env(), p.env.ProjectName())
 }
 
@@ -175,7 +175,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	}
 
 	// Lock if needed.
-	var lockinfo string
+	var lockInfo string
 
 	if r.Lock {
 		start := time.Now()
@@ -183,15 +183,24 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 		first := true
 		lockWait := r.LockWait.AsDuration()
 
+		var (
+			owner     string
+			createdAt time.Time
+		)
+
 		defer t.Stop()
 
 		for {
-			lockinfo, err = acquireLock(ctx, "state", b.Object(p.lockfile("")))
+			lockInfo, owner, createdAt, err = acquireLock(ctx, b.Object(p.stateLockfile()))
 			if err == nil {
 				break
 			}
 
 			if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
+				if err == errAcquireLockFailed {
+					return types.NewStatusStateLockError(lockInfo, owner, createdAt)
+				}
+
 				return err
 			}
 
@@ -210,7 +219,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 
 			select {
 			case <-ctx.Done():
-				return err
+				return ctx.Err()
 			case <-t.C:
 			}
 		}
@@ -229,7 +238,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 		Response: &apiv1.GetStateResponse_State_{
 			State: &apiv1.GetStateResponse_State{
 				State:        state,
-				LockInfo:     lockinfo,
+				LockInfo:     lockInfo,
 				StateCreated: created,
 				StateName:    bucket,
 			},
@@ -291,7 +300,7 @@ func (p *Plugin) ReleaseStateLock(ctx context.Context, r *apiv1.ReleaseStateLock
 	}
 
 	b := cli.Bucket(bucket)
-	err = releaseLock(ctx, b.Object(p.lockfile("")), r.LockInfo)
+	err = releaseLock(ctx, b.Object(p.stateLockfile()), r.LockInfo)
 
 	return &apiv1.ReleaseStateLockResponse{}, err
 }

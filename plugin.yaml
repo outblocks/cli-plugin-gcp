@@ -7,7 +7,7 @@ cmd:
   windows: $OUTBLOCKS_PLUGIN_DIR/gcp_plugin.exe
 actions:
   - deploy
-  - locking
+  - lock
   - state
 state_types:
   - gcp

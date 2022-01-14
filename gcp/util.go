@@ -41,7 +41,7 @@ var Types = []registry.Resource{
 }
 
 func GenericID(id string, suffixes ...string) string {
-	sanitizedID := util.SanitizeName(id)
+	sanitizedID := util.SanitizeName(id, false, false)
 
 	return fmt.Sprintf("%s-%s", sanitizedID, ShortShaID(strings.Join(suffixes, "-")))
 }
@@ -51,8 +51,8 @@ func IDField(e env.Enver, resourceID string) fields.StringInputField {
 }
 
 func ID(e env.Enver, resourceID string) string {
-	sanitizedID := util.SanitizeName(resourceID)
-	sanitizedEnv := util.LimitString(util.SanitizeName(e.Env()), 4)
+	sanitizedID := util.SanitizeName(resourceID, false, false)
+	sanitizedEnv := util.LimitString(util.SanitizeName(e.Env(), false, false), 4)
 
 	if len(sanitizedID) > 44 {
 		sanitizedID = util.LimitString(sanitizedID, 40) + ShortShaID(sanitizedID)
