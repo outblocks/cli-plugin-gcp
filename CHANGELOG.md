@@ -1,5 +1,18 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.47](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.46...v0.1.47)
+
+> 2022-01-14
+
+### BUG FIXES
+
+[`8cbfc4b`](https://github.com/outblocks/cli-plugin-gcp/commit/8cbfc4bdc365dbdab7c4685cddec0ad176bb8ff9) lint, small refactor
+
+### FEATURES
+
+[`00f4d05`](https://github.com/outblocks/cli-plugin-gcp/commit/00f4d054c2356deade7d0a2b5fdd3b5a4bb881ba) multi locking full initial support
+
+
 ## [v0.1.46](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.45...v0.1.46)
 
 > 2022-01-03
