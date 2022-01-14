@@ -29,6 +29,75 @@ func (p *Plugin) lockfile(name string) string {
 	return fmt.Sprintf("%s/%s/%s", p.env.Env(), p.env.ProjectName(), name)
 }
 
+func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNamesMap map[string]string, lockWait time.Duration, b *storage.BucketHandle, waitCb func() error) (locksAcquired map[string]string, lockInfoFailed []*apiv1.LockError, err error) {
+	var mu sync.Mutex
+
+	t := time.NewTicker(time.Second)
+	start := time.Now()
+	locksAcquired = make(map[string]string)
+
+	for i, lockfile := range lockfiles {
+		lockObject := b.Object(lockfile)
+		name := lockNamesMap[lockfile]
+
+		for {
+			lockInfo, owner, createdAt, err := acquireLock(ctx, lockObject)
+			if err == nil {
+				locksAcquired[name] = lockInfo
+
+				break
+			}
+
+			if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
+				if err != errAcquireLockFailed {
+					return nil, nil, err
+				}
+
+				lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
+
+				g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
+
+				if len(lockfiles) > i {
+					for _, lockfile := range lockfiles[i+1:] {
+						lockObject := b.Object(lockfile)
+						name := lockNamesMap[lockfile]
+
+						g.Go(func() error {
+							lockInfo, owner, createdAt, err := checkLock(ctx, lockObject)
+							if err != nil && err != storage.ErrObjectNotExist {
+								return err
+							}
+
+							mu.Lock()
+							lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
+							mu.Unlock()
+
+							return nil
+						})
+					}
+				}
+
+				return locksAcquired, lockInfoFailed, g.Wait()
+			}
+
+			if waitCb != nil {
+				err = waitCb()
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+
+			select {
+			case <-ctx.Done():
+				return nil, nil, ctx.Err()
+			case <-t.C:
+			}
+		}
+	}
+
+	return locksAcquired, lockInfoFailed, nil
+}
+
 func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.LockingPluginService_AcquireLocksServer) error {
 	ctx := stream.Context()
 
@@ -54,7 +123,6 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 		return err
 	}
 
-	start := time.Now()
 	t := time.NewTicker(time.Second)
 	lockWait := r.LockWait.AsDuration()
 
@@ -71,86 +139,22 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 
 	sort.Strings(lockfiles)
 
-	var (
-		mu             sync.Mutex
-		lockInfoFailed []*apiv1.LockError
-		first          bool
-	)
+	var first bool
 
-	locksAcquired := make(map[string]string)
-
-	err = func() error {
-		for i, lockfile := range lockfiles {
-			lockObject := b.Object(lockfile)
-			name := lockNamesMap[lockfile]
-
-			for {
-				lockInfo, owner, createdAt, err := acquireLock(ctx, lockObject)
-				if err == nil {
-					mu.Lock()
-					locksAcquired[name] = lockInfo
-					mu.Unlock()
-
-					break
-				}
-
-				if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
-					if err != errAcquireLockFailed {
-						return err
-					}
-
-					mu.Lock()
-					lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
-					mu.Unlock()
-
-					g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
-
-					if len(lockfiles) > i {
-						for _, lockfile := range lockfiles[i+1:] {
-							lockObject := b.Object(lockfile)
-							name := lockNamesMap[lockfile]
-
-							g.Go(func() error {
-								lockInfo, owner, createdAt, err := checkLock(ctx, lockObject)
-								if err != nil && err != storage.ErrObjectNotExist {
-									return err
-								}
-
-								mu.Lock()
-								lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
-								mu.Unlock()
-
-								return nil
-							})
-						}
-					}
-
-					return g.Wait()
-				}
-
-				mu.Lock()
-				if first {
-					err = stream.Send(&apiv1.AcquireLocksResponse{
-						Waiting: true,
-					})
-					if err != nil {
-						return err
-					}
-
-					first = false
-				}
-				mu.Unlock()
-
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-t.C:
-				}
+	locksAcquired, lockInfoFailed, err := p.acquireLocks(ctx, lockfiles, lockNamesMap, lockWait, b, func() error {
+		if first {
+			err = stream.Send(&apiv1.AcquireLocksResponse{
+				Waiting: true,
+			})
+			if err != nil {
+				return err
 			}
+
+			first = false
 		}
 
 		return nil
-	}()
+	})
 
 	if len(lockInfoFailed) > 0 {
 		if len(locksAcquired) > 0 {
