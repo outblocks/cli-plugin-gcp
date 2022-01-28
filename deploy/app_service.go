@@ -144,6 +144,7 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 
 		dockerfileContent := fmt.Sprintf(`
 FROM %s
+USER root
 ADD %s /bin/runsd
 RUN chmod +x /bin/runsd
 ENTRYPOINT ["%s"]
