@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.48](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.47...v0.1.48)
+
+> 2022-01-28
+
+### BUG FIXES
+
+[`f49740e`](https://github.com/outblocks/cli-plugin-gcp/commit/f49740e4ecf4c348ca64d239cc6ea9266318456a) runsd adding when user was dropped
+
+
 ## [v0.1.47](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.46...v0.1.47)
 
 > 2022-01-14
