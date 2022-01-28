@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.49](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.48...v0.1.49)
+
+> 2022-01-28
+
+### BUG FIXES
+
+[`17ddee7`](https://github.com/outblocks/cli-plugin-gcp/commit/17ddee717bc3c48ab489b50a0a54d6fed7beced9) lint
+[`c5ac7e1`](https://github.com/outblocks/cli-plugin-gcp/commit/c5ac7e16f132afd8392ff0e516a6fe070d2f0378) use static id fields where possible
+
+
 ## [v0.1.48](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.47...v0.1.48)
 
 > 2022-01-28
