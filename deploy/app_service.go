@@ -176,10 +176,12 @@ ENTRYPOINT ["%s"]
 		}
 
 		done := make(chan struct{})
+
 		var stderr []byte
 
 		go func() {
 			stderr, _ = io.ReadAll(cmd.Stderr())
+
 			close(done)
 		}()
 
