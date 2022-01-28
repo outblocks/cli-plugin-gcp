@@ -2,7 +2,9 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -123,8 +125,10 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 		defer os.RemoveAll(dir)
 
 		entrypoint := []string{"/bin/runsd"}
+		homeEnv := ""
 
 		if inspect.Config.User != "" {
+			homeEnv = fmt.Sprintf("ENV HOME=/home/%s", inspect.Config.User)
 			entrypoint = append(entrypoint, "--user", inspect.Config.User)
 		}
 
@@ -145,11 +149,15 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 		dockerfileContent := fmt.Sprintf(`
 FROM %s
 USER root
+%s
+
 ADD %s /bin/runsd
 RUN chmod +x /bin/runsd
+
 ENTRYPOINT ["%s"]
 %s`,
 			o.Props.LocalDockerImage,
+			homeEnv,
 			gcp.RunsdDownloadLink,
 			strings.Join(entrypoint, `", "`),
 			dockerSuffix,
@@ -167,6 +175,14 @@ ENTRYPOINT ["%s"]
 			return err
 		}
 
+		done := make(chan struct{})
+		var stderr []byte
+
+		go func() {
+			stderr, _ = io.ReadAll(cmd.Stderr())
+			close(done)
+		}()
+
 		err = cmd.Run()
 		if err != nil {
 			return err
@@ -174,6 +190,12 @@ ENTRYPOINT ["%s"]
 
 		err = cmd.Wait()
 		if err != nil {
+			<-done
+
+			if len(stderr) != 0 {
+				return errors.New(string(stderr))
+			}
+
 			return err
 		}
 	}

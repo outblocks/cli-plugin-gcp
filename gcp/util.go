@@ -47,6 +47,10 @@ func GenericID(id string, suffixes ...string) string {
 }
 
 func IDField(e env.Enver, resourceID string) fields.StringInputField {
+	return fields.LazyString(func() string { return ID(e, resourceID) })
+}
+
+func RandomIDField(e env.Enver, resourceID string) fields.StringInputField {
 	return fields.RandomStringWithPrefix(ID(e, resourceID), true, false, true, false, 4)
 }
 
@@ -66,6 +70,10 @@ func ShortShaID(id string) string {
 }
 
 func GlobalIDField(e env.Enver, gcpProject, resourceID string) fields.StringInputField {
+	return fields.LazyString(func() string { return GlobalID(e, gcpProject, resourceID) })
+}
+
+func GlobalRandomIDField(e env.Enver, gcpProject, resourceID string) fields.StringInputField {
 	return fields.RandomStringWithPrefix(GlobalID(e, gcpProject, resourceID), true, false, true, false, 4)
 }
 
