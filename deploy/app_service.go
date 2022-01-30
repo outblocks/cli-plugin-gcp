@@ -53,7 +53,7 @@ type ServiceAppArgs struct {
 
 type ServiceAppDeployOptions struct {
 	CPULimit    float64 `mapstructure:"cpu_limit" default:"1"`
-	MemoryLimit int     `mapstructure:"memory_limit" default:"128"`
+	MemoryLimit int     `mapstructure:"memory_limit" default:"256"`
 	MinScale    int     `mapstructure:"min_scale" default:"0"`
 	MaxScale    int     `mapstructure:"max_scale" default:"100"`
 }
@@ -170,7 +170,7 @@ ENTRYPOINT ["%s"]
 			return err
 		}
 
-		cmd, err := command.New(fmt.Sprintf("docker build --tag %s .", runsdImage), command.WithDir(dir), command.WithEnv([]string{"DOCKER_BUILDKIT=1"}))
+		cmd, err := command.New(fmt.Sprintf("docker build --platform amd64 --tag %s .", runsdImage), command.WithDir(dir), command.WithEnv([]string{"DOCKER_BUILDKIT=1"}))
 		if err != nil {
 			return err
 		}
