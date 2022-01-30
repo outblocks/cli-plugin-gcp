@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.50](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.49...v0.1.50)
+
+> 2022-01-30
+
+### BUG FIXES
+
+[`80fa4a8`](https://github.com/outblocks/cli-plugin-gcp/commit/80fa4a8b553ee3898bf6ceb85ff169b62d0d04dd) build for amd64 platform
+
+
 ## [v0.1.49](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.48...v0.1.49)
 
 > 2022-01-28
