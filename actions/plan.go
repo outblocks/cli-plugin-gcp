@@ -356,10 +356,18 @@ func (p *PlanAction) save() error {
 		state := p.getOrCreateAppState(p.appIDMap[id])
 		state.Deployment = deployState
 
-		if serviceApp, ok := app.(*deploy.ServiceApp); ok && serviceApp.Props.Private {
-			state.Dns = &apiv1.DNSState{
-				InternalUrl: fmt.Sprintf("http://%s/", serviceApp.CloudRun.Name.Current()),
+		switch a := app.(type) {
+		case *deploy.ServiceApp:
+			if a.Props.Private {
+				state.Dns = &apiv1.DNSState{
+					InternalUrl: fmt.Sprintf("http://%s/", a.CloudRun.Name.Current()),
+				}
+			} else {
+				state.Dns.CloudUrl = a.CloudRun.URL.Current()
 			}
+
+		case *deploy.StaticApp:
+			state.Dns.CloudUrl = a.CloudRun.URL.Current()
 		}
 	}
 

@@ -9,7 +9,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.8.0
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20220114122950-1c90ed7fa3e7
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20220202220952-f2673b00e3ac
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.64.0
 )

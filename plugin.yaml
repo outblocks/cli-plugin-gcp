@@ -9,6 +9,20 @@ actions:
   - deploy
   - lock
   - state
+commands:
+  dbproxy:
+    short: Create a database proxy
+    long: Create a local CloudSQL database proxy.
+    input:
+      - dependency_states
+    flags:
+      - name: name
+        type: string
+        usage: Dependency name to proxy
+        required: true
+      - name: port
+        type: integer
+        usage: Port to listen at (defaults to 5432 for postgresql, 3306 for mysql)
 state_types:
   - gcp
 supports:

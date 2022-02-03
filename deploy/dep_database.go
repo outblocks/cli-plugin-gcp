@@ -63,12 +63,17 @@ func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
 	}, nil
 }
 
+type DatabaseDepOptionUser struct {
+	Password string `mapstructure:"password"`
+}
+
 type DatabaseDepOptions struct {
-	Version         string            `mapstructure:"version"`
-	HA              bool              `mapstructure:"high_availability"`
-	Tier            string            `mapstructure:"tier" default:"db-f1-micro"`
-	Flags           map[string]string `mapstructure:"flags"`
-	DatabaseVersion string            `mapstructure:"-"`
+	Version         string                            `mapstructure:"version"`
+	HA              bool                              `mapstructure:"high_availability"`
+	Tier            string                            `mapstructure:"tier" default:"db-f1-micro"`
+	Flags           map[string]string                 `mapstructure:"flags"`
+	Users           map[string]*DatabaseDepOptionUser `mapstructure:"users"`
+	DatabaseVersion string                            `mapstructure:"-"`
 }
 
 func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
@@ -160,13 +165,32 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 	}
 
 	// Add databases and users.
+	users := make(map[string]string)
+
+	for username, u := range o.Opts.Users {
+		p := ""
+		if u != nil {
+			p = u.Password
+		}
+
+		users[username] = p
+	}
+
+	for _, n := range c.Needs {
+		if _, ok := users[n.User]; !ok {
+			users[n.User] = ""
+		}
+	}
+
 	for _, n := range c.Needs {
 		err = o.registerDatabase(r, n.Database)
 		if err != nil {
 			return err
 		}
+	}
 
-		err = o.registerUser(r, n.User, "")
+	for u, p := range users {
+		err = o.registerUser(r, u, p)
 		if err != nil {
 			return err
 		}

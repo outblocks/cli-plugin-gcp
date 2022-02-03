@@ -156,6 +156,11 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 		return err
 	}
 
+	lockingBucket, err := validate.OptionalString(p.defaultLocksBucket(project), r.Properties.Fields, "locks_bucket", "locks bucket must be a string")
+	if err != nil {
+		return err
+	}
+
 	pctx := p.PluginContext()
 
 	cli, err := pctx.StorageClient(ctx)
@@ -178,6 +183,16 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	var lockInfo string
 
 	if r.Lock {
+		lockingB := cli.Bucket(lockingBucket)
+
+		_, err := ensureBucket(ctx, lockingB, project, &storage.BucketAttrs{
+			Location:          p.Settings.Region,
+			VersioningEnabled: false,
+		})
+		if err != nil {
+			return err
+		}
+
 		start := time.Now()
 		t := time.NewTicker(time.Second)
 		first := true
@@ -191,7 +206,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 		defer t.Stop()
 
 		for {
-			lockInfo, owner, createdAt, err = acquireLock(ctx, b.Object(p.stateLockfile()))
+			lockInfo, owner, createdAt, err = acquireLock(ctx, lockingB.Object(p.stateLockfile()))
 			if err == nil {
 				break
 			}
@@ -287,7 +302,7 @@ func (p *Plugin) ReleaseStateLock(ctx context.Context, r *apiv1.ReleaseStateLock
 		return nil, err
 	}
 
-	bucket, err := validate.OptionalString(p.defaultStateBucket(project), r.Properties.Fields, "bucket", "bucket must be a string")
+	bucket, err := validate.OptionalString(p.defaultLocksBucket(project), r.Properties.Fields, "locks_bucket", "locks bucket must be a string")
 	if err != nil {
 		return nil, err
 	}

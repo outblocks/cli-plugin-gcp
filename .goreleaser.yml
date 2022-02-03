@@ -8,13 +8,13 @@ release:
 before:
   hooks:
     - go mod download
+
 builds:
   - binary: gcp_plugin
     goos:
       - darwin
       - linux
       - windows
-      - freebsd
     goarch:
       - amd64
       - arm64

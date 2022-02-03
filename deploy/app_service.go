@@ -38,6 +38,7 @@ type ServiceApp struct {
 	CloudRun *gcp.CloudRun
 
 	App        *apiv1.App
+	Build      *apiv1.AppBuild
 	Props      *types.ServiceAppProperties
 	DeployOpts *ServiceAppDeployOptions
 }
@@ -92,6 +93,7 @@ func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
 
 	return &ServiceApp{
 		App:        plan.State.App,
+		Build:      plan.Build,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil
@@ -107,12 +109,12 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 		return err
 	}
 
-	runsdImage := o.Props.LocalDockerImage + "/runsd"
+	runsdImage := o.Build.LocalDockerImage + "/runsd"
 
 	var runsdImageSHA string
 
 	if !apply {
-		inspect, _, err := dockerCli.ImageInspectWithRaw(ctx, o.Props.LocalDockerImage)
+		inspect, _, err := dockerCli.ImageInspectWithRaw(ctx, o.Build.LocalDockerImage)
 		if err != nil {
 			return err
 		}
@@ -156,7 +158,7 @@ RUN chmod +x /bin/runsd
 
 ENTRYPOINT ["%s"]
 %s`,
-			o.Props.LocalDockerImage,
+			o.Build.LocalDockerImage,
 			homeEnv,
 			gcp.RunsdDownloadLink,
 			strings.Join(entrypoint, `", "`),
@@ -170,7 +172,7 @@ ENTRYPOINT ["%s"]
 			return err
 		}
 
-		cmd, err := command.New(fmt.Sprintf("docker build --platform amd64 --tag %s .", runsdImage), command.WithDir(dir), command.WithEnv([]string{"DOCKER_BUILDKIT=1"}))
+		cmd, err := command.New(fmt.Sprintf("docker build --platform=linux/amd64 --tag %s .", runsdImage), command.WithDir(dir), command.WithEnv([]string{"DOCKER_BUILDKIT=1"}))
 		if err != nil {
 			return err
 		}
@@ -224,14 +226,14 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		Pull:      false,
 	}
 
-	if o.Props.LocalDockerImage != "" && o.Props.LocalDockerHash != "" {
+	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" {
 		err := o.addRunsd(ctx, pctx, apply)
 		if err != nil {
 			return fmt.Errorf("adding runsd to image of service app '%s' failed: %w", o.App.Name, err)
 		}
 	}
 
-	_, err := r.RegisterAppResource(o.App, o.Props.LocalDockerImage, o.Image)
+	_, err := r.RegisterAppResource(o.App, o.Build.LocalDockerImage, o.Image)
 	if err != nil {
 		return err
 	}

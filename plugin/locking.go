@@ -106,7 +106,11 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 		return err
 	}
 
-	bucket := p.defaultLocksBucket(project)
+	bucket, err := validate.OptionalString(p.defaultLocksBucket(project), r.Properties.Fields, "locks_bucket", "locks bucket must be a string")
+	if err != nil {
+		return err
+	}
+
 	pctx := p.PluginContext()
 
 	cli, err := pctx.StorageClient(ctx)
@@ -182,7 +186,11 @@ func (p *Plugin) ReleaseLocks(ctx context.Context, r *apiv1.ReleaseLocksRequest)
 		return nil, err
 	}
 
-	bucket := p.defaultLocksBucket(project)
+	bucket, err := validate.OptionalString(p.defaultLocksBucket(project), r.Properties.Fields, "locks_bucket", "locks bucket must be a string")
+	if err != nil {
+		return nil, err
+	}
+
 	pctx := p.PluginContext()
 
 	cli, err := pctx.StorageClient(ctx)
