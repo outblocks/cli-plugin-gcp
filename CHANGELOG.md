@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.51](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.50...v0.1.51)
+
+> 2022-02-03
+
+### FEATURES
+
+[`596fb66`](https://github.com/outblocks/cli-plugin-gcp/commit/596fb66ac0ad328e0dab4256fda3b4090b7b23fa) dbproxy, cloud run url
+
+
 ## [v0.1.50](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.49...v0.1.50)
 
 > 2022-01-30
