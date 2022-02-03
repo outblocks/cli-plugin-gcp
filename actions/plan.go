@@ -356,12 +356,14 @@ func (p *PlanAction) save() error {
 		state := p.getOrCreateAppState(p.appIDMap[id])
 		state.Deployment = deployState
 
+		if state.Dns == nil {
+			state.Dns = &apiv1.DNSState{}
+		}
+
 		switch a := app.(type) {
 		case *deploy.ServiceApp:
 			if a.Props.Private {
-				state.Dns = &apiv1.DNSState{
-					InternalUrl: fmt.Sprintf("http://%s/", a.CloudRun.Name.Current()),
-				}
+				state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
 			} else {
 				state.Dns.CloudUrl = a.CloudRun.URL.Current()
 			}
@@ -423,7 +425,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 }
 
 func (p *PlanAction) Apply(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, cb func(a *apiv1.ApplyAction)) error {
-	err := p.prepareCloudRunURL(ctx, true)
+	err := p.prepareCloudRunURL(ctx, !p.destroy)
 	if err != nil {
 		return err
 	}
