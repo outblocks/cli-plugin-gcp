@@ -276,7 +276,7 @@ func (p *PlanAction) getOrCreateDependencyState(dep *apiv1.Dependency) *apiv1.De
 	return state
 }
 
-func (p *PlanAction) save() error {
+func (p *PlanAction) save() error { // nolint:gocyclo
 	data, err := p.registry.Dump()
 	if err != nil {
 		return err
