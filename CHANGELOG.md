@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.52](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.51...v0.1.52)
+
+> 2022-02-04
+
+### BUG FIXES
+
+[`6d44067`](https://github.com/outblocks/cli-plugin-gcp/commit/6d4406786b1408a864e10bc47f048c2ff0c33ffd) ssl initial status, gcr image based on project
+[`eeea1cc`](https://github.com/outblocks/cli-plugin-gcp/commit/eeea1cca1b6c701af9c2e91a722b9b94cf596faf) for nil dns
+
+
 ## [v0.1.51](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.50...v0.1.51)
 
 > 2022-02-03
