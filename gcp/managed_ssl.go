@@ -115,7 +115,26 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
+	err = WaitForGlobalComputeOperation(cli, projectID, oper.Name)
+	if err != nil {
+		return err
+	}
+
+	cert, err := cli.SslCertificates.Get(projectID, name).Do()
+	if err != nil {
+		return err
+	}
+
+	o.Status.SetCurrent(cert.Managed.Status)
+
+	domainStatus := make(map[string]interface{})
+	for k, v := range cert.Managed.DomainStatus {
+		domainStatus[k] = v
+	}
+
+	o.DomainStatus.SetCurrent(domainStatus)
+
+	return nil
 }
 
 func (o *ManagedSSL) Update(ctx context.Context, meta interface{}) error {

@@ -65,6 +65,17 @@ func ID(e env.Enver, resourceID string) string {
 	return fmt.Sprintf("%s-%s-%s", sanitizedID, sanitizedEnv, ShortShaID(e.ProjectID()))
 }
 
+func ImageID(e env.Enver, imageID string) string {
+	sanitizedID := util.SanitizeName(imageID, false, false)
+	sanitizedEnv := util.LimitString(util.SanitizeName(e.Env(), false, false), 4)
+
+	if len(sanitizedID) > 44 {
+		sanitizedID = util.LimitString(sanitizedID, 40) + ShortShaID(sanitizedID)
+	}
+
+	return fmt.Sprintf("%s-%s/%s", sanitizedEnv, ShortShaID(e.ProjectID()), sanitizedID)
+}
+
 func ShortShaID(id string) string {
 	return util.LimitString(util.SHAString(id), 4)
 }

@@ -19,7 +19,6 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
-	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"github.com/outblocks/outblocks-plugin-go/util/command"
 )
 
@@ -220,7 +219,7 @@ ENTRYPOINT ["%s"]
 func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error {
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
-		Name:      fields.Sprintf("%s/%s", plugin_util.SanitizeName(pctx.Env().Env(), false, false), plugin_util.SanitizeName(o.App.Id, false, false)),
+		Name:      fields.String(gcp.ImageID(pctx.Env(), o.App.Id)),
 		ProjectID: fields.String(c.ProjectID),
 		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
 		Pull:      false,
