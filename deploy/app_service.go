@@ -90,6 +90,10 @@ func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
 		return nil, err
 	}
 
+	if plan.Build == nil {
+		plan.Build = &apiv1.AppBuild{}
+	}
+
 	return &ServiceApp{
 		App:        plan.State.App,
 		Build:      plan.Build,
