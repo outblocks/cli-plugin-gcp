@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.54](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.53...v0.1.54)
+
+> 2022-02-16
+
+### BUG FIXES
+
+[`f46c21b`](https://github.com/outblocks/cli-plugin-gcp/commit/f46c21ba79c0dbb88b09550237cdf875c80a13ea) string formatting, short flags, service image
+
+
 ## [v0.1.53](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.52...v0.1.53)
 
 > 2022-02-10
