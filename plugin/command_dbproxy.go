@@ -70,7 +70,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	binPath := filepath.Join(p.env.PluginProjectCacheDir(), "cloudsqlproxy", fmt.Sprintf("cloud_sql_proxy_%s", gcp.CloudSQLVersion))
 
 	if !plugin_util.FileExists(binPath) {
-		p.log.Infoln("Downloading cloud_sql_proxy at v%s...", gcp.CloudSQLVersion)
+		p.log.Infof("Downloading cloud_sql_proxy at v%s...\n", gcp.CloudSQLVersion)
 
 		err := downloadCloudSQLProxy(ctx, binPath)
 		if err != nil {

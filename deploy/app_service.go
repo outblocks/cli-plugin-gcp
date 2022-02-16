@@ -236,7 +236,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		}
 	}
 
-	_, err := r.RegisterAppResource(o.App, o.Build.LocalDockerImage, o.Image)
+	_, err := r.RegisterAppResource(o.App, "image", o.Image)
 	if err != nil {
 		return err
 	}

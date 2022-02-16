@@ -17,10 +17,12 @@ commands:
       - dependency_states
     flags:
       - name: name
+        short: "n"
         type: string
         usage: Dependency name to proxy
         required: true
       - name: port
+        short: "p"
         type: integer
         usage: Port to listen at (defaults to 5432 for postgresql, 3306 for mysql)
 state_types:
