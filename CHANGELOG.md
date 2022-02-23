@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.56](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.55...v0.1.56)
+
+> 2022-02-23
+
+### FEATURES
+
+[`c117a6e`](https://github.com/outblocks/cli-plugin-gcp/commit/c117a6ecb1337bd4540face18fff50bb289d4f49) add skips creation to getstate
+
+
 ## [v0.1.55](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.54...v0.1.55)
 
 > 2022-02-17
