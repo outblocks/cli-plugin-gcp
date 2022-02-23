@@ -120,9 +120,9 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 
 	b := cli.Bucket(bucket)
 
-	_, err = ensureBucket(ctx, b, project, &storage.BucketAttrs{
+	_, _, err = getBucket(ctx, b, project, &storage.BucketAttrs{
 		Location: p.Settings.Region,
-	})
+	}, true)
 	if err != nil {
 		return err
 	}

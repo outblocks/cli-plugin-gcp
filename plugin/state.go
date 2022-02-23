@@ -23,18 +23,22 @@ func (p *Plugin) defaultBucket(gcpProject, suffix string) string {
 	return fmt.Sprintf("%s%s-%s", plugin_util.LimitString(plugin_util.SanitizeName(p.env.ProjectName(), false, false), 51), suffix, plugin_util.LimitString(plugin_util.SHAString(gcpProject), 8))
 }
 
-func ensureBucket(ctx context.Context, b *storage.BucketHandle, project string, attrs *storage.BucketAttrs) (bool, error) {
-	_, err := b.Attrs(ctx)
+func getBucket(ctx context.Context, b *storage.BucketHandle, project string, attrs *storage.BucketAttrs, create bool) (created, exists bool, err error) {
+	_, err = b.Attrs(ctx)
 
 	if err == storage.ErrBucketNotExist {
-		if err := b.Create(ctx, project, attrs); err != nil {
-			return false, fmt.Errorf("error creating GCS bucket: %w", err)
+		if !create {
+			return false, false, nil
 		}
 
-		return true, nil
+		if err := b.Create(ctx, project, attrs); err != nil {
+			return false, false, fmt.Errorf("error creating GCS bucket: %w", err)
+		}
+
+		return true, true, nil
 	}
 
-	return false, err
+	return false, true, err
 }
 
 func readBucketFile(ctx context.Context, b *storage.BucketHandle, file string) ([]byte, error) {
@@ -143,7 +147,7 @@ func (p *Plugin) defaultStateBucket(project string) string {
 	return p.defaultBucket(project, "")
 }
 
-func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginService_GetStateServer) error {
+func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginService_GetStateServer) error { // nolint:gocyclo
 	ctx := stream.Context()
 
 	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
@@ -171,12 +175,23 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	// Read state.
 	b := cli.Bucket(bucket)
 
-	created, err := ensureBucket(ctx, b, project, &storage.BucketAttrs{
+	created, exists, err := getBucket(ctx, b, project, &storage.BucketAttrs{
 		Location:          p.Settings.Region,
 		VersioningEnabled: true,
-	})
+	}, !r.SkipCreate)
 	if err != nil {
 		return err
+	}
+
+	if !exists && r.SkipCreate {
+		return stream.Send(&apiv1.GetStateResponse{
+			Response: &apiv1.GetStateResponse_State_{
+				State: &apiv1.GetStateResponse_State{
+					StateCreated: false,
+					StateName:    bucket,
+				},
+			},
+		})
 	}
 
 	// Lock if needed.
@@ -185,10 +200,10 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	if r.Lock {
 		lockingB := cli.Bucket(lockingBucket)
 
-		_, err := ensureBucket(ctx, lockingB, project, &storage.BucketAttrs{
+		_, _, err := getBucket(ctx, lockingB, project, &storage.BucketAttrs{
 			Location:          p.Settings.Region,
 			VersioningEnabled: false,
-		})
+		}, true)
 		if err != nil {
 			return err
 		}
