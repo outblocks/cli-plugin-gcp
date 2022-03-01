@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.57](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.56...v0.1.57)
+
+> 2022-03-01
+
+### BUG FIXES
+
+[`53ea7ac`](https://github.com/outblocks/cli-plugin-gcp/commit/53ea7acbfb8348b19d85dd787b6ec67c187e7b9e) potential race with callback
+
+
 ## [v0.1.56](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.55...v0.1.56)
 
 > 2022-02-23
