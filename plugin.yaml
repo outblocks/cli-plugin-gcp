@@ -25,6 +25,14 @@ commands:
         short: "p"
         type: integer
         usage: Port to listen at (defaults to 5432 for postgresql, 3306 for mysql)
+  create-service-account:
+    short: Create a service account
+    long: Create a GCP service account with access to current project to use e.g. in CI
+    flags:
+      - name: name
+        short: "n"
+        type: string
+        usage: Name of service account (defaults to 'outblocks-ci')
 state_types:
   - gcp
 supports:

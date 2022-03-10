@@ -13,6 +13,8 @@ func (p *Plugin) Command(ctx context.Context, req *apiv1.CommandRequest) (*apiv1
 	switch req.Command {
 	case "dbproxy":
 		err = p.DBProxy(ctx, req)
+	case "create-service-account":
+		err = p.CreateServiceAccount(ctx, req)
 	default:
 		return nil, fmt.Errorf("unknown command: %s", req.Command)
 	}

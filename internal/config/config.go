@@ -9,6 +9,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/api/run/v1"
 	"google.golang.org/api/serviceusage/v1"
@@ -35,14 +36,18 @@ func NewGCPComputeClient(ctx context.Context, cred *google.Credentials) (*comput
 	return compute.NewService(ctx, option.WithCredentials(cred))
 }
 
-func NewGCPServiceUsage(ctx context.Context, cred *google.Credentials) (*serviceusage.Service, error) {
+func NewGCPServiceUsageClient(ctx context.Context, cred *google.Credentials) (*serviceusage.Service, error) {
 	return serviceusage.NewService(ctx, option.WithTokenSource(cred.TokenSource))
 }
 
-func NewGCPCloudResourceManager(ctx context.Context, cred *google.Credentials) (*cloudresourcemanager.Service, error) {
+func NewGCPCloudResourceManagerClient(ctx context.Context, cred *google.Credentials) (*cloudresourcemanager.Service, error) {
 	return cloudresourcemanager.NewService(ctx, option.WithCredentials(cred))
 }
 
-func NewGCPSQLAdmin(ctx context.Context, cred *google.Credentials) (*sqladmin.Service, error) {
+func NewGCPSQLAdminClient(ctx context.Context, cred *google.Credentials) (*sqladmin.Service, error) {
 	return sqladmin.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPIAMClient(ctx context.Context, cred *google.Credentials) (*iam.Service, error) {
+	return iam.NewService(ctx, option.WithCredentials(cred))
 }

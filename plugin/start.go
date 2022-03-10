@@ -43,7 +43,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 
 	p.gcred = cred
 
-	crmCli, err := config.NewGCPCloudResourceManager(ctx, p.gcred)
+	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 	if err != nil {
 		return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
 	}
@@ -52,7 +52,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 	if gcp.ErrIs404(err) || gcp.ErrIs403(err) {
 		p.log.Warnf("Project '%s' not found or caller lacks permission!\n", p.Settings.ProjectID)
 
-		crmCli, err := config.NewGCPCloudResourceManager(ctx, p.gcred)
+		crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 		if err != nil {
 			return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
 		}

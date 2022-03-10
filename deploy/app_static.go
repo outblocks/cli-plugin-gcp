@@ -156,6 +156,23 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		"ROUTING":     fields.String(o.Props.Routing),
 	}
 
+	if o.Props.RemoveTrailingSlash != nil {
+		val := "0"
+		if *o.Props.RemoveTrailingSlash {
+			val = "1"
+		}
+
+		envVars["REMOVE_TRAILING_SLASH"] = fields.String(val)
+	}
+
+	if o.Props.BasicAuth != nil && len(o.Props.BasicAuth.Users) != 0 {
+		envVars["BASIC_AUTH_REALM"] = fields.String(o.Props.BasicAuth.Realm)
+
+		for u, p := range o.Props.BasicAuth.Users {
+			envVars[fmt.Sprintf("ACCOUNT_%s", u)] = fields.String(p)
+		}
+	}
+
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
 		Name:      gcp.IDField(pctx.Env(), o.App.Id),

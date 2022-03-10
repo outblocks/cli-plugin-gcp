@@ -116,7 +116,7 @@ func (c *PluginContext) GCPServiceUsageClient(ctx context.Context) (*serviceusag
 	var err error
 
 	c.once.serviceusageCli.Do(func() {
-		c.serviceusageCli, err = NewGCPServiceUsage(ctx, c.GoogleCredentials())
+		c.serviceusageCli, err = NewGCPServiceUsageClient(ctx, c.GoogleCredentials())
 	})
 
 	if err != nil {
@@ -130,7 +130,7 @@ func (c *PluginContext) GCPSQLAdminClient(ctx context.Context) (*sqladmin.Servic
 	var err error
 
 	c.once.sqlAdminCli.Do(func() {
-		c.sqlAdminCli, err = NewGCPSQLAdmin(ctx, c.GoogleCredentials())
+		c.sqlAdminCli, err = NewGCPSQLAdminClient(ctx, c.GoogleCredentials())
 	})
 
 	if err != nil {
