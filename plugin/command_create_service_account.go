@@ -17,6 +17,55 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func addServiceAccountToEditor(crmCli *cloudresourcemanager.Service, projectID, serviceAccountName string) error {
+	policy, err := crmCli.Projects.GetIamPolicy(projectID, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
+	if err != nil {
+		return fmt.Errorf("error getting project iam policy: %w", err)
+	}
+
+	var editorRoleBinding *cloudresourcemanager.Binding
+
+	for _, b := range policy.Bindings {
+		if b.Role == "roles/editor" {
+			editorRoleBinding = b
+			break
+		}
+	}
+
+	if editorRoleBinding == nil {
+		editorRoleBinding = &cloudresourcemanager.Binding{
+			Role: "roles/editor",
+		}
+
+		policy.Bindings = append(policy.Bindings, editorRoleBinding)
+	}
+
+	editorRoleBinding.Members = append(editorRoleBinding.Members, fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", serviceAccountName, projectID))
+
+	for _, b := range policy.Bindings {
+		var members []string
+
+		for _, m := range b.Members {
+			if strings.HasPrefix(m, "deleted:") {
+				continue
+			}
+
+			members = append(members, m)
+		}
+
+		b.Members = members
+	}
+
+	_, err = crmCli.Projects.SetIamPolicy(projectID, &cloudresourcemanager.SetIamPolicyRequest{
+		Policy: policy,
+	}).Do()
+	if err != nil {
+		return fmt.Errorf("error setting project iam policy: %w", err)
+	}
+
+	return nil
+}
+
 func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
 	nameF := flags["name"]
@@ -31,11 +80,6 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 	iamCli, err := config.NewGCPIAMClient(ctx, p.gcred)
 	if err != nil {
 		return fmt.Errorf("error creating iam client: %w", err)
-	}
-
-	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
-	if err != nil {
-		return fmt.Errorf("error creating cloud resource manager client: %w", err)
 	}
 
 	accountID := fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", p.Settings.ProjectID, name, p.Settings.ProjectID)
@@ -103,49 +147,14 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("could not decode service account key: %w", err)
 	}
 
-	policy, err := crmCli.Projects.GetIamPolicy(p.Settings.ProjectID, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
+	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 	if err != nil {
-		return fmt.Errorf("error getting project iam policy: %w", err)
+		return fmt.Errorf("error creating cloud resource manager client: %w", err)
 	}
 
-	var editorRoleBinding *cloudresourcemanager.Binding
-
-	for _, b := range policy.Bindings {
-		if b.Role == "roles/editor" {
-			editorRoleBinding = b
-			break
-		}
-	}
-
-	if editorRoleBinding == nil {
-		editorRoleBinding = &cloudresourcemanager.Binding{
-			Role: "roles/editor",
-		}
-
-		policy.Bindings = append(policy.Bindings, editorRoleBinding)
-	}
-
-	editorRoleBinding.Members = append(editorRoleBinding.Members, fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", name, p.Settings.ProjectID))
-
-	for _, b := range policy.Bindings {
-		var members []string
-
-		for _, m := range b.Members {
-			if strings.HasPrefix(m, "deleted:") {
-				continue
-			}
-
-			members = append(members, m)
-		}
-
-		b.Members = members
-	}
-
-	_, err = crmCli.Projects.SetIamPolicy(p.Settings.ProjectID, &cloudresourcemanager.SetIamPolicyRequest{
-		Policy: policy,
-	}).Do()
+	err = addServiceAccountToEditor(crmCli, p.Settings.ProjectID, name)
 	if err != nil {
-		return fmt.Errorf("error setting project iam policy: %w", err)
+		return err
 	}
 
 	p.log.Successf("Created '%s' service account with Editor role!\n", name)
