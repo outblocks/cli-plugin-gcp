@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.58](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.57...v0.1.58)
+
+> 2022-03-10
+
+### FEATURES
+
+[`0781aac`](https://github.com/outblocks/cli-plugin-gcp/commit/0781aac5138e50ac037e07549e8f663789b7f493) add create-service-account command
+
+
 ## [v0.1.57](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.56...v0.1.57)
 
 > 2022-03-01
