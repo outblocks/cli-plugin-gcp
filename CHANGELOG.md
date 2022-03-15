@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.59](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.58...v0.1.59)
+
+> 2022-03-15
+
+### FEATURES
+
+[`3699951`](https://github.com/outblocks/cli-plugin-gcp/commit/36999518a8339a74166d9a88ec7329a66e01e374) plugin-go update and image a bit more tolerant
+
+
 ## [v0.1.58](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.57...v0.1.58)
 
 > 2022-03-10
