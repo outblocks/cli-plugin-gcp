@@ -9,10 +9,10 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.8.0
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20220310153738-b0792b33a0f5
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20220315150417-e5aa563019b3
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
 	google.golang.org/api v0.70.0
-	google.golang.org/grpc v1.44.0
+	google.golang.org/grpc v1.45.0
 )
 
 require (
@@ -39,11 +39,11 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220302033224-9aa15565e42a // indirect
+	google.golang.org/genproto v0.0.0-20220314164441-57ef72a4c106 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 

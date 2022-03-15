@@ -21,8 +21,8 @@ import (
 type Image struct {
 	registry.ResourceBase
 
-	Name       fields.StringInputField `state:"force_new"`
-	Tag        fields.StringInputField `state:"force_new"`
+	Name       fields.StringInputField
+	Tag        fields.StringInputField
 	ProjectID  fields.StringInputField `state:"force_new"`
 	GCR        fields.StringInputField `state:"force_new"`
 	Digest     fields.StringOutputField
@@ -125,7 +125,18 @@ func (o *Image) Create(ctx context.Context, meta interface{}) error {
 }
 
 func (o *Image) Update(ctx context.Context, meta interface{}) error {
-	return o.push(ctx, meta)
+	oldDigest := o.Digest.Current()
+
+	err := o.push(ctx, meta)
+	if err != nil {
+		return err
+	}
+
+	if o.Tag.IsChanged() || oldDigest != o.Digest.Current() {
+		return o.delete(ctx, meta, o.Tag.IsChanged(), oldDigest)
+	}
+
+	return nil
 }
 
 func (o *Image) push(ctx context.Context, meta interface{}) error {
@@ -218,8 +229,8 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 	return reader.Close()
 }
 
-func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag, deleteDigest bool) error {
-	if !deleteDigest && !deleteTag {
+func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, digest string) error {
+	if digest == "" && !deleteTag {
 		return nil
 	}
 
@@ -255,8 +266,8 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag, deleteD
 		}
 	}
 
-	if deleteDigest {
-		digestRef := gcrrepo.Digest(o.Digest.Current())
+	if digest != "" {
+		digestRef := gcrrepo.Digest(digest)
 
 		err = gcrremote.Delete(digestRef, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
 		if err != nil {
@@ -268,5 +279,5 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag, deleteD
 }
 
 func (o *Image) Delete(ctx context.Context, meta interface{}) error {
-	return o.delete(ctx, meta, true, true)
+	return o.delete(ctx, meta, true, o.Digest.Current())
 }
