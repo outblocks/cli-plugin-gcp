@@ -45,6 +45,7 @@ func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
 type StorageDepOptions struct {
 	Name       string `mapstructure:"name"`
 	Versioning bool   `mapstructure:"versioning"`
+	Location   string `mapstructure:"location"`
 }
 
 func NewStorageDepOptions(in map[string]interface{}, typ string) (*StorageDepOptions, error) {
@@ -61,10 +62,15 @@ func NewStorageDepOptions(in map[string]interface{}, typ string) (*StorageDepOpt
 func (o *StorageDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *StorageDepArgs) error {
 	o.Needs = c.Needs
 
+	location := o.Opts.Location
+	if location == "" {
+		location = c.Region
+	}
+
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
 		Name:       fields.String(o.Opts.Name),
-		Location:   fields.String(c.Region),
+		Location:   fields.String(location),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(o.Opts.Versioning),
 	}

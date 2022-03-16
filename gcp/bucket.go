@@ -133,3 +133,7 @@ func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 
 	return b.Delete(ctx)
 }
+
+func (o *Bucket) IsCritical(t registry.DiffType, fieldList []string) bool {
+	return t == registry.DiffTypeDelete || t == registry.DiffTypeRecreate
+}
