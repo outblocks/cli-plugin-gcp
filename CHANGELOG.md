@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.60](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.59...v0.1.60)
+
+> 2022-03-16
+
+### FEATURES
+
+[`bbcb781`](https://github.com/outblocks/cli-plugin-gcp/commit/bbcb78148b4aec5713167907b16a98fa80d02968) add support for storage location
+
+
 ## [v0.1.59](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.58...v0.1.59)
 
 > 2022-03-15
