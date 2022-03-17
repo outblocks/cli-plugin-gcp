@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.61](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.60...v0.1.61)
+
+> 2022-03-17
+
+### FEATURES
+
+[`95b864a`](https://github.com/outblocks/cli-plugin-gcp/commit/95b864a05a836ae205b739548c29b5a7f20e4fe3) lifecycle rules on state bucket
+
+
 ## [v0.1.60](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.59...v0.1.60)
 
 > 2022-03-16
