@@ -769,8 +769,8 @@ github.com/opencontainers/selinux v1.8.0/go.mod h1:RScLhm78qiWa2gbVCcGkC7tCGdgk3
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/opencontainers/selinux v1.10.0/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuho1lHsJxIJ3gGbJI=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20220317002530-4f0185a1a177 h1:VnLMPAqzS1PgHMoH0lH5PQOcVRbr/It7E1xOXMAbW3Q=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20220317002530-4f0185a1a177/go.mod h1:ZrN4QZvTboz66Ti2VBmam+dlHNt0I9fUc5lxan33VNk=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20220317004219-a186f3bb2202 h1:VMubllxnO4jc+bGQXkFaEO4+1LuOG72kG5nmdAzmNmo=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20220317004219-a186f3bb2202/go.mod h1:ZrN4QZvTboz66Ti2VBmam+dlHNt0I9fUc5lxan33VNk=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
