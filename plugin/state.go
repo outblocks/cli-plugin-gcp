@@ -147,7 +147,68 @@ func (p *Plugin) defaultStateBucket(project string) string {
 	return p.defaultBucket(project, "")
 }
 
-func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginService_GetStateServer) error { // nolint:gocyclo
+func (p *Plugin) lockState(ctx context.Context, cli *storage.Client, project, lockingBucket string, lockWait time.Duration, stream apiv1.StatePluginService_GetStateServer) (string, error) {
+	var lockInfo string
+
+	lockingB := cli.Bucket(lockingBucket)
+
+	_, _, err := getBucket(ctx, lockingB, project, &storage.BucketAttrs{
+		Location:          p.Settings.Region,
+		VersioningEnabled: false,
+	}, true)
+	if err != nil {
+		return "", err
+	}
+
+	start := time.Now()
+	t := time.NewTicker(time.Second)
+	first := true
+
+	var (
+		owner     string
+		createdAt time.Time
+	)
+
+	defer t.Stop()
+
+	for {
+		lockInfo, owner, createdAt, err = acquireLock(ctx, lockingB.Object(p.stateLockfile()))
+		if err == nil {
+			break
+		}
+
+		if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
+			if err == errAcquireLockFailed {
+				return "", types.NewStatusStateLockError(lockInfo, owner, createdAt)
+			}
+
+			return "", err
+		}
+
+		if first {
+			err = stream.Send(&apiv1.GetStateResponse{
+				Response: &apiv1.GetStateResponse_Waiting{
+					Waiting: true,
+				},
+			})
+			if err != nil {
+				return "", err
+			}
+
+			first = false
+		}
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-t.C:
+		}
+	}
+
+	return lockInfo, nil
+}
+
+func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginService_GetStateServer) error {
 	ctx := stream.Context()
 
 	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
@@ -178,6 +239,27 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	created, exists, err := getBucket(ctx, b, project, &storage.BucketAttrs{
 		Location:          p.Settings.Region,
 		VersioningEnabled: true,
+		Lifecycle: storage.Lifecycle{
+			Rules: []storage.LifecycleRule{
+				{
+					Condition: storage.LifecycleCondition{
+						DaysSinceNoncurrentTime: 14,
+					},
+					Action: storage.LifecycleAction{
+						Type: "Delete",
+					},
+				},
+				{
+					Condition: storage.LifecycleCondition{
+						NumNewerVersions: 100,
+						Liveness:         storage.Archived,
+					},
+					Action: storage.LifecycleAction{
+						Type: "Delete",
+					},
+				},
+			},
+		},
 	}, !r.SkipCreate)
 	if err != nil {
 		return err
@@ -198,60 +280,9 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	var lockInfo string
 
 	if r.Lock {
-		lockingB := cli.Bucket(lockingBucket)
-
-		_, _, err := getBucket(ctx, lockingB, project, &storage.BucketAttrs{
-			Location:          p.Settings.Region,
-			VersioningEnabled: false,
-		}, true)
+		lockInfo, err = p.lockState(ctx, cli, project, lockingBucket, r.LockWait.AsDuration(), stream)
 		if err != nil {
 			return err
-		}
-
-		start := time.Now()
-		t := time.NewTicker(time.Second)
-		first := true
-		lockWait := r.LockWait.AsDuration()
-
-		var (
-			owner     string
-			createdAt time.Time
-		)
-
-		defer t.Stop()
-
-		for {
-			lockInfo, owner, createdAt, err = acquireLock(ctx, lockingB.Object(p.stateLockfile()))
-			if err == nil {
-				break
-			}
-
-			if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
-				if err == errAcquireLockFailed {
-					return types.NewStatusStateLockError(lockInfo, owner, createdAt)
-				}
-
-				return err
-			}
-
-			if first {
-				err = stream.Send(&apiv1.GetStateResponse{
-					Response: &apiv1.GetStateResponse_Waiting{
-						Waiting: true,
-					},
-				})
-				if err != nil {
-					return err
-				}
-
-				first = false
-			}
-
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-t.C:
-			}
 		}
 	}
 

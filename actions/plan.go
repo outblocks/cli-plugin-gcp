@@ -276,25 +276,7 @@ func (p *PlanAction) getOrCreateDependencyState(dep *apiv1.Dependency) *apiv1.De
 	return state
 }
 
-func (p *PlanAction) save() error { // nolint:gocyclo
-	data, err := p.registry.Dump()
-	if err != nil {
-		return err
-	}
-
-	p.State.Registry = data
-
-	if p.destroy {
-		return nil
-	}
-
-	var curMapping map[string]interface{}
-	if len(p.loadBalancer.URLMaps) > 0 {
-		curMapping = p.loadBalancer.URLMaps[0].AppMapping.Current()
-	}
-
-	// App SSL states.
-
+func (p *PlanAction) saveAppSSLStates(curMapping map[string]interface{}) {
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
 		app := p.appIDMap[id]
@@ -345,6 +327,27 @@ func (p *PlanAction) save() error { // nolint:gocyclo
 	for _, v := range p.dnsRecordsMap {
 		p.DNSRecords = append(p.DNSRecords, v)
 	}
+}
+
+func (p *PlanAction) save() error {
+	data, err := p.registry.Dump()
+	if err != nil {
+		return err
+	}
+
+	p.State.Registry = data
+
+	if p.destroy {
+		return nil
+	}
+
+	var curMapping map[string]interface{}
+	if len(p.loadBalancer.URLMaps) > 0 {
+		curMapping = p.loadBalancer.URLMaps[0].AppMapping.Current()
+	}
+
+	// App SSL states.
+	p.saveAppSSLStates(curMapping)
 
 	// App states.
 	for id, app := range p.appDeployIDMap {
