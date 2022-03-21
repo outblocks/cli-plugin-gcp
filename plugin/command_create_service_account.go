@@ -68,14 +68,14 @@ func addServiceAccountToEditor(crmCli *cloudresourcemanager.Service, projectID, 
 
 func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
-	nameF := flags["name"]
 
-	name := "outblocks-ci"
-	name = plugin_util.SanitizeName(name, true, true)
+	name := flags["name"].(string)
 
-	if n, ok := nameF.(string); ok && n != "" {
-		name = n
+	if name == "" {
+		name = "outblocks-ci"
 	}
+
+	name = plugin_util.SanitizeName(name, true, true)
 
 	iamCli, err := config.NewGCPIAMClient(ctx, p.gcred)
 	if err != nil {

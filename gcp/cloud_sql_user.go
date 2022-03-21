@@ -17,6 +17,7 @@ type CloudSQLUser struct {
 	Instance  fields.StringInputField `state:"force_new"`
 	Name      fields.StringInputField `state:"force_new"`
 	Password  fields.StringInputField
+	Hostname  fields.StringInputField
 }
 
 func (o *CloudSQLUser) ReferenceID() string {
@@ -77,7 +78,8 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Instance.SetCurrent(instance)
-	o.Name.SetCurrent(name)
+	o.Name.SetCurrent(user.Name)
+	o.Hostname.SetCurrent(user.Host)
 
 	return nil
 }
@@ -98,10 +100,12 @@ func (o *CloudSQLUser) Create(ctx context.Context, meta interface{}) error {
 	instance := o.Instance.Wanted()
 	name := o.Name.Wanted()
 	password := o.Password.Wanted()
+	host := o.Hostname.Wanted()
 
 	op, err := cli.Users.Insert(projectID, instance, &sqladmin.User{
 		Name:     name,
 		Password: password,
+		Host:     host,
 	}).Do()
 	if err != nil {
 		return err
@@ -126,8 +130,12 @@ func (o *CloudSQLUser) Update(ctx context.Context, meta interface{}) error {
 	instance := o.Instance.Wanted()
 	name := o.Name.Wanted()
 	password := o.Password.Wanted()
+	host := o.Hostname.Wanted()
 
-	op, err := cli.Users.Update(projectID, instance, &sqladmin.User{Password: password}).Name(name).Do()
+	op, err := cli.Users.Update(projectID, instance, &sqladmin.User{
+		Password: password,
+		Host:     host,
+	}).Name(name).Do()
 	if err != nil {
 		return err
 	}

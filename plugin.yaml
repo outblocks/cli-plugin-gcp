@@ -20,7 +20,6 @@ commands:
         short: "n"
         type: string
         usage: Dependency name to proxy
-        required: true
       - name: port
         short: "p"
         type: integer

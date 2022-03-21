@@ -33,13 +33,35 @@ func downloadCloudSQLProxy(ctx context.Context, target string) error {
 
 func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
-	name := flags["name"]
+	name := flags["name"].(string)
+
+	var deps []*apiv1.DependencyState
+
+	for _, d := range req.DependencyStates {
+		switch d.Dependency.Type {
+		case actions.DepTypeMySQL:
+		case actions.DepTypePostgresql:
+		default:
+			continue
+		}
+
+		deps = append(deps, d)
+	}
 
 	var dep *apiv1.DependencyState
 
-	if n, ok := name.(string); ok {
-		for _, d := range req.DependencyStates {
-			if d.Dependency.Name == n {
+	if name == "" {
+		switch len(deps) {
+		case 1:
+			dep = deps[0]
+		case 0:
+			return fmt.Errorf("no matching dependencies were found")
+		default:
+			return fmt.Errorf("more than one matching dependencies were found, you need to specify --name")
+		}
+	} else {
+		for _, d := range deps {
+			if d.Dependency.Name == name {
 				dep = d
 				break
 			}
@@ -85,6 +107,9 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]
 
+	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on local port: %d.\n", dep.Dependency.Name, connectionName, port)
+	p.log.Infof("You can connect to it using user='cloudsqlproxy', password='cloudsqlproxy', host='127.0.0.1:%d'.\n", port)
+
 	cmd, err := command.New(fmt.Sprintf("%s -instances %s=tcp:%d", binPath, connectionName, port))
 	if err != nil {
 		return err
@@ -101,7 +126,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		s := bufio.NewScanner(cmd.Stdout())
 
 		for s.Scan() {
-			p.log.Infof("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
 		}
 
 		wg.Done()
@@ -111,7 +136,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		s := bufio.NewScanner(cmd.Stderr())
 
 		for s.Scan() {
-			p.log.Infof("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
 		}
 
 		wg.Done()

@@ -41,6 +41,8 @@ type DatabaseDepArgs struct {
 
 type DatabaseDepNeed struct {
 	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	Hostname string `mapstructure:"hostname"`
 	Database string `mapstructure:"database"`
 }
 
@@ -65,15 +67,17 @@ func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
 
 type DatabaseDepOptionUser struct {
 	Password string `mapstructure:"password"`
+	Hostname string `mapstructure:"hostname"`
 }
 
 type DatabaseDepOptions struct {
-	Version         string                            `mapstructure:"version"`
-	HA              bool                              `mapstructure:"high_availability"`
-	Tier            string                            `mapstructure:"tier" default:"db-f1-micro"`
-	Flags           map[string]string                 `mapstructure:"flags"`
-	Users           map[string]*DatabaseDepOptionUser `mapstructure:"users"`
-	DatabaseVersion string                            `mapstructure:"-"`
+	Version                  string                            `mapstructure:"version"`
+	HA                       bool                              `mapstructure:"high_availability"`
+	Tier                     string                            `mapstructure:"tier" default:"db-f1-micro"`
+	Flags                    map[string]string                 `mapstructure:"flags"`
+	Users                    map[string]*DatabaseDepOptionUser `mapstructure:"users"`
+	DisableCloudSQLProxyUser bool                              `mapstructure:"disable_cloudsql_proxy_user"`
+	DatabaseVersion          string                            `mapstructure:"-"`
 }
 
 func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
@@ -165,20 +169,22 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 	}
 
 	// Add databases and users.
-	users := make(map[string]string)
+	users := make(map[string]*DatabaseDepOptionUser)
 
 	for username, u := range o.Opts.Users {
-		p := ""
-		if u != nil {
-			p = u.Password
+		if u == nil {
+			u = &DatabaseDepOptionUser{}
 		}
 
-		users[username] = p
+		users[username] = u
 	}
 
 	for _, n := range c.Needs {
 		if _, ok := users[n.User]; !ok {
-			users[n.User] = ""
+			users[n.User] = &DatabaseDepOptionUser{
+				Password: n.Password,
+				Hostname: n.Hostname,
+			}
 		}
 	}
 
@@ -189,8 +195,15 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 		}
 	}
 
+	if !o.Opts.DisableCloudSQLProxyUser {
+		users["cloudsqlproxy"] = &DatabaseDepOptionUser{
+			Password: "cloudsqlproxy",
+			Hostname: "cloudsqlproxy~%",
+		}
+	}
+
 	for u, p := range users {
-		err = o.registerUser(r, u, p)
+		err = o.registerUser(r, u, p.Password, p.Hostname)
 		if err != nil {
 			return err
 		}
@@ -219,7 +232,7 @@ func (o *DatabaseDep) registerDatabase(r *registry.Registry, db string) error {
 	return nil
 }
 
-func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) error {
+func (o *DatabaseDep) registerUser(r *registry.Registry, user, password, hostname string) error {
 	if _, ok := o.CloudSQLUsers[user]; ok {
 		return nil
 	}
@@ -245,6 +258,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password string) 
 		Instance:  o.CloudSQL.Name,
 		Name:      fields.String(user),
 		Password:  passwordField,
+		Hostname:  fields.String(hostname),
 	}
 
 	_, err := r.RegisterDependencyResource(o.Dep, user, o.CloudSQLUsers[user])
