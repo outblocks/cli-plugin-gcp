@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.62](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.61...v0.1.62)
+
+> 2022-03-21
+
+### FEATURES
+
+[`73f2b81`](https://github.com/outblocks/cli-plugin-gcp/commit/73f2b81e8733a38c1158a075cbac469b60837c54) add cloudsqlproxy user, add hostname to sql user and better ux for dbproxy
+
+
 ## [v0.1.61](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.60...v0.1.61)
 
 > 2022-03-17
