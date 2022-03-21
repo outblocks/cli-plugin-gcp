@@ -31,13 +31,10 @@ func downloadCloudSQLProxy(ctx context.Context, target string) error {
 	return fileutil.DownloadFile(ctx, downloadURL, target)
 }
 
-func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
-	flags := req.Args.Flags.AsMap()
-	name := flags["name"].(string)
-
+func filterDepByName(name string, depStates map[string]*apiv1.DependencyState) (*apiv1.DependencyState, error) {
 	var deps []*apiv1.DependencyState
 
-	for _, d := range req.DependencyStates {
+	for _, d := range depStates {
 		switch d.Dependency.Type {
 		case actions.DepTypeMySQL:
 		case actions.DepTypePostgresql:
@@ -55,9 +52,9 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		case 1:
 			dep = deps[0]
 		case 0:
-			return fmt.Errorf("no matching dependencies were found")
+			return nil, fmt.Errorf("no matching dependencies were found")
 		default:
-			return fmt.Errorf("more than one matching dependencies were found, you need to specify --name")
+			return nil, fmt.Errorf("more than one matching dependencies were found, you need to specify --name")
 		}
 	} else {
 		for _, d := range deps {
@@ -69,12 +66,24 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	}
 
 	if dep == nil {
-		return fmt.Errorf("dependency with name '%s' not found or not deployed yet", name)
+		return nil, fmt.Errorf("dependency with name '%s' not found or not deployed yet", name)
 	}
+
+	return dep, nil
+}
+
+func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
+	flags := req.Args.Flags.AsMap()
+	name := flags["name"].(string)
 
 	port := int(flags["port"].(float64))
 
 	var defaultPort int
+
+	dep, err := filterDepByName(name, req.DependencyStates)
+	if err != nil {
+		return err
+	}
 
 	switch dep.Dependency.Type {
 	case actions.DepTypeMySQL:
@@ -100,7 +109,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		}
 	}
 
-	err := os.Chmod(binPath, 0o755)
+	err = os.Chmod(binPath, 0o755)
 	if err != nil {
 		return err
 	}
