@@ -28,7 +28,12 @@ func downloadCloudSQLProxy(ctx context.Context, target string) error {
 
 	downloadURL := fmt.Sprintf("https://storage.googleapis.com/cloudsql-proxy/v%s/cloud_sql_proxy.%s.%s", gcp.CloudSQLVersion, runtime.GOOS, runtime.GOARCH)
 
-	return fileutil.DownloadFile(ctx, downloadURL, target)
+	err = fileutil.DownloadFile(ctx, downloadURL, target)
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(target, 0o755)
 }
 
 func filterDepByName(name string, depStates map[string]*apiv1.DependencyState) (*apiv1.DependencyState, error) {
@@ -107,11 +112,6 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		if err != nil {
 			return fmt.Errorf("downloading cloud proxy binary error: %w", err)
 		}
-	}
-
-	err = os.Chmod(binPath, 0o755)
-	if err != nil {
-		return err
 	}
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]

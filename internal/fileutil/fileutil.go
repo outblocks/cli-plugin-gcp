@@ -37,5 +37,9 @@ func DownloadFile(ctx context.Context, url, target string) error {
 	_, err = io.Copy(f, resp.Body)
 	resp.Body.Close()
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }
