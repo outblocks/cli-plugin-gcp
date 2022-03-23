@@ -231,9 +231,14 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 	}
 
 	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" && o.DeployOpts.SkipRunsd {
-		err := o.addRunsd(ctx, pctx, apply)
-		if err != nil {
-			return fmt.Errorf("adding runsd to image of service app '%s' failed: %w", o.App.Name, err)
+		if !o.DeployOpts.SkipRunsd {
+			err := o.addRunsd(ctx, pctx, apply)
+			if err != nil {
+				return fmt.Errorf("adding runsd to image of service app '%s' failed: %w", o.App.Name, err)
+			}
+		} else {
+			o.Image.SourceHash = fields.String(o.Build.LocalDockerHash)
+			o.Image.Source = fields.String(o.Build.LocalDockerImage)
 		}
 	}
 
