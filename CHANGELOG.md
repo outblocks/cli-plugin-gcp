@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.66](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.65...v0.1.66)
+
+> 2022-03-23
+
+### BUG FIXES
+
+[`d778e20`](https://github.com/outblocks/cli-plugin-gcp/commit/d778e209cb4323fe94fbc31022c12665f0e6ba67) make cloudsql proxy user opt-in rather than opt-out
+
+
 ## [v0.1.65](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.64...v0.1.65)
 
 > 2022-03-23
