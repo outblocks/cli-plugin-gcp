@@ -52,6 +52,7 @@ type ServiceAppArgs struct {
 }
 
 type ServiceAppDeployOptions struct {
+	SkipRunsd   bool    `mapstructure:"skip_runsd"`
 	CPULimit    float64 `mapstructure:"cpu_limit" default:"1"`
 	MemoryLimit int     `mapstructure:"memory_limit" default:"256"`
 	MinScale    int     `mapstructure:"min_scale" default:"0"`
@@ -229,7 +230,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		Pull:      false,
 	}
 
-	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" {
+	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" && o.DeployOpts.SkipRunsd {
 		err := o.addRunsd(ctx, pctx, apply)
 		if err != nil {
 			return fmt.Errorf("adding runsd to image of service app '%s' failed: %w", o.App.Name, err)
