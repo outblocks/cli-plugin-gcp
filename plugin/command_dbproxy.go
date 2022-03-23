@@ -116,8 +116,18 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]
 
+	opts, err := deploy.NewDatabaseDepOptions(dep.Dependency.Properties.AsMap(), dep.Dependency.Type)
+	if err != nil {
+		return err
+	}
+
 	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on local port: %d.\n", dep.Dependency.Name, connectionName, port)
-	p.log.Infof("You can connect to it using user='cloudsqlproxy', password='cloudsqlproxy', host='127.0.0.1:%d'.\n", port)
+
+	if opts.EnableCloudSQLProxyUser {
+		p.log.Infof("You can connect to it using user='cloudsqlproxy', password='cloudsqlproxy', host='127.0.0.1:%d'.\n", port)
+	} else {
+		p.log.Infof("You can connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
+	}
 
 	cmd, err := command.New(fmt.Sprintf("%s -instances %s=tcp:%d", binPath, connectionName, port))
 	if err != nil {
