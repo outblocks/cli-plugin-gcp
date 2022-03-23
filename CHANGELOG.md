@@ -1,5 +1,19 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.65](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.64...v0.1.65)
+
+> 2022-03-23
+
+### BUG FIXES
+
+[`4c6bb30`](https://github.com/outblocks/cli-plugin-gcp/commit/4c6bb3010045e70f4e7a453fe9a709770ba9ddd9) missing hostname for postgresql users
+[`721a642`](https://github.com/outblocks/cli-plugin-gcp/commit/721a642e1f1b495d4da1fa17b8c54c451187c29a) handle skip runsd properly
+
+### FEATURES
+
+[`07ed566`](https://github.com/outblocks/cli-plugin-gcp/commit/07ed566357535539e84745089ef5bb5f5dae5df7) add option to skip runsd
+
+
 ## [v0.1.64](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.63...v0.1.64)
 
 > 2022-03-22
