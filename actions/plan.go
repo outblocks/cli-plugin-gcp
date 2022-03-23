@@ -93,9 +93,9 @@ func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, ap
 		apps = append(apps, plan.State.App)
 
 		switch plan.State.App.Type {
-		case TypeStatic:
+		case deploy.AppTypeStatic:
 			staticAppsPlan = append(staticAppsPlan, plan)
-		case TypeService:
+		case deploy.AppTypeService:
 			serviceAppsPlan = append(serviceAppsPlan, plan)
 		}
 	}
@@ -138,9 +138,9 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 		p.depIDMap[plan.State.Dependency.Id] = plan.State.Dependency
 
 		switch plan.State.Dependency.Type {
-		case DepTypePostgresql, DepTypeMySQL:
+		case deploy.DepTypePostgresql, deploy.DepTypeMySQL:
 			databasePlan = append(databasePlan, plan)
-		case DepTypeStorage:
+		case deploy.DepTypeStorage:
 			storagePlan = append(storagePlan, plan)
 		}
 	}

@@ -252,13 +252,19 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password, hostnam
 		passwordField = randomPassword.Result.Input()
 	}
 
+	host := fields.String(hostname)
+
+	if o.Dep.Type != DepTypeMySQL {
+		host = nil
+	}
+
 	// Add cloud sql user.
 	o.CloudSQLUsers[user] = &gcp.CloudSQLUser{
 		ProjectID: o.CloudSQL.ProjectID,
 		Instance:  o.CloudSQL.Name,
 		Name:      fields.String(user),
 		Password:  passwordField,
-		Hostname:  fields.String(hostname),
+		Hostname:  host,
 	}
 
 	_, err := r.RegisterDependencyResource(o.Dep, user, o.CloudSQLUsers[user])

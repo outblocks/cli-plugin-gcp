@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/outblocks/cli-plugin-gcp/actions"
+	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/fileutil"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
@@ -41,8 +41,8 @@ func filterDepByName(name string, depStates map[string]*apiv1.DependencyState) (
 
 	for _, d := range depStates {
 		switch d.Dependency.Type {
-		case actions.DepTypeMySQL:
-		case actions.DepTypePostgresql:
+		case deploy.DepTypeMySQL:
+		case deploy.DepTypePostgresql:
 		default:
 			continue
 		}
@@ -91,9 +91,9 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	}
 
 	switch dep.Dependency.Type {
-	case actions.DepTypeMySQL:
+	case deploy.DepTypeMySQL:
 		defaultPort = 3306
-	case actions.DepTypePostgresql:
+	case deploy.DepTypePostgresql:
 		defaultPort = 5432
 	default:
 		return fmt.Errorf("dependency '%s' is of unsupported type: %s", name, dep.Dependency.Type)
