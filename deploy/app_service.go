@@ -230,8 +230,12 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		Pull:      false,
 	}
 
-	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" && o.DeployOpts.SkipRunsd {
+	if o.Build.LocalDockerImage != "" && o.Build.LocalDockerHash != "" {
 		if !o.DeployOpts.SkipRunsd {
+			if o.Props.Container.Port == 80 {
+				return fmt.Errorf("cannot inject runsd to service app '%s' running at port 80 - run at different port", o.App.Name)
+			}
+
 			err := o.addRunsd(ctx, pctx, apply)
 			if err != nil {
 				return fmt.Errorf("adding runsd to image of service app '%s' failed: %w", o.App.Name, err)
