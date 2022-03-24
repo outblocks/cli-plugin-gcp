@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.67](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.66...v0.1.67)
+
+> 2022-03-24
+
+### BUG FIXES
+
+[`71253f3`](https://github.com/outblocks/cli-plugin-gcp/commit/71253f3d8559a5a0c6792e3c89f7adb4d119991d) service app deployments with runsd
+
+
 ## [v0.1.66](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.65...v0.1.66)
 
 > 2022-03-23
