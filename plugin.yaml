@@ -15,6 +15,7 @@ commands:
     long: Create a local CloudSQL database proxy.
     input:
       - dependency_states
+      - plugin_state
     flags:
       - name: name
         short: "n"

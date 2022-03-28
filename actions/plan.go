@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
@@ -49,11 +50,9 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 		state = types.NewPluginState()
 	}
 
-	for _, t := range gcp.Types {
-		err := reg.RegisterType(t)
-		if err != nil {
-			return nil, err
-		}
+	err := gcp.RegisterTypes(reg)
+	if err != nil {
+		return nil, err
 	}
 
 	return &PlanAction{
@@ -104,14 +103,25 @@ func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, ap
 
 	var err error
 
+	// Prepare static and service apps.
+	serviceApps, err := p.prepareServiceAppsDeploy(serviceAppsPlan)
+	if err != nil {
+		return err
+	}
+
+	staticApps, err := p.prepareStaticAppsDeploy(staticAppsPlan)
+	if err != nil {
+		return err
+	}
+
 	// Plan static app deployment.
-	p.staticApps, err = p.planStaticAppsDeploy(staticAppsPlan)
+	p.staticApps, err = p.planStaticAppsDeploy(staticApps, staticAppsPlan)
 	if err != nil {
 		return err
 	}
 
 	// Plan service app deployment.
-	p.serviceApps, err = p.planServiceAppsDeploy(ctx, serviceAppsPlan, apply)
+	p.serviceApps, err = p.planServiceAppsDeploy(ctx, serviceApps, serviceAppsPlan, apply)
 	if err != nil {
 		return err
 	}
@@ -365,13 +375,17 @@ func (p *PlanAction) save() error {
 
 		switch a := app.(type) {
 		case *deploy.ServiceApp:
-			if a.Props.Private {
-				state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
-			} else {
+			state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
+
+			if !a.Props.Private {
 				state.Dns.CloudUrl = a.CloudRun.URL.Current()
+				if state.Dns.CloudUrl != "" && !strings.HasSuffix(state.Dns.CloudUrl, "/") {
+					state.Dns.CloudUrl += "/"
+				}
 			}
 
 		case *deploy.StaticApp:
+			state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
 			state.Dns.CloudUrl = a.CloudRun.URL.Current()
 		}
 	}

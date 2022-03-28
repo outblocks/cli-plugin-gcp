@@ -9,7 +9,7 @@ import (
 )
 
 func (p *Plugin) Plan(ctx context.Context, reg *registry.Registry, r *apiv1.PlanRequest) (*apiv1.PlanResponse, error) {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.State, r.Domains, reg, r.Destroy, false)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginState, r.Domains, reg, r.Destroy, false)
 	if err != nil {
 		return nil, err
 	}

@@ -77,6 +77,10 @@ func NewStaticApp(plan *apiv1.AppPlan) (*StaticApp, error) {
 	}, nil
 }
 
+func (o *StaticApp) ID(pctx *config.PluginContext) string {
+	return gcp.ID(pctx.Env(), o.App.Id)
+}
+
 func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *StaticAppArgs) error {
 	buildDir := filepath.Join(pctx.Env().ProjectDir(), o.App.Dir, o.Props.Build.Dir)
 
@@ -175,7 +179,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 
 	// Add cloud run service.
 	o.CloudRun = &gcp.CloudRun{
-		Name:      gcp.IDField(pctx.Env(), o.App.Id),
+		Name:      fields.String(o.ID(pctx)),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
 		Image:     o.Image.ImageName(),

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -14,6 +15,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/fileutil"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
+	"github.com/outblocks/outblocks-plugin-go/registry"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"github.com/outblocks/outblocks-plugin-go/util/command"
 )
@@ -116,20 +118,36 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]
 
-	opts, err := deploy.NewDatabaseDepOptions(dep.Dependency.Properties.AsMap(), dep.Dependency.Type)
+	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on local port: %d.\n", dep.Dependency.Name, connectionName, port)
+
+	reg := registry.NewRegistry(nil)
+
+	err = gcp.RegisterTypes(reg)
 	if err != nil {
 		return err
 	}
 
-	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on local port: %d.\n", dep.Dependency.Name, connectionName, port)
+	var cloudsqluser *gcp.CloudSQLUser
 
-	if opts.EnableCloudSQLProxyUser {
-		p.log.Infof("You can connect to it using user='cloudsqlproxy', password='cloudsqlproxy', host='127.0.0.1:%d'.\n", port)
+	err = reg.Load(ctx, req.PluginState.Registry)
+	if err == nil {
+		user := &gcp.CloudSQLUser{}
+
+		if reg.GetDependencyResource(dep.Dependency, "cloudsqlproxy", user) {
+			cloudsqluser = user
+		}
+	}
+
+	if cloudsqluser != nil {
+		p.log.Infof("You can connect to it using user='%s', password='%s', host='127.0.0.1:%d'.\n",
+			cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), port)
 	} else {
 		p.log.Infof("You can connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
 	}
 
-	cmd, err := command.New(fmt.Sprintf("%s -instances %s=tcp:%d", binPath, connectionName, port))
+	cmd, err := command.New(
+		exec.Command(binPath, "-instances", fmt.Sprintf("%s=tcp:%d", connectionName, port)),
+	)
 	if err != nil {
 		return err
 	}

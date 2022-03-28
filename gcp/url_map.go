@@ -106,7 +106,7 @@ func (o *URLMap) Create(ctx context.Context, meta interface{}) error {
 
 	projectID := o.ProjectID.Wanted()
 
-	oper, err := cli.UrlMaps.Insert(projectID, o.makeURLMap()).Do()
+	oper, err := cli.UrlMaps.Insert(projectID, o.MakeURLMap()).Do()
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (o *URLMap) Update(ctx context.Context, meta interface{}) error {
 		o.Fingerprint = obj.Fingerprint
 	}
 
-	oper, err := cli.UrlMaps.Update(projectID, name, o.makeURLMap()).Do()
+	oper, err := cli.UrlMaps.Update(projectID, name, o.MakeURLMap()).Do()
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func cleanupURLMapping(m map[string]interface{}) []*URLMapping {
 	return ret
 }
 
-func (o *URLMap) makeURLMap() *compute.UrlMap {
+func (o *URLMap) MakeURLMap() *compute.UrlMap {
 	name := o.Name.Wanted()
 
 	urlMap := &compute.UrlMap{

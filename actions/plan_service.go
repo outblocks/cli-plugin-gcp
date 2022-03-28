@@ -49,9 +49,8 @@ func (p *PlanAction) planServiceAppDeploy(ctx context.Context, appDeploy *deploy
 	return appDeploy, nil
 }
 
-func (p *PlanAction) planServiceAppsDeploy(ctx context.Context, appPlans []*apiv1.AppPlan, apply bool) (ret map[string]*deploy.ServiceApp, err error) {
-	ret = make(map[string]*deploy.ServiceApp, len(appPlans))
-	apps := make([]*deploy.ServiceApp, len(appPlans))
+func (p *PlanAction) prepareServiceAppsDeploy(appPlans []*apiv1.AppPlan) (ret []*deploy.ServiceApp, err error) {
+	ret = make([]*deploy.ServiceApp, len(appPlans))
 
 	for i, plan := range appPlans {
 		appDeploy, err := deploy.NewServiceApp(plan)
@@ -59,17 +58,28 @@ func (p *PlanAction) planServiceAppsDeploy(ctx context.Context, appPlans []*apiv
 			return nil, err
 		}
 
+		vars := p.appEnvVars.ForApp(appDeploy.App)
+
+		vars["cloud_url"] = fmt.Sprintf("https://%s-%s.a.run.app/", appDeploy.ID(p.pluginCtx), p.cloudRunSettings.URLSuffix())
+		vars["private_url"] = fmt.Sprintf("http://%s/", appDeploy.ID(p.pluginCtx))
+
 		if appDeploy.Props.Private {
-			p.appEnvVars.ForApp(appDeploy.App)["url"] = fmt.Sprintf("http://%s/", appDeploy.ID(p.pluginCtx))
+			vars["url"] = vars["private_url"]
 		}
 
-		apps[i] = appDeploy
+		ret[i] = appDeploy
 	}
+
+	return ret, nil
+}
+
+func (p *PlanAction) planServiceAppsDeploy(ctx context.Context, apps []*deploy.ServiceApp, appPlans []*apiv1.AppPlan, apply bool) (ret map[string]*deploy.ServiceApp, err error) {
+	ret = make(map[string]*deploy.ServiceApp, len(apps))
 
 	for i, plan := range appPlans {
 		app, err := p.planServiceAppDeploy(ctx, apps[i], plan, apply)
 		if err != nil {
-			return ret, err
+			return nil, err
 		}
 
 		ret[plan.State.App.Id] = app

@@ -18,6 +18,8 @@ type CloudRun struct {
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
 	Region    fields.StringInputField `state:"force_new"`
+	Command   fields.ArrayInputField
+	Args      fields.ArrayInputField
 	Image     fields.StringInputField
 	IsPublic  fields.BoolInputField
 
@@ -99,6 +101,18 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 		o.StatusMessage.SetCurrent(cond.Message)
 	}
 
+	args := make([]interface{}, len(svc.Spec.Template.Spec.Containers[0].Args))
+	for i, v := range svc.Spec.Template.Spec.Containers[0].Args {
+		args[i] = v
+	}
+
+	command := make([]interface{}, len(svc.Spec.Template.Spec.Containers[0].Command))
+	for i, v := range svc.Spec.Template.Spec.Containers[0].Command {
+		command[i] = v
+	}
+
+	o.Command.SetCurrent(command)
+	o.Args.SetCurrent(args)
 	o.Image.SetCurrent(svc.Spec.Template.Spec.Containers[0].Image)
 	o.URL.SetCurrent(svc.Status.Url)
 	o.CloudSQLInstances.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cloudsql-instances"])
@@ -225,6 +239,20 @@ func (o *CloudRun) makeRunService() *run.Service {
 		envVars = append(envVars, &run.EnvVar{Name: k, Value: v.(string)})
 	}
 
+	command := o.Command.Wanted()
+	commandStr := make([]string, len(command))
+
+	for i, v := range command {
+		commandStr[i] = v.(string)
+	}
+
+	args := o.Args.Wanted()
+	argsStr := make([]string, len(args))
+
+	for i, v := range args {
+		argsStr[i] = v.(string)
+	}
+
 	svc := &run.Service{
 		ApiVersion: "serving.knative.dev/v1",
 		Kind:       "Service",
@@ -249,9 +277,11 @@ func (o *CloudRun) makeRunService() *run.Service {
 					TimeoutSeconds:       int64(o.TimeoutSeconds.Wanted()),
 					Containers: []*run.Container{
 						{
-							Image: o.Image.Wanted(),
-							Env:   envVars,
-							Ports: []*run.ContainerPort{{ContainerPort: int64(o.Port.Wanted())}},
+							Command: commandStr,
+							Args:    argsStr,
+							Image:   o.Image.Wanted(),
+							Env:     envVars,
+							Ports:   []*run.ContainerPort{{ContainerPort: int64(o.Port.Wanted())}},
 							Resources: &run.ResourceRequirements{
 								Limits: map[string]string{
 									"cpu":    o.CPULimit.Wanted(),

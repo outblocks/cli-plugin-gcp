@@ -40,6 +40,17 @@ var Types = []registry.Resource{
 	(*URLMap)(nil),
 }
 
+func RegisterTypes(reg *registry.Registry) error {
+	for _, t := range Types {
+		err := reg.RegisterType(t)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func GenericID(id string, suffixes ...string) string {
 	sanitizedID := util.SanitizeName(id, false, false)
 
@@ -234,11 +245,15 @@ func SplitURL(url string) (host, path string) {
 	urlSplit := strings.SplitN(url, "/", 2)
 
 	if len(urlSplit) == 2 {
-		path = urlSplit[1]
+		path = "/" + urlSplit[1]
 	}
 
-	if path == "*" || path == "" {
-		path = "/*"
+	if path == "" || path == "/" {
+		return urlSplit[0], "/*"
+	}
+
+	if strings.HasSuffix(path, "/") {
+		path += "*"
 	}
 
 	return urlSplit[0], path

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -176,7 +177,11 @@ ENTRYPOINT ["%s"]
 			return err
 		}
 
-		cmd, err := command.New(fmt.Sprintf("docker build --platform=linux/amd64 --tag %s .", runsdImage), command.WithDir(dir), command.WithEnv([]string{"DOCKER_BUILDKIT=1"}))
+		cmd, err := command.New(
+			exec.Command("docker", "build", "--platform=linux/amd64", "--tag", runsdImage, "."),
+			command.WithDir(dir),
+			command.WithEnv([]string{"DOCKER_BUILDKIT=1"}),
+		)
 		if err != nil {
 			return err
 		}
@@ -285,12 +290,20 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		cloudSQLconnNames[i] = db.CloudSQL.ConnectionName
 	}
 
-	if o.Props.Container.Port == 80 {
-		return fmt.Errorf("cannot inject runsd to service app '%s' running at port 80 - run at different port", o.App.Name)
+	cmd := make([]fields.Field, len(o.Props.Container.Entrypoint.ShArray()))
+	for i, v := range o.Props.Container.Entrypoint.ShArray() {
+		cmd[i] = fields.String(v)
+	}
+
+	args := make([]fields.Field, len(o.Props.Container.Command.ShArray()))
+	for i, v := range o.Props.Container.Command.ShArray() {
+		args[i] = fields.String(v)
 	}
 
 	o.CloudRun = &gcp.CloudRun{
 		Name:      fields.String(o.ID(pctx)),
+		Command:   fields.Array(cmd),
+		Args:      fields.Array(args),
 		Port:      fields.Int(o.Props.Container.Port),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),

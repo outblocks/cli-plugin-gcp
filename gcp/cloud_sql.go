@@ -7,6 +7,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
@@ -199,6 +200,7 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 		Name:            o.Name.Wanted(),
 		Region:          o.Region.Wanted(),
 		DatabaseVersion: o.DatabaseVersion.Wanted(),
+		RootPassword:    plugin_util.RandomStringCrypto(16),
 		Settings: &sqladmin.Settings{
 			Tier:             o.Tier.Wanted(),
 			AvailabilityType: o.AvailabilityZone.Wanted(),

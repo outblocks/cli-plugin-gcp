@@ -133,7 +133,7 @@ func (o *Image) Update(ctx context.Context, meta interface{}) error {
 	}
 
 	if o.Tag.IsChanged() || oldDigest != o.Digest.Current() {
-		return o.delete(ctx, meta, o.Tag.IsChanged(), oldDigest)
+		_ = o.delete(ctx, meta, o.Tag.IsChanged() && o.Tag.Current() != "", oldDigest)
 	}
 
 	return nil

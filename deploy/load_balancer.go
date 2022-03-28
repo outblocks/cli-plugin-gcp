@@ -153,12 +153,23 @@ func (o *LoadBalancer) processDomain(pctx *config.PluginContext, r *registry.Reg
 }
 
 func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, domainMatch *types.DomainInfoMatcher, c *LoadBalancerArgs) error {
-	if len(static) == 0 && len(service) == 0 {
-		return nil
-	}
-
 	staticApps := make([]*StaticApp, 0, len(static))
 	serviceApps := make([]*ServiceApp, 0, len(service))
+
+	// Process Apps in LB.
+	err := o.processStaticApps(pctx, r, static, c)
+	if err != nil {
+		return err
+	}
+
+	err = o.processServiceApps(pctx, r, service, c)
+	if err != nil {
+		return err
+	}
+
+	if len(o.urlMap) == 0 && len(o.appMap) == 0 {
+		return nil
+	}
 
 	// IP Address.
 	addr := &gcp.Address{
@@ -166,7 +177,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		ProjectID: fields.String(c.ProjectID),
 	}
 
-	_, err := r.RegisterPluginResource(LoadBalancerName, c.Name+"-0", addr)
+	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-0", addr)
 	if err != nil {
 		return err
 	}
@@ -207,17 +218,6 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		if err != nil {
 			return err
 		}
-	}
-
-	// Process Apps in LB.
-	err = o.processStaticApps(pctx, r, static, c)
-	if err != nil {
-		return err
-	}
-
-	err = o.processServiceApps(pctx, r, service, c)
-	if err != nil {
-		return err
 	}
 
 	// URL Map.
