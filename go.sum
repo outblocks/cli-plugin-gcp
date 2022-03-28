@@ -62,8 +62,8 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 cloud.google.com/go/storage v1.21.0 h1:HwnT2u2D309SFDHQII6m18HlrCi3jAXhUMTLOWXYH14=
 cloud.google.com/go/storage v1.21.0/go.mod h1:XmRlxkgPjlBONznT2dDUU/5XlpU2OjMnKuqnZI01LAA=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/23doors/go-yaml v1.8.10-0.20220328115725-5f4263177e5e h1:1akOJBs6NX0QYet3AZNII+wElaN6FOH+Ra+I4GzNq6Q=
-github.com/23doors/go-yaml v1.8.10-0.20220328115725-5f4263177e5e/go.mod h1:cO5nDBORGvVePGs3qhSIGiGA7QjEAvSBxVDjbMc1RA0=
+github.com/23doors/go-yaml v1.9.6-0.20220328165103-15fd217cc309 h1:/P2saTfIWrcSiFxUvwxVgEKovW/48SPbb85V6oxYars=
+github.com/23doors/go-yaml v1.9.6-0.20220328165103-15fd217cc309/go.mod h1:cO5nDBORGvVePGs3qhSIGiGA7QjEAvSBxVDjbMc1RA0=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20210715213245-6c3934b029d8/go.mod h1:CzsSbkDixRphAF5hS6wbMKq0eI6ccJRb7/A0M6JBnwg=
 github.com/Azure/azure-sdk-for-go v16.2.1+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=
@@ -785,8 +785,8 @@ github.com/opencontainers/selinux v1.8.0/go.mod h1:RScLhm78qiWa2gbVCcGkC7tCGdgk3
 github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xAPP8dBsCoU0KuF8=
 github.com/opencontainers/selinux v1.10.0/go.mod h1:2i0OySw99QjzBBQByd1Gr9gSjvuho1lHsJxIJ3gGbJI=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20220328120438-d5e9b87cc9fd h1:KalG3f1hva84MvJ5MMt2xT4oxdxSW0JWnBhQAc58CBI=
-github.com/outblocks/outblocks-plugin-go v0.0.0-20220328120438-d5e9b87cc9fd/go.mod h1:znr11/nyPigEHfcIBs5DY9J8rOskp3rLkey+T0faJu0=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20220328165400-c0288fe91a69 h1:8Scu9PVxVSBOgVYJcck0tUQN37F5ysBbs/5XJoB5rRc=
+github.com/outblocks/outblocks-plugin-go v0.0.0-20220328165400-c0288fe91a69/go.mod h1:9zg3VuxJcO6XD+HuW1Vb5x/emBLnkGbWZ/XrIHCkJ1k=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=

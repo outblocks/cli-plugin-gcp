@@ -65,7 +65,7 @@ func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOpt
 
 	err := mapstructure.Decode(in, o)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding service app deploy options: %w", err)
 	}
 
 	err = defaults.Set(o)
@@ -290,13 +290,13 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		cloudSQLconnNames[i] = db.CloudSQL.ConnectionName
 	}
 
-	cmd := make([]fields.Field, len(o.Props.Container.Entrypoint.ShArray()))
-	for i, v := range o.Props.Container.Entrypoint.ShArray() {
+	cmd := make([]fields.Field, len(o.Props.Container.Entrypoint.ArrayOrShell()))
+	for i, v := range o.Props.Container.Entrypoint.ArrayOrShell() {
 		cmd[i] = fields.String(v)
 	}
 
-	args := make([]fields.Field, len(o.Props.Container.Command.ShArray()))
-	for i, v := range o.Props.Container.Command.ShArray() {
+	args := make([]fields.Field, len(o.Props.Container.Command.ArrayOrShell()))
+	for i, v := range o.Props.Container.Command.ArrayOrShell() {
 		args[i] = fields.String(v)
 	}
 

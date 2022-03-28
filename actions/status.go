@@ -36,7 +36,7 @@ func computeAppDeploymentState(app interface{}) *apiv1.DeploymentState {
 func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
 	var dns *apiv1.DNSState
 
-	switch depDeploy := dep.(type) { //nolint:gocritic
+	switch depDeploy := dep.(type) {
 	case *deploy.DatabaseDep:
 		if !depDeploy.CloudSQL.IsExisting() {
 			return nil
@@ -60,6 +60,20 @@ func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
 			InternalIp:     depDeploy.CloudSQL.PrivateIP.Current(),
 			ConnectionInfo: connInfo,
 			Properties:     props,
+		}
+
+	case *deploy.StorageDep:
+		if !depDeploy.Bucket.IsExisting() {
+			return nil
+		}
+
+		props := plugin_util.MustNewStruct(map[string]interface{}{
+			"name":     depDeploy.Bucket.Name.Current(),
+			"location": depDeploy.Bucket.Location.Current(),
+		})
+
+		dns = &apiv1.DNSState{
+			Properties: props,
 		}
 	}
 

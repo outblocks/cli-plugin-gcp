@@ -44,7 +44,7 @@ func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptio
 
 	err := mapstructure.Decode(in, o)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding static app deploy options: %w", err)
 	}
 
 	err = defaults.Set(o)
