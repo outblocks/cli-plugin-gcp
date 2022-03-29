@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.69](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.68...v0.1.69)
+
+> 2022-03-29
+
+### BUG FIXES
+
+[`fd8151a`](https://github.com/outblocks/cli-plugin-gcp/commit/fd8151a408cdaf8236f70646338200f6c54a356c) cloudsqluser update
+
+
 ## [v0.1.68](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.67...v0.1.68)
 
 > 2022-03-29
