@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.71](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.70...v0.1.71)
+
+> 2022-03-29
+
+### BUG FIXES
+
+[`1b6aa85`](https://github.com/outblocks/cli-plugin-gcp/commit/1b6aa85787edce1bd1b9c8a83e19333adf51ac4b) propagate recreate state tag, wait lock
+
+
 ## [v0.1.70](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.69...v0.1.70)
 
 > 2022-03-29
