@@ -1,5 +1,16 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.68](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.67...v0.1.68)
+
+> 2022-03-29
+
+### FEATURES
+
+[`a6ff06b`](https://github.com/outblocks/cli-plugin-gcp/commit/a6ff06bf2ff8adddc989da7651478dd5c68460bf) consistent url, fix gcs url
+[`005c8e7`](https://github.com/outblocks/cli-plugin-gcp/commit/005c8e7dc576b9f51ade3d7b6c609f138345d8d0) storage status
+[`043cb82`](https://github.com/outblocks/cli-plugin-gcp/commit/043cb82645a09b79920f17974bf6bd4765c9c313) support for cloud run commands+args, cloudsql proxy user easy sqlproxy
+
+
 ## [v0.1.67](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.66...v0.1.67)
 
 > 2022-03-24
