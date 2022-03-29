@@ -143,7 +143,7 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 
 	sort.Strings(lockfiles)
 
-	var first bool
+	first := true
 
 	locksAcquired, lockInfoFailed, err := p.acquireLocks(ctx, lockfiles, lockNamesMap, lockWait, b, func() error {
 		if first {

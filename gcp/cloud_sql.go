@@ -21,7 +21,7 @@ type CloudSQL struct {
 
 	PublicIP       fields.StringOutputField
 	PrivateIP      fields.StringOutputField
-	ConnectionName fields.StringOutputField `state:"static"`
+	ConnectionName fields.StringOutputField
 
 	Tier             fields.StringInputField `default:"db-f1-micro"`
 	AvailabilityZone fields.StringInputField `default:"ZONAL"`

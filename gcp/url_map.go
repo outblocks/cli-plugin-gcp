@@ -15,7 +15,7 @@ type URLMap struct {
 
 	Name       fields.StringInputField `state:"force_new"`
 	ProjectID  fields.StringInputField `state:"force_new"`
-	URLMapping fields.MapInputField
+	URLMapping fields.MapInputField    `state:"propagate_recreate"`
 	AppMapping fields.MapInputField
 
 	Fingerprint string `state:"-"`
@@ -175,7 +175,9 @@ const (
 	URLPathMatcherPathPrefixRewriteKey = "path_redirect"
 )
 
-func cleanupURLMapping(m map[string]interface{}) []*URLMapping {
+func (o *URLMap) cleanupURLMapping() []*URLMapping {
+	m := o.URLMapping.Wanted()
+
 	hmap := make(map[string][]*URLPathMatcher)
 
 	for k, v := range m {
@@ -239,7 +241,7 @@ func (o *URLMap) MakeURLMap() *compute.UrlMap {
 		Fingerprint: o.Fingerprint,
 	}
 
-	mapping := cleanupURLMapping(o.URLMapping.Wanted())
+	mapping := o.cleanupURLMapping()
 
 	for _, matcher := range mapping {
 		host := matcher.Host

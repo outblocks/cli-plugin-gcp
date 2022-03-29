@@ -23,7 +23,7 @@ type CloudRun struct {
 	Image     fields.StringInputField
 	IsPublic  fields.BoolInputField
 
-	URL           fields.StringOutputField `state:"static"`
+	URL           fields.StringOutputField
 	Ready         fields.BoolOutputField
 	StatusMessage fields.StringOutputField
 

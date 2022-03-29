@@ -14,7 +14,7 @@ type TargetHTTPSProxy struct {
 
 	Name            fields.StringInputField `state:"force_new"`
 	ProjectID       fields.StringInputField `state:"force_new"`
-	URLMap          fields.StringInputField
+	URLMap          fields.StringInputField `state:"propagate_recreate"`
 	SSLCertificates fields.ArrayInputField
 
 	Fingerprint string `state:"-"`
