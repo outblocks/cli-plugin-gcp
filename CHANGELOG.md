@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.70](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.69...v0.1.70)
+
+> 2022-03-29
+
+### BUG FIXES
+
+[`17b75a2`](https://github.com/outblocks/cli-plugin-gcp/commit/17b75a24c9dd45c8fa6834f39bc41fc02b9ee7e9) missing urlsuffix
+
+
 ## [v0.1.69](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.68...v0.1.69)
 
 > 2022-03-29
