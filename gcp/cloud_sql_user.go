@@ -134,8 +134,7 @@ func (o *CloudSQLUser) Update(ctx context.Context, meta interface{}) error {
 
 	op, err := cli.Users.Update(projectID, instance, &sqladmin.User{
 		Password: password,
-		Host:     host,
-	}).Name(name).Do()
+	}).Name(name).Host(host).Do()
 	if err != nil {
 		return err
 	}
