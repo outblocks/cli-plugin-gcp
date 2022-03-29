@@ -35,8 +35,8 @@ func (p *PlanAction) prepareStaticAppsDeploy(appPlans []*apiv1.AppPlan) (ret []*
 
 		vars := p.appEnvVars.ForApp(appDeploy.App)
 
-		vars["cloud_url"] = fmt.Sprintf("https://%s-%s.a.run.app/", appDeploy.ID(p.pluginCtx), p.cloudRunSettings.URLSuffix())
-		vars["private_url"] = fmt.Sprintf("http://%s/", appDeploy.ID(p.pluginCtx))
+		vars["cloud_url"] = fmt.Sprintf("https://%s-%s.a.run.app", appDeploy.ID(p.pluginCtx), p.cloudRunSettings.URLSuffix())
+		vars["private_url"] = fmt.Sprintf("http://%s", appDeploy.ID(p.pluginCtx))
 
 		ret[i] = appDeploy
 	}

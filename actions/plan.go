@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
@@ -375,17 +374,14 @@ func (p *PlanAction) save() error {
 
 		switch a := app.(type) {
 		case *deploy.ServiceApp:
-			state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
+			state.Dns.InternalUrl = fmt.Sprintf("http://%s", a.CloudRun.Name.Current())
 
 			if !a.Props.Private {
 				state.Dns.CloudUrl = a.CloudRun.URL.Current()
-				if state.Dns.CloudUrl != "" && !strings.HasSuffix(state.Dns.CloudUrl, "/") {
-					state.Dns.CloudUrl += "/"
-				}
 			}
 
 		case *deploy.StaticApp:
-			state.Dns.InternalUrl = fmt.Sprintf("http://%s/", a.CloudRun.Name.Current())
+			state.Dns.InternalUrl = fmt.Sprintf("http://%s", a.CloudRun.Name.Current())
 			state.Dns.CloudUrl = a.CloudRun.URL.Current()
 		}
 	}

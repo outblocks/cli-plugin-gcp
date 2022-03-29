@@ -132,7 +132,7 @@ func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) 
 	if dep, ok := p.storageDeps[need.Dependency]; ok {
 		vars := make(map[string]interface{})
 		vars["name"] = dep.Bucket.Name
-		vars["url"] = fields.Sprintf("https://storage.cloud.google.com/%s/", dep.Bucket.Name)
+		vars["url"] = fields.Sprintf("https://storage.googleapis.com/%s", dep.Bucket.Name)
 
 		return vars, nil
 	}
