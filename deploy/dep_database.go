@@ -196,9 +196,11 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 	}
 
 	if !o.Opts.DisableCloudSQLProxyUser {
-		users["cloudsqlproxy"] = &DatabaseDepOptionUser{
-			Hostname: "cloudsqlproxy~%",
+		if _, ok := users["cloudsqlproxy"]; !ok {
+			users["cloudsqlproxy"] = &DatabaseDepOptionUser{}
 		}
+
+		users["cloudsqlproxy"].Hostname = "cloudsqlproxy~%"
 	}
 
 	for u, p := range users {
