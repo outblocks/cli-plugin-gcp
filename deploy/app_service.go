@@ -30,6 +30,10 @@ type CloudRunSettings struct {
 }
 
 func (s *CloudRunSettings) URLSuffix() string {
+	if s == nil {
+		return "undefined-undefined"
+	}
+
 	return fmt.Sprintf("%s-%s", s.ProjectHash, s.RegionCode)
 }
 
