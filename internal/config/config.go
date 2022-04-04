@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
@@ -17,6 +18,11 @@ import (
 )
 
 func GoogleCredentials(ctx context.Context, scopes ...string) (*google.Credentials, error) {
+	const envVar = "GCLOUD_SERVICE_KEY"
+	if key := os.Getenv(envVar); key != "" {
+		return google.CredentialsFromJSON(ctx, []byte(key), scopes...)
+	}
+
 	return google.FindDefaultCredentials(ctx, scopes...)
 }
 
