@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.72](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.71...v0.1.72)
+
+> 2022-04-04
+
+### FEATURES
+
+[`ef8b8a5`](https://github.com/outblocks/cli-plugin-gcp/commit/ef8b8a5634e73195fb1ecde568344455c67b9beb) support for policies and postgres 14
+
+
 ## [v0.1.71](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.70...v0.1.71)
 
 > 2022-03-29
