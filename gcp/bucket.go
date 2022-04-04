@@ -16,10 +16,14 @@ import (
 type Bucket struct {
 	registry.ResourceBase
 
-	Name       fields.StringInputField `state:"force_new"`
-	Location   fields.StringInputField `state:"force_new"`
-	ProjectID  fields.StringInputField
-	Versioning fields.BoolInputField
+	Name                 fields.StringInputField `state:"force_new"`
+	Location             fields.StringInputField `state:"force_new"`
+	ProjectID            fields.StringInputField
+	Versioning           fields.BoolInputField
+	DeleteInDays         fields.IntInputField
+	ExpireVersionsInDays fields.IntInputField
+	MaxVersions          fields.IntInputField
+	Public               fields.BoolInputField
 }
 
 func (o *Bucket) ReferenceID() string {
@@ -38,7 +42,9 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	attrs, err := cli.Bucket(o.Name.Any()).Attrs(ctx)
+	b := cli.Bucket(o.Name.Any())
+
+	attrs, err := b.Attrs(ctx)
 	if err == storage.ErrBucketNotExist {
 		o.MarkAsNew()
 
@@ -57,6 +63,13 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	// Cannot check project ID, assume that it is in correct project ID always.
 	o.ProjectID.SetCurrent(o.ProjectID.Wanted())
 
+	policy, err := b.IAM().Policy(ctx)
+	if err != nil {
+		return fmt.Errorf("error fetching bucket policy: %w", err)
+	}
+
+	o.Public.SetCurrent(policy.HasRole("allUsers", "roles/storage.objectViewer"))
+
 	return nil
 }
 
@@ -68,9 +81,65 @@ func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
+	b := cli.Bucket(o.Name.Wanted())
 	attrs := &storage.BucketAttrs{Location: o.Location.Wanted(), VersioningEnabled: o.Versioning.Wanted()}
 
-	return cli.Bucket(o.Name.Wanted()).Create(ctx, o.ProjectID.Wanted(), attrs)
+	if o.ExpireVersionsInDays.Wanted() > 0 {
+		attrs.Lifecycle.Rules = append(attrs.Lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				DaysSinceNoncurrentTime: int64(o.ExpireVersionsInDays.Wanted()),
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	if o.DeleteInDays.Wanted() > 0 {
+		attrs.Lifecycle.Rules = append(attrs.Lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				AgeInDays: int64(o.DeleteInDays.Wanted()),
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	if o.MaxVersions.Wanted() > 0 {
+		attrs.Lifecycle.Rules = append(attrs.Lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				NumNewerVersions: int64(o.MaxVersions.Current()),
+				Liveness:         storage.Archived,
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	err = b.Create(ctx, o.ProjectID.Wanted(), attrs)
+	if err != nil {
+		return fmt.Errorf("error creating bucket: %w", err)
+	}
+
+	if !o.Public.Wanted() {
+		return nil
+	}
+
+	policy, err := b.IAM().Policy(ctx)
+	if err != nil {
+		return fmt.Errorf("error fetching bucket policy: %w", err)
+	}
+
+	policy.Add("allUsers", "roles/storage.objectViewer")
+
+	err = b.IAM().SetPolicy(ctx, policy)
+	if err != nil {
+		return fmt.Errorf("error setting bucket policy: %w", err)
+	}
+
+	return nil
 }
 
 func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
@@ -81,9 +150,73 @@ func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
+	b := cli.Bucket(o.Name.Wanted())
 	attrs := storage.BucketAttrsToUpdate{VersioningEnabled: o.Versioning.Wanted()}
 
-	_, err = cli.Bucket(o.Name.Wanted()).Update(ctx, attrs)
+	var lifecycle storage.Lifecycle
+
+	if o.ExpireVersionsInDays.Wanted() > 0 {
+		lifecycle.Rules = append(lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				DaysSinceNoncurrentTime: int64(o.ExpireVersionsInDays.Wanted()),
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	if o.DeleteInDays.Wanted() > 0 {
+		lifecycle.Rules = append(lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				AgeInDays: int64(o.DeleteInDays.Wanted()),
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	if o.MaxVersions.Wanted() > 0 {
+		lifecycle.Rules = append(lifecycle.Rules, storage.LifecycleRule{
+			Condition: storage.LifecycleCondition{
+				NumNewerVersions: int64(o.MaxVersions.Current()),
+				Liveness:         storage.Archived,
+			},
+			Action: storage.LifecycleAction{
+				Type: "Delete",
+			},
+		})
+	}
+
+	if len(lifecycle.Rules) > 0 {
+		attrs.Lifecycle = &lifecycle
+	}
+
+	_, err = b.Update(ctx, attrs)
+	if err != nil {
+		return fmt.Errorf("error updating bucket: %w", err)
+	}
+
+	if !o.Public.IsChanged() {
+		return nil
+	}
+
+	policy, err := b.IAM().Policy(ctx)
+	if err != nil {
+		return fmt.Errorf("error fetching bucket policy: %w", err)
+	}
+
+	if o.Public.Wanted() {
+		policy.Add("allUsers", "roles/storage.objectViewer")
+	} else {
+		policy.Remove("allUsers", "roles/storage.objectViewer")
+	}
+
+	err = b.IAM().SetPolicy(ctx, policy)
+	if err != nil {
+		return fmt.Errorf("error setting bucket policy: %w", err)
+	}
 
 	return err
 }

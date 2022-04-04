@@ -43,9 +43,13 @@ func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
 }
 
 type StorageDepOptions struct {
-	Name       string `mapstructure:"name"`
-	Versioning bool   `mapstructure:"versioning"`
-	Location   string `mapstructure:"location"`
+	Name               string `mapstructure:"name"`
+	Versioning         bool   `mapstructure:"versioning"`
+	Location           string `mapstructure:"location"`
+	DeleteInDays       int    `mapstructure:"delete_in_days"`
+	ExpireVersionsDays int    `mapstructure:"expire_versions_in_days"`
+	MaxVersions        int    `mapstructure:"max_versions"`
+	Public             bool   `mapstructure:"public"`
 }
 
 func NewStorageDepOptions(in map[string]interface{}, typ string) (*StorageDepOptions, error) {
@@ -69,10 +73,14 @@ func (o *StorageDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
-		Name:       fields.String(o.Opts.Name),
-		Location:   fields.String(location),
-		ProjectID:  fields.String(c.ProjectID),
-		Versioning: fields.Bool(o.Opts.Versioning),
+		Name:                 fields.String(o.Opts.Name),
+		Location:             fields.String(location),
+		ProjectID:            fields.String(c.ProjectID),
+		Versioning:           fields.Bool(o.Opts.Versioning),
+		DeleteInDays:         fields.Int(o.Opts.DeleteInDays),
+		ExpireVersionsInDays: fields.Int(o.Opts.ExpireVersionsDays),
+		MaxVersions:          fields.Int(o.Opts.MaxVersions),
+		Public:               fields.Bool(o.Opts.Public),
 	}
 
 	_, err := r.RegisterDependencyResource(o.Dep, "bucket", o.Bucket)
