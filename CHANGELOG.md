@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.73](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.72...v0.1.73)
+
+> 2022-04-04
+
+### FEATURES
+
+[`574fd8b`](https://github.com/outblocks/cli-plugin-gcp/commit/574fd8bfa79879c63c32b06d681c5eb7eb2bb8e9) add support for GCLOUD_SERVICE_KEY
+
+
 ## [v0.1.72](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.71...v0.1.72)
 
 > 2022-04-04
