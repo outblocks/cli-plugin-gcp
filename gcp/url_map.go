@@ -267,7 +267,9 @@ func (o *URLMap) MakeURLMap() *compute.UrlMap {
 			if pathMatcher.DefaultService == "" || (len(m.Paths) == 1 && m.Paths[0] == "/*") {
 				pathMatcher.DefaultService = m.ServiceID
 				pathMatcher.DefaultRouteAction = routeAction
+			}
 
+			if len(m.Paths) == 1 && m.Paths[0] == "/*" {
 				continue
 			}
 
