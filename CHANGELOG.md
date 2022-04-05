@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.76](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.75...v0.1.76)
+
+> 2022-04-05
+
+### BUG FIXES
+
+[`9efe49e`](https://github.com/outblocks/cli-plugin-gcp/commit/9efe49e20c3064278475c99c2cde33c0712c33e8) enable crm api on project
+
+
 ## [v0.1.75](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.74...v0.1.75)
 
 > 2022-04-05
