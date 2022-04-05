@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.75](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.74...v0.1.75)
+
+> 2022-04-05
+
+### BUG FIXES
+
+[`c2ebe72`](https://github.com/outblocks/cli-plugin-gcp/commit/c2ebe72245d7f7f90063a078fe0f18198f75e3bd) path matcher
+
+
 ## [v0.1.74](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.73...v0.1.74)
 
 > 2022-04-05
