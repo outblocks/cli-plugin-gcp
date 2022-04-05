@@ -72,7 +72,7 @@ func (c *PluginContext) StorageClient(ctx context.Context) (*storage.Client, err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating storage client: %w", err)
+		return nil, fmt.Errorf("error creating gcp storage client: %w", err)
 	}
 
 	return c.storageCli, err
@@ -89,7 +89,7 @@ func (c *PluginContext) GCPRunClient(ctx context.Context, region string) (*run.A
 
 		cli, err = NewGCPRunClient(ctx, c.GoogleCredentials(), region)
 		if err != nil {
-			return nil, fmt.Errorf("error creating run client: %w", err)
+			return nil, fmt.Errorf("error creating gcp run client: %w", err)
 		}
 	}
 
@@ -106,7 +106,7 @@ func (c *PluginContext) GCPComputeClient(ctx context.Context) (*compute.Service,
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating compute client: %w", err)
+		return nil, fmt.Errorf("error creating gcp compute client: %w", err)
 	}
 
 	return c.computeCli, err
@@ -120,7 +120,7 @@ func (c *PluginContext) GCPServiceUsageClient(ctx context.Context) (*serviceusag
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating service usage client: %w", err)
+		return nil, fmt.Errorf("error creating gcp service usage client: %w", err)
 	}
 
 	return c.serviceusageCli, err
@@ -134,7 +134,7 @@ func (c *PluginContext) GCPSQLAdminClient(ctx context.Context) (*sqladmin.Servic
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating sqladmin client: %w", err)
+		return nil, fmt.Errorf("error creating gcp sqladmin client: %w", err)
 	}
 
 	return c.sqlAdminCli, err

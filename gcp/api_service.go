@@ -34,7 +34,7 @@ func (o *APIService) Read(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	id := fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, name)
+	id := fmt.Sprintf("projects/%d/services/%s", o.ProjectNumber.Any(), name)
 
 	res, err := apiCli.Services.Get(id).Do()
 	if err != nil {
@@ -60,7 +60,7 @@ func (o *APIService) Create(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	id := fmt.Sprintf("projects/%d/services/%s", pctx.Settings().ProjectNumber, o.Name.Wanted())
+	id := fmt.Sprintf("projects/%d/services/%s", o.ProjectNumber.Wanted(), o.Name.Wanted())
 
 	op, err := cli.Services.Enable(id, &serviceusage.EnableServiceRequest{}).Do()
 	if err != nil {

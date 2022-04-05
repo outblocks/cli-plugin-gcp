@@ -101,7 +101,7 @@ func (p *Plugin) ProjectInit(ctx context.Context, r *apiv1.ProjectInitRequest) (
 
 	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 	if err != nil {
-		return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
+		return nil, fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
 	if v, ok := r.Args.Fields["project"]; ok && v.GetStringValue() != "" {

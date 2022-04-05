@@ -173,7 +173,10 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	// Process API registry.
 	for _, api := range gcp.APISRequired {
-		s := &gcp.APIService{Name: fields.String(api)}
+		s := &gcp.APIService{
+			ProjectNumber: fields.Int(int(p.pluginCtx.Settings().ProjectNumber)),
+			Name:          fields.String(api),
+		}
 
 		_, err := p.apiRegistry.RegisterPluginResource(deploy.APIName, api, s)
 		if err != nil {

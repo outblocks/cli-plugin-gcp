@@ -49,7 +49,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 
 	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 	if err != nil {
-		return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
+		return nil, fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
 	proj, err := crmCli.Projects.Get(p.Settings.ProjectID).Do()
@@ -58,7 +58,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 
 		crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 		if err != nil {
-			return nil, fmt.Errorf("error creating cloud resource manager client: %w", err)
+			return nil, fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 		}
 
 		res, err := p.hostCli.PromptConfirmation(ctx, &apiv1.PromptConfirmationRequest{
