@@ -292,6 +292,17 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 			return err
 		}
 
+		if r.SkipCreate {
+			return stream.Send(&apiv1.GetStateResponse{
+				Response: &apiv1.GetStateResponse_State_{
+					State: &apiv1.GetStateResponse_State{
+						StateCreated: false,
+						StateName:    bucket,
+					},
+				},
+			})
+		}
+
 		created = true
 	}
 

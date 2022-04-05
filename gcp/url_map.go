@@ -258,25 +258,23 @@ func (o *URLMap) MakeURLMap() *compute.UrlMap {
 		urlMap.PathMatchers = append(urlMap.PathMatchers, pathMatcher)
 
 		for _, m := range matcher.PathMatcher {
-			if len(m.Paths) == 1 && m.Paths[0] == "/*" {
+			routeAction := &compute.HttpRouteAction{
+				UrlRewrite: &compute.UrlRewrite{
+					PathPrefixRewrite: m.PathPrefixRewrite,
+				},
+			}
+
+			if pathMatcher.DefaultService == "" || (len(m.Paths) == 1 && m.Paths[0] == "/*") {
 				pathMatcher.DefaultService = m.ServiceID
-				pathMatcher.DefaultRouteAction = &compute.HttpRouteAction{
-					UrlRewrite: &compute.UrlRewrite{
-						PathPrefixRewrite: m.PathPrefixRewrite,
-					},
-				}
+				pathMatcher.DefaultRouteAction = routeAction
 
 				continue
 			}
 
 			pathMatcher.PathRules = append(pathMatcher.PathRules, &compute.PathRule{
-				Paths:   m.Paths,
-				Service: m.ServiceID,
-				RouteAction: &compute.HttpRouteAction{
-					UrlRewrite: &compute.UrlRewrite{
-						PathPrefixRewrite: m.PathPrefixRewrite,
-					},
-				},
+				Paths:       m.Paths,
+				Service:     m.ServiceID,
+				RouteAction: routeAction,
 			})
 		}
 	}

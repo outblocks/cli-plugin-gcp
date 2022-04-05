@@ -14,6 +14,10 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
+var errCredentialsMissing = fmt.Errorf(`error getting google credentials!
+Supported credentials through environment variables: 'GOOGLE_APPLICATION_CREDENTIALS' pointing to a file or 'GCLOUD_SERVICE_KEY' with file contents.
+Alternatively install 'gcloud' and authorize with your account: 'gcloud application-default login'`)
+
 func (p *Plugin) Init(ctx context.Context, e env.Enver, l log.Logger, cli apiv1.HostServiceClient) error {
 	p.env = e
 	p.hostCli = cli
@@ -38,7 +42,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return nil, fmt.Errorf("error getting google credentials, did you install and set up 'gcloud'?")
+		return nil, errCredentialsMissing
 	}
 
 	p.gcred = cred
