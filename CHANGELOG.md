@@ -1,5 +1,14 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.74](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.73...v0.1.74)
+
+> 2022-04-05
+
+### BUG FIXES
+
+[`2f83662`](https://github.com/outblocks/cli-plugin-gcp/commit/2f836625f8190c40153fadb0b4653d612f61f214) default service and proper error
+
+
 ## [v0.1.73](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.72...v0.1.73)
 
 > 2022-04-04
