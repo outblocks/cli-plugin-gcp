@@ -17,9 +17,10 @@ import (
 	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
+const CredentialsEnvVar = "GCLOUD_SERVICE_KEY"
+
 func GoogleCredentials(ctx context.Context, scopes ...string) (*google.Credentials, error) {
-	const envVar = "GCLOUD_SERVICE_KEY"
-	if key := os.Getenv(envVar); key != "" {
+	if key := os.Getenv(CredentialsEnvVar); key != "" {
 		return google.CredentialsFromJSON(ctx, []byte(key), scopes...)
 	}
 

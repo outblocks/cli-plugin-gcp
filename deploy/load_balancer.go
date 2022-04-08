@@ -152,6 +152,52 @@ func (o *LoadBalancer) processDomain(pctx *config.PluginContext, r *registry.Reg
 	return nil
 }
 
+func (o *LoadBalancer) planHTTP(pctx *config.PluginContext, r *registry.Registry, addr *gcp.Address, c *LoadBalancerArgs) error {
+	// URL Map.
+	mhttp := &gcp.URLMap{
+		Name:          gcp.IDField(pctx.Env(), c.Name+"-http-0"),
+		ProjectID:     fields.String(c.ProjectID),
+		HTTPSRedirect: fields.Bool(true),
+	}
+
+	_, err := r.RegisterPluginResource(LoadBalancerName, c.Name+"-http-0", mhttp)
+	if err != nil {
+		return err
+	}
+
+	// Target HTTP Proxy.
+	proxy := &gcp.TargetHTTPProxy{
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-0"),
+		ProjectID: fields.String(c.ProjectID),
+		URLMap:    mhttp.RefField(),
+	}
+
+	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-0", proxy)
+	if err != nil {
+		return err
+	}
+
+	o.TargetHTTPProxies = append(o.TargetHTTPProxies, proxy)
+
+	// HTTP forwarding Rules.
+	rule := &gcp.ForwardingRule{
+		Name:      gcp.IDField(pctx.Env(), c.Name+"-http-0"),
+		ProjectID: fields.String(c.ProjectID),
+		IPAddress: addr.IP.Input(),
+		Target:    proxy.RefField(),
+		PortRange: fields.String("80-80"),
+	}
+
+	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-http-0", rule)
+	if err != nil {
+		return err
+	}
+
+	o.ForwardingRules = append(o.ForwardingRules, rule)
+
+	return nil
+}
+
 func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, domainMatch *types.DomainInfoMatcher, c *LoadBalancerArgs) error {
 	staticApps := make([]*StaticApp, 0, len(static))
 	serviceApps := make([]*ServiceApp, 0, len(service))
@@ -220,21 +266,26 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		}
 	}
 
+	err = o.planHTTP(pctx, r, addr, c)
+	if err != nil {
+		return err
+	}
+
 	// URL Map.
-	m := &gcp.URLMap{
-		Name:       gcp.IDField(pctx.Env(), c.Name+"-0"),
+	mhttps := &gcp.URLMap{
+		Name:       gcp.IDField(pctx.Env(), c.Name+"-https-0"),
 		ProjectID:  fields.String(c.ProjectID),
 		URLMapping: fields.Map(o.urlMap),
 		AppMapping: fields.Map(o.appMap),
 	}
 
-	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-0", m)
+	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-https-0", mhttps)
 	if err != nil {
 		return err
 	}
 
 	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name, &CacheInvalidate{
-		URLMapName:  m.Name,
+		URLMapName:  mhttps.Name,
 		ProjectID:   fields.String(c.ProjectID),
 		StaticApps:  staticApps,
 		ServiceApps: serviceApps,
@@ -243,21 +294,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 		return err
 	}
 
-	o.URLMaps = append(o.URLMaps, m)
-
-	// Target HTTP Proxy.
-	proxy := &gcp.TargetHTTPProxy{
-		Name:      gcp.IDField(pctx.Env(), c.Name+"-0"),
-		ProjectID: fields.String(c.ProjectID),
-		URLMap:    m.RefField(),
-	}
-
-	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-0", proxy)
-	if err != nil {
-		return err
-	}
-
-	o.TargetHTTPProxies = append(o.TargetHTTPProxies, proxy)
+	o.URLMaps = append(o.URLMaps, mhttps)
 
 	// Target HTTPS Proxy.
 	var certs []fields.Field
@@ -272,7 +309,7 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	sproxy := &gcp.TargetHTTPSProxy{
 		Name:            gcp.IDField(pctx.Env(), c.Name+"-0"),
 		ProjectID:       fields.String(c.ProjectID),
-		URLMap:          m.RefField(),
+		URLMap:          mhttps.RefField(),
 		SSLCertificates: fields.Array(certs),
 	}
 
@@ -283,24 +320,8 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 
 	o.TargetHTTPSProxies = append(o.TargetHTTPSProxies, sproxy)
 
-	// HTTP forwarding Rules.
-	rule := &gcp.ForwardingRule{
-		Name:      gcp.IDField(pctx.Env(), c.Name+"-http-0"),
-		ProjectID: fields.String(c.ProjectID),
-		IPAddress: addr.IP.Input(),
-		Target:    proxy.RefField(),
-		PortRange: fields.String("80-80"),
-	}
-
-	_, err = r.RegisterPluginResource(LoadBalancerName, c.Name+"-http-0", rule)
-	if err != nil {
-		return err
-	}
-
-	o.ForwardingRules = append(o.ForwardingRules, rule)
-
 	// HTTPS forwarding rule.
-	rule = &gcp.ForwardingRule{
+	rule := &gcp.ForwardingRule{
 		Name:      gcp.IDField(pctx.Env(), c.Name+"-https-0"),
 		ProjectID: fields.String(c.ProjectID),
 		IPAddress: addr.IP.Input(),

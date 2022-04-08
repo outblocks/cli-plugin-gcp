@@ -54,7 +54,6 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 				}
 
 				lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
-
 				g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 				if len(lockfiles) > i {
@@ -64,7 +63,11 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 
 						g.Go(func() error {
 							lockInfo, owner, createdAt, err := checkLock(ctx, lockObject)
-							if err != nil && err != storage.ErrObjectNotExist {
+							if err == storage.ErrObjectNotExist {
+								return nil
+							}
+
+							if err != nil {
 								return err
 							}
 

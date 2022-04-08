@@ -13,10 +13,11 @@ import (
 type URLMap struct {
 	registry.ResourceBase
 
-	Name       fields.StringInputField `state:"force_new"`
-	ProjectID  fields.StringInputField `state:"force_new"`
-	URLMapping fields.MapInputField    `state:"propagate_recreate"`
-	AppMapping fields.MapInputField
+	Name          fields.StringInputField `state:"force_new"`
+	ProjectID     fields.StringInputField `state:"force_new"`
+	URLMapping    fields.MapInputField    `state:"hard_link"`
+	AppMapping    fields.MapInputField
+	HTTPSRedirect fields.BoolInputField
 
 	Fingerprint string `state:"-"`
 }
@@ -239,6 +240,15 @@ func (o *URLMap) MakeURLMap() *compute.UrlMap {
 	urlMap := &compute.UrlMap{
 		Name:        name,
 		Fingerprint: o.Fingerprint,
+	}
+
+	if o.HTTPSRedirect.Wanted() {
+		urlMap.DefaultUrlRedirect = &compute.HttpRedirectAction{
+			HttpsRedirect:        true,
+			RedirectResponseCode: "MOVED_PERMANENTLY_DEFAULT",
+		}
+
+		return urlMap
 	}
 
 	mapping := o.cleanupURLMapping()

@@ -7,6 +7,7 @@ import (
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 type StorageDep struct {
@@ -27,7 +28,8 @@ type StorageDepNeed struct{}
 
 func NewStorageDepNeed(in map[string]interface{}) (*StorageDepNeed, error) {
 	o := &StorageDepNeed{}
-	return o, mapstructure.Decode(in, o)
+
+	return o, plugin_util.MapstructureJSONDecode(in, o)
 }
 
 func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
@@ -43,19 +45,19 @@ func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
 }
 
 type StorageDepOptions struct {
-	Name               string `mapstructure:"name"`
-	Versioning         bool   `mapstructure:"versioning"`
-	Location           string `mapstructure:"location"`
-	DeleteInDays       int    `mapstructure:"delete_in_days"`
-	ExpireVersionsDays int    `mapstructure:"expire_versions_in_days"`
-	MaxVersions        int    `mapstructure:"max_versions"`
-	Public             bool   `mapstructure:"public"`
+	Name               string `json:"name"`
+	Versioning         bool   `json:"versioning"`
+	Location           string `json:"location"`
+	DeleteInDays       int    `json:"delete_in_days"`
+	ExpireVersionsDays int    `json:"expire_versions_in_days"`
+	MaxVersions        int    `json:"max_versions"`
+	Public             bool   `json:"public"`
 }
 
 func NewStorageDepOptions(in map[string]interface{}, typ string) (*StorageDepOptions, error) {
 	o := &StorageDepOptions{}
 
-	err := mapstructure.Decode(in, o)
+	err := mapstructure.WeakDecode(in, o)
 	if err != nil {
 		return nil, err
 	}

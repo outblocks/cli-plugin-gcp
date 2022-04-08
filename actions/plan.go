@@ -147,7 +147,7 @@ func (p *PlanAction) planDependencies(appPlans []*apiv1.AppPlan, depPlans []*api
 		p.depIDMap[plan.State.Dependency.Id] = plan.State.Dependency
 
 		switch plan.State.Dependency.Type {
-		case deploy.DepTypePostgresql, deploy.DepTypeMySQL:
+		case deploy.DepTypePostgreSQL, deploy.DepTypeMySQL:
 			databasePlan = append(databasePlan, plan)
 		case deploy.DepTypeStorage:
 			storagePlan = append(storagePlan, plan)

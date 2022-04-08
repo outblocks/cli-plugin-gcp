@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"github.com/creasty/defaults"
-	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/resources"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
 type DatabaseDepUser struct {
@@ -40,15 +40,16 @@ type DatabaseDepArgs struct {
 }
 
 type DatabaseDepNeed struct {
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	Hostname string `mapstructure:"hostname"`
-	Database string `mapstructure:"database"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Hostname string `json:"hostname"`
+	Database string `json:"database"`
 }
 
 func NewDatabaseDepNeed(in map[string]interface{}) (*DatabaseDepNeed, error) {
 	o := &DatabaseDepNeed{}
-	return o, mapstructure.Decode(in, o)
+
+	return o, plugin_util.MapstructureJSONDecode(in, o)
 }
 
 func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
@@ -66,24 +67,24 @@ func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
 }
 
 type DatabaseDepOptionUser struct {
-	Password string `mapstructure:"password"`
-	Hostname string `mapstructure:"hostname"`
+	Password string `json:"password"`
+	Hostname string `json:"hostname"`
 }
 
 type DatabaseDepOptions struct {
-	Version                  string                            `mapstructure:"version"`
-	HA                       bool                              `mapstructure:"high_availability"`
-	Tier                     string                            `mapstructure:"tier" default:"db-f1-micro"`
-	Flags                    map[string]string                 `mapstructure:"flags"`
-	Users                    map[string]*DatabaseDepOptionUser `mapstructure:"users"`
-	DisableCloudSQLProxyUser bool                              `mapstructure:"disable_cloudsql_proxy_user"`
-	DatabaseVersion          string                            `mapstructure:"-"`
+	Version                  string                            `json:"version"`
+	HA                       bool                              `json:"high_availability"`
+	Tier                     string                            `json:"tier" default:"db-f1-micro"`
+	Flags                    map[string]string                 `json:"flags"`
+	Users                    map[string]*DatabaseDepOptionUser `json:"users"`
+	DisableCloudSQLProxyUser bool                              `json:"disable_cloudsql_proxy_user"`
+	DatabaseVersion          string                            `json:"-"`
 }
 
 func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
 	o := &DatabaseDepOptions{}
 
-	err := mapstructure.Decode(in, o)
+	err := plugin_util.MapstructureJSONDecode(in, o)
 	if err != nil {
 		return nil, err
 	}

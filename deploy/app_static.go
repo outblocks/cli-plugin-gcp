@@ -7,7 +7,6 @@ import (
 
 	"github.com/creasty/defaults"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
@@ -35,14 +34,14 @@ type StaticAppArgs struct {
 }
 
 type StaticAppDeployOptions struct {
-	MinScale int `mapstructure:"min_scale" default:"0"`
-	MaxScale int `mapstructure:"max_scale" default:"100"`
+	MinScale int `json:"min_scale" default:"0"`
+	MaxScale int `json:"max_scale" default:"100"`
 }
 
 func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptions, error) {
 	o := &StaticAppDeployOptions{}
 
-	err := mapstructure.Decode(in, o)
+	err := plugin_util.MapstructureJSONDecode(in, o)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding static app deploy options: %w", err)
 	}
@@ -155,9 +154,8 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	}
 
 	envVars := map[string]fields.Field{
-		"GCS_BUCKET":  o.Bucket.Name,
-		"FORCE_HTTPS": fields.String("1"),
-		"ROUTING":     fields.String(o.Props.Routing),
+		"GCS_BUCKET": o.Bucket.Name,
+		"ROUTING":    fields.String(o.Props.Routing),
 	}
 
 	if o.Props.RemoveTrailingSlash != nil {

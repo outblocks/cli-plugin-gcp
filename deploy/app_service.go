@@ -13,13 +13,13 @@ import (
 
 	"github.com/creasty/defaults"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"github.com/outblocks/outblocks-plugin-go/util/command"
 )
 
@@ -57,17 +57,17 @@ type ServiceAppArgs struct {
 }
 
 type ServiceAppDeployOptions struct {
-	SkipRunsd   bool    `mapstructure:"skip_runsd"`
-	CPULimit    float64 `mapstructure:"cpu_limit" default:"1"`
-	MemoryLimit int     `mapstructure:"memory_limit" default:"256"`
-	MinScale    int     `mapstructure:"min_scale" default:"0"`
-	MaxScale    int     `mapstructure:"max_scale" default:"100"`
+	SkipRunsd   bool    `json:"skip_runsd"`
+	CPULimit    float64 `json:"cpu_limit" default:"1"`
+	MemoryLimit int     `json:"memory_limit" default:"256"`
+	MinScale    int     `json:"min_scale" default:"0"`
+	MaxScale    int     `json:"max_scale" default:"100"`
 }
 
 func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOptions, error) {
 	o := &ServiceAppDeployOptions{}
 
-	err := mapstructure.Decode(in, o)
+	err := plugin_util.MapstructureJSONDecode(in, o)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding service app deploy options: %w", err)
 	}

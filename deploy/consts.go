@@ -8,7 +8,7 @@ const (
 	AppTypeStatic  = "static"
 	AppTypeService = "service"
 
-	DepTypePostgresql = "postgresql"
+	DepTypePostgreSQL = "postgresql"
 	DepTypeMySQL      = "mysql"
 	DepTypeStorage    = "storage"
 )

@@ -15,7 +15,7 @@ type ForwardingRule struct {
 	Name      fields.StringInputField `state:"force_new"`
 	ProjectID fields.StringInputField `state:"force_new"`
 	IPAddress fields.StringInputField `state:"force_new"`
-	Target    fields.StringInputField `state:"propagate_recreate"`
+	Target    fields.StringInputField `state:"hard_link"`
 	PortRange fields.StringInputField
 
 	Fingerprint string `state:"-"`

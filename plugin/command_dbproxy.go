@@ -13,6 +13,7 @@ import (
 
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
+	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/cli-plugin-gcp/internal/fileutil"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -44,7 +45,7 @@ func filterDepByName(name string, depStates map[string]*apiv1.DependencyState) (
 	for _, d := range depStates {
 		switch d.Dependency.Type {
 		case deploy.DepTypeMySQL:
-		case deploy.DepTypePostgresql:
+		case deploy.DepTypePostgreSQL:
 		default:
 			continue
 		}
@@ -79,6 +80,26 @@ func filterDepByName(name string, depStates map[string]*apiv1.DependencyState) (
 	return dep, nil
 }
 
+func (p *Plugin) prepareTempFileCredentials() (f *os.File, err error) {
+	key := os.Getenv(config.CredentialsEnvVar)
+	if key == "" {
+		return nil, nil
+	}
+
+	f, err = os.CreateTemp("", "auth-")
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err = f.WriteString(key); err != nil {
+		return nil, err
+	}
+
+	err = f.Close()
+
+	return f, err
+}
+
 func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
 	name := flags["name"].(string)
@@ -95,7 +116,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	switch dep.Dependency.Type {
 	case deploy.DepTypeMySQL:
 		defaultPort = 3306
-	case deploy.DepTypePostgresql:
+	case deploy.DepTypePostgreSQL:
 		defaultPort = 5432
 	default:
 		return fmt.Errorf("dependency '%s' is of unsupported type: %s", name, dep.Dependency.Type)
@@ -145,8 +166,22 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		p.log.Infof("You can connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
 	}
 
+	args := []string{"-instances", fmt.Sprintf("%s=tcp:%d", connectionName, port)}
+
+	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
+	f, err := p.prepareTempFileCredentials()
+	if err != nil {
+		return err
+	}
+
+	if f != nil {
+		defer os.Remove(f.Name())
+
+		args = append(args, "-credential_file", f.Name())
+	}
+
 	cmd, err := command.New(
-		exec.Command(binPath, "-instances", fmt.Sprintf("%s=tcp:%d", connectionName, port)),
+		exec.Command(binPath, args...),
 	)
 	if err != nil {
 		return err
