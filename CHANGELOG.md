@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.78](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.77...v0.1.78)
+
+> 2022-04-12
+
+### FEATURES
+
+[`23845d2`](https://github.com/outblocks/cli-plugin-gcp/commit/23845d22725b6e39aa122ba6ada8e51d122bd367) dbproxy with user, insights for cloud sql, error logging
+
 ## [v0.1.77](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.76...v0.1.77)
 
 > 2022-04-08
