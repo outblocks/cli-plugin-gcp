@@ -260,6 +260,10 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		return err
 	}
 
+	if !o.Image.IsExisting() && o.Build.LocalDockerHash == "" {
+		return fmt.Errorf("image for app '%s' is missing", o.App.Name)
+	}
+
 	// Expand env vars.
 	cloudRunHash := "unknown"
 

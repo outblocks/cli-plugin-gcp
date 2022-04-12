@@ -21,6 +21,10 @@ commands:
         short: "n"
         type: string
         usage: Dependency name to proxy
+      - name: user
+        short: "u"
+        type: string
+        usage: Database user to use
       - name: port
         short: "p"
         type: integer

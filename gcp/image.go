@@ -147,6 +147,18 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 		return fmt.Errorf("error getting google credentials token: %w", err)
 	}
 
+	authConfig := dockertypes.AuthConfig{
+		Username: "oauth2accesstoken",
+		Password: token.AccessToken,
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return err
+	}
+
+	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+
 	cli, err := pctx.DockerClient()
 	if err != nil {
 		return err
@@ -159,7 +171,9 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 
 	if o.Pull {
 		// Pull image from source.
-		reader, err := cli.ImagePull(ctx, o.Source.Wanted(), dockertypes.ImagePullOptions{})
+		reader, err := cli.ImagePull(ctx, o.Source.Wanted(), dockertypes.ImagePullOptions{
+			RegistryAuth: authStr,
+		})
 		if err != nil {
 			return err
 		}
@@ -189,18 +203,6 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	authConfig := dockertypes.AuthConfig{
-		Username: "oauth2accesstoken",
-		Password: token.AccessToken,
-	}
-
-	encodedJSON, err := json.Marshal(authConfig)
-	if err != nil {
-		return err
-	}
-
-	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
 
 	reader, err := cli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
 		RegistryAuth: authStr,

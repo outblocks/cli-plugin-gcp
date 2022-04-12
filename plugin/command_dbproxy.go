@@ -100,10 +100,34 @@ func (p *Plugin) prepareTempFileCredentials() (f *os.File, err error) {
 	return f, err
 }
 
+func (p *Plugin) extractUser(ctx context.Context, registryData []byte, dep *apiv1.Dependency, user string) (*gcp.CloudSQLUser, error) {
+	if user == "" {
+		return nil, nil
+	}
+
+	reg := registry.NewRegistry(nil)
+
+	err := gcp.RegisterTypes(reg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = reg.Load(ctx, registryData)
+	if err == nil {
+		u := &gcp.CloudSQLUser{}
+
+		if reg.GetDependencyResource(dep, user, u) {
+			return u, err
+		}
+	}
+
+	return nil, nil
+}
+
 func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
 	name := flags["name"].(string)
-
+	user := flags["user"].(string)
 	port := int(flags["port"].(float64))
 
 	var defaultPort int
@@ -148,22 +172,16 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		return err
 	}
 
-	var cloudsqluser *gcp.CloudSQLUser
-
-	err = reg.Load(ctx, req.PluginState.Registry)
-	if err == nil {
-		user := &gcp.CloudSQLUser{}
-
-		if reg.GetDependencyResource(dep.Dependency, "cloudsqlproxy", user) {
-			cloudsqluser = user
-		}
+	cloudsqluser, err := p.extractUser(ctx, req.PluginState.Registry, dep.Dependency, user)
+	if err != nil {
+		return err
 	}
 
 	if cloudsqluser != nil {
 		p.log.Infof("You can connect to it using user='%s', password='%s', host='127.0.0.1:%d'.\n",
 			cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), port)
 	} else {
-		p.log.Infof("You can connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
+		p.log.Infof("You can specify --user to use already created user or connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
 	}
 
 	args := []string{"-instances", fmt.Sprintf("%s=tcp:%d", connectionName, port)}

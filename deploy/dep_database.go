@@ -72,13 +72,12 @@ type DatabaseDepOptionUser struct {
 }
 
 type DatabaseDepOptions struct {
-	Version                  string                            `json:"version"`
-	HA                       bool                              `json:"high_availability"`
-	Tier                     string                            `json:"tier" default:"db-f1-micro"`
-	Flags                    map[string]string                 `json:"flags"`
-	Users                    map[string]*DatabaseDepOptionUser `json:"users"`
-	DisableCloudSQLProxyUser bool                              `json:"disable_cloudsql_proxy_user"`
-	DatabaseVersion          string                            `json:"-"`
+	Version         string                            `json:"version"`
+	HA              bool                              `json:"high_availability"`
+	Tier            string                            `json:"tier" default:"db-f1-micro"`
+	Flags           map[string]string                 `json:"flags"`
+	Users           map[string]*DatabaseDepOptionUser `json:"users"`
+	DatabaseVersion string                            `json:"-"`
 }
 
 func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
@@ -196,14 +195,6 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 		if err != nil {
 			return err
 		}
-	}
-
-	if !o.Opts.DisableCloudSQLProxyUser {
-		if _, ok := users["cloudsqlproxy"]; !ok {
-			users["cloudsqlproxy"] = &DatabaseDepOptionUser{}
-		}
-
-		users["cloudsqlproxy"].Hostname = "cloudsqlproxy~%"
 	}
 
 	for u, p := range users {

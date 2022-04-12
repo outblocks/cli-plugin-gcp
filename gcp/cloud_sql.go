@@ -35,6 +35,10 @@ type CloudSQL struct {
 		StartTime fields.StringInputField `default:"05:00"`
 	}
 
+	InsightsConfiguration struct {
+		Enabled fields.BoolInputField `default:"true"`
+	}
+
 	DatabaseFlags fields.MapInputField
 
 	SettingsVersion int64 `state:"-"`
@@ -83,6 +87,7 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	o.IPConfiguration.Ipv4Enabled.SetCurrent(inst.Settings.IpConfiguration.Ipv4Enabled)
 	o.BackupConfiguration.Enabled.SetCurrent(inst.Settings.BackupConfiguration.Enabled)
 	o.BackupConfiguration.StartTime.SetCurrent(inst.Settings.BackupConfiguration.StartTime)
+	o.InsightsConfiguration.Enabled.SetCurrent(inst.Settings.InsightsConfig.QueryInsightsEnabled)
 
 	flags := make(map[string]interface{}, len(inst.Settings.DatabaseFlags))
 	for _, v := range inst.Settings.DatabaseFlags {
@@ -211,6 +216,9 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 				Enabled:   o.BackupConfiguration.Enabled.Wanted(),
 				StartTime: o.BackupConfiguration.StartTime.Wanted(),
 				Location:  o.Region.Wanted()[:2],
+			},
+			InsightsConfig: &sqladmin.InsightsConfig{
+				QueryInsightsEnabled: o.InsightsConfiguration.Enabled.Wanted(),
 			},
 			DatabaseFlags:   flags,
 			SettingsVersion: o.SettingsVersion,
