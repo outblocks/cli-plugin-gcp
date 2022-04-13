@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.80](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.79...v0.1.80)
+
+> 2022-04-13
+
+### FEATURES
+
+[`4e9b9e0`](https://github.com/outblocks/cli-plugin-gcp/commit/4e9b9e0c2c9e59f9b172e2ddf2148533ca062af7) cors support, fix for tagged image, silent mode for dbproxy
+
 ## [v0.1.79](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.78...v0.1.79)
 
 > 2022-04-13
