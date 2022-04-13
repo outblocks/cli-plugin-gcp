@@ -25,6 +25,10 @@ commands:
         short: "u"
         type: string
         usage: Database user to use
+      - name: bind-addr
+        short: "a"
+        type: string
+        usage: IP address to bind at (e.g. 0.0.0.0 to bind on all interfaces, defaults to loopback - 127.0.0.1)
       - name: port
         short: "p"
         type: integer

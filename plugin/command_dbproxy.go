@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -124,11 +125,67 @@ func (p *Plugin) extractUser(ctx context.Context, registryData []byte, dep *apiv
 	return nil, nil
 }
 
+func (p *Plugin) runProxy(ctx context.Context, cmd *command.Cmd) error {
+	prefix := "proxy:"
+
+	// Process stdout/stderr.
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		s := bufio.NewScanner(cmd.Stdout())
+
+		for s.Scan() {
+			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+		}
+
+		wg.Done()
+	}()
+
+	go func() {
+		s := bufio.NewScanner(cmd.Stderr())
+
+		for s.Scan() {
+			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+		}
+
+		wg.Done()
+	}()
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error running cloud sql proxy: %w", err)
+	}
+
+	select {
+	case <-ctx.Done():
+		_ = cmd.Stop(cloudSQProxyCleanupTimeout)
+	case <-cmd.WaitChannel():
+	}
+
+	wg.Wait()
+
+	err = cmd.Wait()
+	if err != nil {
+		return fmt.Errorf("error running cloud sql proxy: %w", err)
+	}
+
+	return nil
+}
+
 func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
 	name := flags["name"].(string)
 	user := flags["user"].(string)
 	port := int(flags["port"].(float64))
+	bindAddr := flags["bind-addr"].(string)
+
+	if bindAddr == "" {
+		bindAddr = "127.0.0.1"
+	} else if ip := net.ParseIP(bindAddr); ip == nil || ip.To4() == nil {
+		return fmt.Errorf("invalid bind-addr specified, must be a valid ipv4 address")
+	}
 
 	var defaultPort int
 
@@ -163,7 +220,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]
 
-	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on local port: %d.\n", dep.Dependency.Name, connectionName, port)
+	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on %s:%d.\n", dep.Dependency.Name, connectionName, bindAddr, port)
 
 	reg := registry.NewRegistry(nil)
 
@@ -178,13 +235,13 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	}
 
 	if cloudsqluser != nil {
-		p.log.Infof("You can connect to it using user='%s', password='%s', host='127.0.0.1:%d'.\n",
-			cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), port)
+		p.log.Infof("You can connect to it using user='%s', password='%s', host='%s:%d'.\n",
+			cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), bindAddr, port)
 	} else {
-		p.log.Infof("You can specify --user to use already created user or connect to it using credentials you defined and host='127.0.0.1:%d'.\n", port)
+		p.log.Infof("You can specify --user to use already created user or connect to it using credentials you defined and host='%s:%d'.\n", bindAddr, port)
 	}
 
-	args := []string{"-instances", fmt.Sprintf("%s=tcp:%d", connectionName, port)}
+	args := []string{"-instances", fmt.Sprintf("%s=tcp:%s:%d", connectionName, bindAddr, port)}
 
 	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
 	f, err := p.prepareTempFileCredentials()
@@ -205,50 +262,5 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		return err
 	}
 
-	prefix := "proxy:"
-
-	// Process stdout/stderr.
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	go func() {
-		s := bufio.NewScanner(cmd.Stdout())
-
-		for s.Scan() {
-			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
-		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		s := bufio.NewScanner(cmd.Stderr())
-
-		for s.Scan() {
-			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
-		}
-
-		wg.Done()
-	}()
-
-	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("error running cloud sql proxy: %w", err)
-	}
-
-	select {
-	case <-ctx.Done():
-		_ = cmd.Stop(cloudSQProxyCleanupTimeout)
-	case <-cmd.WaitChannel():
-	}
-
-	wg.Wait()
-
-	err = cmd.Wait()
-	if err != nil {
-		return fmt.Errorf("error running cloud sql proxy: %w", err)
-	}
-
-	return nil
+	return p.runProxy(ctx, cmd)
 }
