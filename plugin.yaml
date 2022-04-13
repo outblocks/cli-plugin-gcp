@@ -29,6 +29,12 @@ commands:
         short: "a"
         type: string
         usage: IP address to bind at (e.g. 0.0.0.0 to bind on all interfaces, defaults to loopback - 127.0.0.1)
+        default: "127.0.0.1"
+      - name: silent
+        short: "s"
+        type: boolean
+        usage: Skip printing any output, just run the proxy
+        default: "false"
       - name: port
         short: "p"
         type: integer

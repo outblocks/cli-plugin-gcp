@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,38 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/util/errgroup"
 	"google.golang.org/api/iterator"
 )
+
+func BucketCORS(in []storage.CORS) fields.ArrayInputField {
+	ret := make([]fields.Field, len(in))
+
+	for i, v := range in {
+		out, err := json.Marshal(v)
+		if err != nil {
+			panic(err)
+		}
+
+		ret[i] = fields.String(string(out))
+	}
+
+	return fields.Array(ret)
+}
+
+func bucketCORSFromInterface(arr []interface{}) []storage.CORS {
+	ret := make([]storage.CORS, 0, len(arr))
+
+	for _, v := range arr {
+		o := &storage.CORS{}
+
+		err := json.Unmarshal([]byte(v.(string)), o)
+		if err != nil {
+			continue
+		}
+
+		ret = append(ret, *o)
+	}
+
+	return ret
+}
 
 type Bucket struct {
 	registry.ResourceBase
@@ -24,6 +57,8 @@ type Bucket struct {
 	ExpireVersionsInDays fields.IntInputField
 	MaxVersions          fields.IntInputField
 	Public               fields.BoolInputField
+
+	CORS fields.ArrayInputField
 }
 
 func (o *Bucket) ReferenceID() string {
@@ -63,6 +98,8 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	// Cannot check project ID, assume that it is in correct project ID always.
 	o.ProjectID.SetCurrent(o.ProjectID.Wanted())
 
+	o.CORS.SetCurrent(BucketCORS(attrs.CORS).Wanted())
+
 	policy, err := b.IAM().Policy(ctx)
 	if err != nil {
 		return fmt.Errorf("error fetching bucket policy: %w", err)
@@ -82,7 +119,11 @@ func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 	}
 
 	b := cli.Bucket(o.Name.Wanted())
-	attrs := &storage.BucketAttrs{Location: o.Location.Wanted(), VersioningEnabled: o.Versioning.Wanted()}
+	attrs := &storage.BucketAttrs{
+		Location:          o.Location.Wanted(),
+		VersioningEnabled: o.Versioning.Wanted(),
+		CORS:              bucketCORSFromInterface(o.CORS.Wanted()),
+	}
 
 	if o.ExpireVersionsInDays.Wanted() > 0 {
 		attrs.Lifecycle.Rules = append(attrs.Lifecycle.Rules, storage.LifecycleRule{
@@ -151,7 +192,10 @@ func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 	}
 
 	b := cli.Bucket(o.Name.Wanted())
-	attrs := storage.BucketAttrsToUpdate{VersioningEnabled: o.Versioning.Wanted()}
+	attrs := storage.BucketAttrsToUpdate{
+		VersioningEnabled: o.Versioning.Wanted(),
+		CORS:              bucketCORSFromInterface(o.CORS.Wanted()),
+	}
 
 	var lifecycle storage.Lifecycle
 

@@ -125,33 +125,35 @@ func (p *Plugin) extractUser(ctx context.Context, registryData []byte, dep *apiv
 	return nil, nil
 }
 
-func (p *Plugin) runProxy(ctx context.Context, cmd *command.Cmd) error {
+func (p *Plugin) runProxy(ctx context.Context, cmd *command.Cmd, silent bool) error {
 	prefix := "proxy:"
 
 	// Process stdout/stderr.
 	var wg sync.WaitGroup
 
-	wg.Add(2)
+	if !silent {
+		wg.Add(2)
 
-	go func() {
-		s := bufio.NewScanner(cmd.Stdout())
+		go func() {
+			s := bufio.NewScanner(cmd.Stdout())
 
-		for s.Scan() {
-			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
-		}
+			for s.Scan() {
+				p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+			}
 
-		wg.Done()
-	}()
+			wg.Done()
+		}()
 
-	go func() {
-		s := bufio.NewScanner(cmd.Stderr())
+		go func() {
+			s := bufio.NewScanner(cmd.Stderr())
 
-		for s.Scan() {
-			p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
-		}
+			for s.Scan() {
+				p.log.Printf("%s %s\n", prefix, plugin_util.StripAnsiControl(s.Text()))
+			}
 
-		wg.Done()
-	}()
+			wg.Done()
+		}()
+	}
 
 	err := cmd.Run()
 	if err != nil {
@@ -180,10 +182,9 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	user := flags["user"].(string)
 	port := int(flags["port"].(float64))
 	bindAddr := flags["bind-addr"].(string)
+	silent := flags["silent"].(bool)
 
-	if bindAddr == "" {
-		bindAddr = "127.0.0.1"
-	} else if ip := net.ParseIP(bindAddr); ip == nil || ip.To4() == nil {
+	if ip := net.ParseIP(bindAddr); ip == nil || ip.To4() == nil {
 		return fmt.Errorf("invalid bind-addr specified, must be a valid ipv4 address")
 	}
 
@@ -220,7 +221,9 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	connectionName := dep.Dns.Properties.AsMap()["connection_name"]
 
-	p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on %s:%d.\n", dep.Dependency.Name, connectionName, bindAddr, port)
+	if !silent {
+		p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on %s:%d.\n", dep.Dependency.Name, connectionName, bindAddr, port)
+	}
 
 	reg := registry.NewRegistry(nil)
 
@@ -234,11 +237,13 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		return err
 	}
 
-	if cloudsqluser != nil {
-		p.log.Infof("You can connect to it using user='%s', password='%s', host='%s:%d'.\n",
-			cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), bindAddr, port)
-	} else {
-		p.log.Infof("You can specify --user to use already created user or connect to it using credentials you defined and host='%s:%d'.\n", bindAddr, port)
+	if !silent {
+		if cloudsqluser != nil {
+			p.log.Infof("You can connect to it using user='%s', password='%s', host='%s:%d'.\n",
+				cloudsqluser.Name.Any(), cloudsqluser.Password.Any(), bindAddr, port)
+		} else {
+			p.log.Infof("You can specify --user to use already created user or connect to it using credentials you defined and host='%s:%d'.\n", bindAddr, port)
+		}
 	}
 
 	args := []string{"-instances", fmt.Sprintf("%s=tcp:%s:%d", connectionName, bindAddr, port)}
@@ -262,5 +267,5 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		return err
 	}
 
-	return p.runProxy(ctx, cmd)
+	return p.runProxy(ctx, cmd, silent)
 }

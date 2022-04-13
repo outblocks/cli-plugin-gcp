@@ -118,7 +118,7 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 		return err
 	}
 
-	runsdImage := o.Build.LocalDockerImage + "/runsd"
+	runsdImage := strings.SplitN(o.Build.LocalDockerImage, ":", 2)[0] + "/runsd"
 
 	var runsdImageSHA string
 
