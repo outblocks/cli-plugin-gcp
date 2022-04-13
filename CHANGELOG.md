@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.79](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.78...v0.1.79)
+
+> 2022-04-13
+
+### FEATURES
+
+[`faa6752`](https://github.com/outblocks/cli-plugin-gcp/commit/faa6752618be8c9b7b977be387def3b01d59272d) add bind addr to gcp proxy
+
 ## [v0.1.78](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.77...v0.1.78)
 
 > 2022-04-12
