@@ -29,7 +29,8 @@ type Image struct {
 	Source     fields.StringInputField
 	SourceHash fields.StringInputField
 
-	Pull bool `state:"-"`
+	Pull     bool `state:"-"`
+	PullAuth bool `state:"-"`
 }
 
 func (o *Image) ReferenceID() string {
@@ -171,9 +172,12 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 
 	if o.Pull {
 		// Pull image from source.
-		reader, err := cli.ImagePull(ctx, o.Source.Wanted(), dockertypes.ImagePullOptions{
-			RegistryAuth: authStr,
-		})
+		pullOpts := dockertypes.ImagePullOptions{}
+		if o.PullAuth {
+			pullOpts.RegistryAuth = authStr
+		}
+
+		reader, err := cli.ImagePull(ctx, o.Source.Wanted(), pullOpts)
 		if err != nil {
 			return err
 		}

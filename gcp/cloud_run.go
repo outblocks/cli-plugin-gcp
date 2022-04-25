@@ -36,7 +36,9 @@ type CloudRun struct {
 	TimeoutSeconds       fields.IntInputField    `default:"300"`
 	Port                 fields.IntInputField    `default:"80"`
 	EnvVars              fields.MapInputField
-	Ingress              fields.StringInputField `default:"all"` // options: internal-and-cloud-load-balancing
+	Ingress              fields.StringInputField `default:"all"`  // options: internal-and-cloud-load-balancing
+	ExecutionEnvironment fields.StringInputField `default:"gen1"` // options: gen2
+	CPUThrottling        fields.BoolInputField   `default:"true"`
 }
 
 func (o *CloudRun) ReferenceID() string {
@@ -88,6 +90,8 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 		o.MaxScale.UnsetCurrent()
 		o.EnvVars.UnsetCurrent()
 		o.Ingress.UnsetCurrent()
+		o.CPUThrottling.UnsetCurrent()
+		o.ExecutionEnvironment.UnsetCurrent()
 
 		return nil
 	}
@@ -122,6 +126,8 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 	o.TimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.TimeoutSeconds))
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
 	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
+	o.CPUThrottling.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == "true")
+	o.ExecutionEnvironment.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/execution-environment"])
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
 	o.MinScale.SetCurrent(v)
@@ -253,6 +259,11 @@ func (o *CloudRun) makeRunService() *run.Service {
 		argsStr[i] = v.(string)
 	}
 
+	cpuThrottling := "false"
+	if o.CPUThrottling.Wanted() {
+		cpuThrottling = "true"
+	}
+
 	svc := &run.Service{
 		ApiVersion: "serving.knative.dev/v1",
 		Kind:       "Service",
@@ -266,10 +277,12 @@ func (o *CloudRun) makeRunService() *run.Service {
 			Template: &run.RevisionTemplate{
 				Metadata: &run.ObjectMeta{
 					Annotations: map[string]string{
-						"run.googleapis.com/client-name":        "outblocks",
-						"autoscaling.knative.dev/minScale":      strconv.Itoa(o.MinScale.Wanted()),
-						"autoscaling.knative.dev/maxScale":      strconv.Itoa(o.MaxScale.Wanted()),
-						"run.googleapis.com/cloudsql-instances": o.CloudSQLInstances.Wanted(),
+						"run.googleapis.com/client-name":           "outblocks",
+						"autoscaling.knative.dev/minScale":         strconv.Itoa(o.MinScale.Wanted()),
+						"autoscaling.knative.dev/maxScale":         strconv.Itoa(o.MaxScale.Wanted()),
+						"run.googleapis.com/cloudsql-instances":    o.CloudSQLInstances.Wanted(),
+						"run.googleapis.com/execution-environment": o.ExecutionEnvironment.Wanted(),
+						"run.googleapis.com/cpu-throttling":        cpuThrottling,
 					},
 				},
 				Spec: &run.RevisionSpec{

@@ -57,11 +57,13 @@ type ServiceAppArgs struct {
 }
 
 type ServiceAppDeployOptions struct {
-	SkipRunsd   bool    `json:"skip_runsd"`
-	CPULimit    float64 `json:"cpu_limit" default:"1"`
-	MemoryLimit int     `json:"memory_limit" default:"256"`
-	MinScale    int     `json:"min_scale" default:"0"`
-	MaxScale    int     `json:"max_scale" default:"100"`
+	SkipRunsd            bool    `json:"skip_runsd"`
+	CPULimit             float64 `json:"cpu_limit" default:"1"`
+	MemoryLimit          int     `json:"memory_limit" default:"256"`
+	MinScale             int     `json:"min_scale" default:"0"`
+	MaxScale             int     `json:"max_scale" default:"100"`
+	CPUThrottling        bool    `json:"cpu_throttling" default:"true"`
+	ExecutionEnvironment string  `json:"execution_environment" default:"gen1"`
 }
 
 func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOptions, error) {
@@ -319,11 +321,13 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		IsPublic:  fields.Bool(!o.Props.Private),
 		EnvVars:   fields.Map(envVars),
 
-		CloudSQLInstances: fields.Sprintf(strings.Join(cloudSQLconnFmt, ","), cloudSQLconnNames...),
-		MinScale:          fields.Int(o.DeployOpts.MinScale),
-		MaxScale:          fields.Int(o.DeployOpts.MaxScale),
-		MemoryLimit:       fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
-		CPULimit:          fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
+		CloudSQLInstances:    fields.Sprintf(strings.Join(cloudSQLconnFmt, ","), cloudSQLconnNames...),
+		MinScale:             fields.Int(o.DeployOpts.MinScale),
+		MaxScale:             fields.Int(o.DeployOpts.MaxScale),
+		MemoryLimit:          fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
+		CPULimit:             fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
+		ExecutionEnvironment: fields.String(o.DeployOpts.ExecutionEnvironment),
+		CPUThrottling:        fields.Bool(o.DeployOpts.CPUThrottling),
 	}
 
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
