@@ -1,5 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.81](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.80...v0.1.81)
+
+> 2022-04-25
+
+### BUG FIXES
+
+[`33187b6`](https://github.com/outblocks/cli-plugin-gcp/commit/33187b64cdce0487696bea09b8c4b7d2f7dd3464) update plugins to fix edge case hard link issue
+
+### FEATURES
+
+[`2e07ac9`](https://github.com/outblocks/cli-plugin-gcp/commit/2e07ac981c0e0453f2e015c37296fa3869b56c4a) cloud run env, throttling support, image pull auth
+
 ## [v0.1.80](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.79...v0.1.80)
 
 > 2022-04-13
