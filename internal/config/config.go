@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	logging "cloud.google.com/go/logging/apiv2"
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
 	"golang.org/x/oauth2/google"
@@ -27,7 +28,7 @@ func GoogleCredentials(ctx context.Context, scopes ...string) (*google.Credentia
 	return google.FindDefaultCredentials(ctx, scopes...)
 }
 
-func NewStorageClient(ctx context.Context, cred *google.Credentials) (*storage.Client, error) {
+func NewGCPStorageClient(ctx context.Context, cred *google.Credentials) (*storage.Client, error) {
 	return storage.NewClient(ctx, option.WithCredentials(cred))
 }
 
@@ -57,4 +58,8 @@ func NewGCPSQLAdminClient(ctx context.Context, cred *google.Credentials) (*sqlad
 
 func NewGCPIAMClient(ctx context.Context, cred *google.Credentials) (*iam.Service, error) {
 	return iam.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPLoggingClient(ctx context.Context, cred *google.Credentials) (*logging.Client, error) {
+	return logging.NewClient(ctx, option.WithCredentials(cred))
 }

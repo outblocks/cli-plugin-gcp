@@ -101,19 +101,16 @@ func (p *Plugin) prepareTempFileCredentials() (f *os.File, err error) {
 	return f, err
 }
 
-func (p *Plugin) extractUser(ctx context.Context, registryData []byte, dep *apiv1.Dependency, user string) (*gcp.CloudSQLUser, error) {
+func (p *Plugin) extractUser(registryData []byte, dep *apiv1.Dependency, user string) (*gcp.CloudSQLUser, error) {
 	if user == "" {
 		return nil, nil
 	}
 
 	reg := registry.NewRegistry(nil)
 
-	err := gcp.RegisterTypes(reg)
-	if err != nil {
-		return nil, err
-	}
+	gcp.RegisterTypes(reg)
 
-	err = reg.Load(ctx, registryData)
+	err := reg.Load(registryData)
 	if err == nil {
 		u := &gcp.CloudSQLUser{}
 
@@ -225,14 +222,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on %s:%d.\n", dep.Dependency.Name, connectionName, bindAddr, port)
 	}
 
-	reg := registry.NewRegistry(nil)
-
-	err = gcp.RegisterTypes(reg)
-	if err != nil {
-		return err
-	}
-
-	cloudsqluser, err := p.extractUser(ctx, req.PluginState.Registry, dep.Dependency, user)
+	cloudsqluser, err := p.extractUser(req.PluginState.Registry, dep.Dependency, user)
 	if err != nil {
 		return err
 	}

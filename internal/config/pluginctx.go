@@ -68,7 +68,7 @@ func (c *PluginContext) StorageClient(ctx context.Context) (*storage.Client, err
 	var err error
 
 	c.once.storageCli.Do(func() {
-		c.storageCli, err = NewStorageClient(ctx, c.GoogleCredentials())
+		c.storageCli, err = NewGCPStorageClient(ctx, c.GoogleCredentials())
 	})
 
 	if err != nil {

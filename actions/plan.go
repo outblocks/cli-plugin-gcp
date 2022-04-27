@@ -49,10 +49,7 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 		state = types.NewPluginState()
 	}
 
-	err := gcp.RegisterTypes(reg)
-	if err != nil {
-		return nil, err
-	}
+	gcp.RegisterTypes(reg)
 
 	return &PlanAction{
 		pluginCtx: pctx,
@@ -191,7 +188,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 	apiReg := p.State.Other["api_registry"]
 
 	// Skip Read to avoid being rate limited. And it shouldn't really be necessary to recheck it.
-	err := p.apiRegistry.Load(ctx, apiReg)
+	err := p.apiRegistry.Load(apiReg)
 	if err != nil {
 		return err
 	}
@@ -228,7 +225,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, apply bool) error {
 	reg := p.State.Registry
 
-	err := p.registry.Load(ctx, reg)
+	err := p.registry.Load(reg)
 	if err != nil {
 		return err
 	}

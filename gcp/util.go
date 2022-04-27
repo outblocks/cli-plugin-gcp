@@ -40,15 +40,10 @@ var Types = []registry.Resource{
 	(*URLMap)(nil),
 }
 
-func RegisterTypes(reg *registry.Registry) error {
+func RegisterTypes(reg *registry.Registry) {
 	for _, t := range Types {
-		err := reg.RegisterType(t)
-		if err != nil {
-			return err
-		}
+		reg.RegisterType(t)
 	}
-
-	return nil
 }
 
 func GenericID(id string, suffixes ...string) string {

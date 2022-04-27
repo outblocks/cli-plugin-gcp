@@ -31,4 +31,5 @@ var (
 	_ plugin.StatePluginHandler   = (*Plugin)(nil)
 	_ plugin.DeployPluginHandler  = (*Plugin)(nil)
 	_ plugin.CommandPluginHandler = (*Plugin)(nil)
+	_ plugin.LogsPluginHandler    = (*Plugin)(nil)
 )
