@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.82](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.81...v0.1.82)
+
+> 2022-04-27
+
+### FEATURES
+
+[`f5ce314`](https://github.com/outblocks/cli-plugin-gcp/commit/f5ce31441e94d657665210061fd166ecfae3e81b) logging support
+
 ## [v0.1.81](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.80...v0.1.81)
 
 > 2022-04-25
