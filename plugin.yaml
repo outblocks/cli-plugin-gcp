@@ -39,6 +39,105 @@ commands:
         short: "p"
         type: integer
         usage: Port to listen at (defaults to 5432 for postgresql, 3306 for mysql)
+
+  dbdump:
+    short: Dump database to local file
+    long: >
+      Create a backup of CloudSQL database. All additional args will be passed to pg_dump/mysqldump.
+      For postgres creates custom format backup by default (applicable for pg_restore).
+    input:
+      - dependency_states
+      - plugin_state
+    flags:
+      - name: name
+        short: "n"
+        type: string
+        usage: Dependency name to dump
+      - name: user
+        short: "u"
+        type: string
+        usage: Database user to use
+        required: true
+      - name: database
+        short: "d"
+        type: string
+        usage: Database name to use
+        required: true
+      - name: file
+        short: "o"
+        type: string
+        usage: Output file
+        required: true
+      - name: tables
+        short: "t"
+        type: stringarray
+        usage: Only include these tables
+      - name: exclude-tables
+        short: "T"
+        type: stringarray
+        usage: Exclude these tables
+      - name: verbose
+        type: bool
+        usage: Verbose output
+      - name: override
+        type: bool
+        usage: >
+          Override all default command params
+          (for pg_dump: '--format=custom --clean --no-owner',
+          for mysqldump: '--single-transaction --compress --routines'),
+          use only params from positional arguments
+
+  dbrestore:
+    short: Restore database from local file
+    long: >
+      Restore backup of CloudSQL database. For postgres custom format uses pg_restore, for postgres plaintext uses psql.
+      If applicable, all additional args will be passed to pg_restore/psql/mysql.
+    input:
+      - dependency_states
+      - plugin_state
+    flags:
+      - name: name
+        short: "n"
+        type: string
+        usage: Dependency name to restore
+      - name: user
+        short: "u"
+        type: string
+        usage: Database user to use
+        required: true
+      - name: database
+        short: "d"
+        type: string
+        usage: Database name to use
+        required: true
+      - name: file
+        short: "i"
+        type: string
+        usage: Backup file to restore
+        required: true
+      - name: tables
+        short: "t"
+        type: stringarray
+        usage: Only include these tables (only applicable to postgres custom format backup)
+      - name: exclude-tables
+        short: "T"
+        type: stringarray
+        usage: Exclude these tables (only applicable to postgres custom format backup)
+      - name: verbose
+        short: "v"
+        type: bool
+        usage: Verbose output
+      - name: pg-psql
+        type: bool
+        usage: >
+          Use psql instead of pg_restore
+          (only applicable to postgres database and required when feeding plaintext format instead of default one)
+      - name: override
+        type: bool
+        usage: >
+          Override all default command params (for pg_restore/psql: '--single-transaction'),
+          use only params from positional arguments
+
   create-service-account:
     short: Create a service account
     long: Create a GCP service account with access to current project to use e.g. in CI
@@ -47,6 +146,7 @@ commands:
         short: "n"
         type: string
         usage: Name of service account (defaults to 'outblocks-ci')
+
 state_types:
   - gcp
 supports:

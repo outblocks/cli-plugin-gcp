@@ -15,6 +15,10 @@ func (p *Plugin) Command(ctx context.Context, req *apiv1.CommandRequest) (*apiv1
 		err = p.DBProxy(ctx, req)
 	case "create-service-account":
 		err = p.CreateServiceAccount(ctx, req)
+	case "dbdump":
+		err = p.DBDump(ctx, req)
+	case "dbrestore":
+		err = p.DBRestore(ctx, req)
 	default:
 		return nil, fmt.Errorf("unknown command: %s", req.Command)
 	}

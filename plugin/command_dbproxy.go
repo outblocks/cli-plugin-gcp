@@ -101,7 +101,7 @@ func (p *Plugin) prepareTempFileCredentials() (f *os.File, err error) {
 	return f, err
 }
 
-func (p *Plugin) extractUser(registryData []byte, dep *apiv1.Dependency, user string) (*gcp.CloudSQLUser, error) {
+func (p *Plugin) extractCloudSQLUser(registryData []byte, dep *apiv1.Dependency, user string) (*gcp.CloudSQLUser, error) {
 	if user == "" {
 		return nil, nil
 	}
@@ -122,7 +122,7 @@ func (p *Plugin) extractUser(registryData []byte, dep *apiv1.Dependency, user st
 	return nil, nil
 }
 
-func (p *Plugin) runProxy(ctx context.Context, cmd *command.Cmd, silent bool) error {
+func (p *Plugin) execProxyCommand(ctx context.Context, cmd *command.Cmd, silent bool) error {
 	prefix := "proxy:"
 
 	// Process stdout/stderr.
@@ -167,42 +167,15 @@ func (p *Plugin) runProxy(ctx context.Context, cmd *command.Cmd, silent bool) er
 
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("error running cloud sql proxy: %w", err)
+		return fmt.Errorf("error stopping cloud sql proxy: %w", err)
 	}
 
 	return nil
 }
 
-func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
-	flags := req.Args.Flags.AsMap()
-	name := flags["name"].(string)
-	user := flags["user"].(string)
-	port := int(flags["port"].(float64))
-	bindAddr := flags["bind-addr"].(string)
-	silent := flags["silent"].(bool)
-
+func (p *Plugin) prepareDBProxyCommand(ctx context.Context, dep *apiv1.DependencyState, cloudsqluser *gcp.CloudSQLUser, port int, bindAddr string, silent bool) (*command.Cmd, error) {
 	if ip := net.ParseIP(bindAddr); ip == nil || ip.To4() == nil {
-		return fmt.Errorf("invalid bind-addr specified, must be a valid ipv4 address")
-	}
-
-	var defaultPort int
-
-	dep, err := filterDepByName(name, req.DependencyStates)
-	if err != nil {
-		return err
-	}
-
-	switch dep.Dependency.Type {
-	case deploy.DepTypeMySQL:
-		defaultPort = 3306
-	case deploy.DepTypePostgreSQL:
-		defaultPort = 5432
-	default:
-		return fmt.Errorf("dependency '%s' is of unsupported type: %s", name, dep.Dependency.Type)
-	}
-
-	if port == 0 {
-		port = defaultPort
+		return nil, fmt.Errorf("invalid bind-addr specified, must be a valid ipv4 address")
 	}
 
 	binPath := filepath.Join(p.env.PluginProjectCacheDir(), "cloudsqlproxy", fmt.Sprintf("cloud_sql_proxy_%s", gcp.CloudSQLVersion))
@@ -212,7 +185,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 		err := downloadCloudSQLProxy(ctx, binPath)
 		if err != nil {
-			return fmt.Errorf("downloading cloud proxy binary error: %w", err)
+			return nil, fmt.Errorf("downloading cloud proxy binary error: %w", err)
 		}
 	}
 
@@ -220,11 +193,6 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 
 	if !silent {
 		p.log.Infof("Creating proxy to dependency: %s, connectionName: %s on %s:%d.\n", dep.Dependency.Name, connectionName, bindAddr, port)
-	}
-
-	cloudsqluser, err := p.extractUser(req.PluginState.Registry, dep.Dependency, user)
-	if err != nil {
-		return err
 	}
 
 	if !silent {
@@ -241,7 +209,7 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
 	f, err := p.prepareTempFileCredentials()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if f != nil {
@@ -254,8 +222,58 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		exec.Command(binPath, args...),
 	)
 	if err != nil {
+		return cmd, err
+	}
+
+	return cmd, nil
+}
+
+func (p *Plugin) databaseDefaultPort(dep *apiv1.DependencyState, port int) (int, error) {
+	var defaultPort int
+
+	switch dep.Dependency.Type {
+	case deploy.DepTypeMySQL:
+		defaultPort = 3306
+	case deploy.DepTypePostgreSQL:
+		defaultPort = 5432
+	default:
+		return 0, fmt.Errorf("dependency '%s' is of unsupported type: %s", dep.Dependency.Name, dep.Dependency.Type)
+	}
+
+	if port == 0 {
+		port = defaultPort
+	}
+
+	return port, nil
+}
+
+func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
+	flags := req.Args.Flags.AsMap()
+	name := flags["name"].(string)
+	user := flags["user"].(string)
+	port := int(flags["port"].(float64))
+	bindAddr := flags["bind-addr"].(string)
+	silent := flags["silent"].(bool)
+
+	dep, err := filterDepByName(name, req.DependencyStates)
+	if err != nil {
 		return err
 	}
 
-	return p.runProxy(ctx, cmd, silent)
+	cloudsqluser, err := p.extractCloudSQLUser(req.PluginState.Registry, dep.Dependency, user)
+	if err != nil {
+		return err
+	}
+
+	port, err = p.databaseDefaultPort(dep, port)
+	if err != nil {
+		return err
+	}
+
+	cmd, err := p.prepareDBProxyCommand(ctx, dep, cloudsqluser, port, bindAddr, silent)
+	if err != nil {
+		return err
+	}
+
+	return p.execProxyCommand(ctx, cmd, silent)
 }

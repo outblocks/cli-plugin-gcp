@@ -197,6 +197,10 @@ ENTRYPOINT ["%s"]
 		var stderr []byte
 
 		go func() {
+			_, _ = io.ReadAll(cmd.Stdout())
+		}()
+
+		go func() {
 			stderr, _ = io.ReadAll(cmd.Stderr())
 
 			close(done)
