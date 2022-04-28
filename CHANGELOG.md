@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.83](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.82...v0.1.83)
+
+> 2022-04-28
+
+### FEATURES
+
+[`63345e0`](https://github.com/outblocks/cli-plugin-gcp/commit/63345e0dd18398c79a6c870abe815ec5deae320a) initial gcp-dbdump and gcp-dbrestore support
+
 ## [v0.1.82](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.81...v0.1.82)
 
 > 2022-04-27
