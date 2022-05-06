@@ -6,6 +6,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	"github.com/outblocks/outblocks-plugin-go/types"
 )
 
 func (p *PlanAction) planDatabaseDepDeploy(depPlan *apiv1.DependencyPlan, needs map[*apiv1.App]*apiv1.AppNeed) (*deploy.DatabaseDep, error) {
@@ -16,10 +17,10 @@ func (p *PlanAction) planDatabaseDepDeploy(depPlan *apiv1.DependencyPlan, needs 
 
 	pctx := p.pluginCtx
 
-	depNeeds := make(map[*apiv1.App]*deploy.DatabaseDepNeed, len(needs))
+	depNeeds := make(map[*apiv1.App]*types.DatabaseDepNeed, len(needs))
 
 	for app, n := range needs {
-		need, err := deploy.NewDatabaseDepNeed(n.Properties.AsMap())
+		need, err := types.NewDatabaseDepNeed(n.Properties.AsMap())
 		if err != nil {
 			return nil, err
 		}

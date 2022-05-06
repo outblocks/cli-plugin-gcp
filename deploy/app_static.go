@@ -5,7 +5,6 @@ import (
 	"mime"
 	"path/filepath"
 
-	"github.com/creasty/defaults"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -34,8 +33,7 @@ type StaticAppArgs struct {
 }
 
 type StaticAppDeployOptions struct {
-	MinScale int `json:"min_scale" default:"0"`
-	MaxScale int `json:"max_scale" default:"100"`
+	types.StaticAppDeployOptions
 }
 
 func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptions, error) {
@@ -46,9 +44,9 @@ func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptio
 		return nil, fmt.Errorf("error decoding static app deploy options: %w", err)
 	}
 
-	err = defaults.Set(o)
-	if err != nil {
-		return nil, err
+	// Manual defaults.
+	if o.MaxScale == 0 {
+		o.MaxScale = 100
 	}
 
 	return o, validation.ValidateStruct(o,

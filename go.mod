@@ -9,8 +9,7 @@ require (
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.8.0
-	github.com/mitchellh/mapstructure v1.4.3
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20220428150459-262b053acc7f
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20220506131329-3cfd8d6b9c61
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
 	google.golang.org/api v0.70.0
 	google.golang.org/genproto v0.0.0-20220314164441-57ef72a4c106
@@ -34,6 +33,7 @@ require (
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

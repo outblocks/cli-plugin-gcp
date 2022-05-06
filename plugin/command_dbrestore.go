@@ -109,6 +109,10 @@ func (p *Plugin) DBRestore(ctx context.Context, req *apiv1.CommandRequest) error
 		return err
 	}
 
+	if cloudsqluser == nil {
+		return fmt.Errorf("user '%s' not found in database", user)
+	}
+
 	opts, err := deploy.NewDatabaseDepOptions(dep.Dependency.Properties.AsMap(), dep.Dependency.Type)
 	if err != nil {
 		return err

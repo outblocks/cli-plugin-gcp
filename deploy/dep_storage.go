@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/mitchellh/mapstructure"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
@@ -17,7 +17,7 @@ type StorageDep struct {
 	Bucket *gcp.Bucket
 
 	Dep   *apiv1.Dependency
-	Opts  *StorageDepOptions
+	Opts  *types.StorageDepOptions
 	Needs map[*apiv1.App]*StorageDepNeed
 }
 
@@ -36,7 +36,7 @@ func NewStorageDepNeed(in map[string]interface{}) (*StorageDepNeed, error) {
 }
 
 func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
-	opts, err := NewStorageDepOptions(dep.Properties.AsMap(), dep.Type)
+	opts, err := types.NewStorageDepOptions(dep.Properties.AsMap())
 	if err != nil {
 		return nil, err
 	}
@@ -45,34 +45,6 @@ func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
 		Dep:  dep,
 		Opts: opts,
 	}, nil
-}
-
-type StorageDepOptions struct {
-	Name               string `json:"name"`
-	Versioning         bool   `json:"versioning"`
-	Location           string `json:"location"`
-	DeleteInDays       int    `json:"delete_in_days"`
-	ExpireVersionsDays int    `json:"expire_versions_in_days"`
-	MaxVersions        int    `json:"max_versions"`
-	Public             bool   `json:"public"`
-
-	CORS []struct {
-		Origins         []string `json:"origin"`
-		Methods         []string `json:"method"`
-		ResponseHeaders []string `json:"response_header"`
-		MaxAgeInSeconds int      `json:"max_age_in_seconds"`
-	} `json:"cors"`
-}
-
-func NewStorageDepOptions(in map[string]interface{}, typ string) (*StorageDepOptions, error) {
-	o := &StorageDepOptions{}
-
-	err := mapstructure.WeakDecode(in, o)
-	if err != nil {
-		return nil, err
-	}
-
-	return o, nil
 }
 
 func (o *StorageDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *StorageDepArgs) error {

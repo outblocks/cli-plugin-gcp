@@ -57,13 +57,11 @@ type ServiceAppArgs struct {
 }
 
 type ServiceAppDeployOptions struct {
-	SkipRunsd            bool    `json:"skip_runsd"`
-	CPULimit             float64 `json:"cpu_limit" default:"1"`
-	MemoryLimit          int     `json:"memory_limit" default:"256"`
-	MinScale             int     `json:"min_scale" default:"0"`
-	MaxScale             int     `json:"max_scale" default:"100"`
-	CPUThrottling        bool    `json:"cpu_throttling" default:"true"`
-	ExecutionEnvironment string  `json:"execution_environment" default:"gen1"`
+	types.ServiceAppDeployOptions
+
+	SkipRunsd            bool   `json:"skip_runsd"`
+	CPUThrottling        bool   `json:"cpu_throttling" default:"true"`
+	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
 }
 
 func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOptions, error) {
@@ -77,6 +75,19 @@ func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOpt
 	err = defaults.Set(o)
 	if err != nil {
 		return nil, err
+	}
+
+	// Manual defaults.
+	if o.CPULimit == 0 {
+		o.CPULimit = 1
+	}
+
+	if o.MemoryLimit == 0 {
+		o.MemoryLimit = 256
+	}
+
+	if o.MaxScale == 0 {
+		o.MaxScale = 100
 	}
 
 	return o, validation.ValidateStruct(o,

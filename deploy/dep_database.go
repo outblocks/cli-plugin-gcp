@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/creasty/defaults"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/resources"
+	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
@@ -30,26 +30,13 @@ type DatabaseDep struct {
 
 	Dep   *apiv1.Dependency
 	Opts  *DatabaseDepOptions
-	Needs map[*apiv1.App]*DatabaseDepNeed
+	Needs map[*apiv1.App]*types.DatabaseDepNeed
 }
 
 type DatabaseDepArgs struct {
 	ProjectID string
 	Region    string
-	Needs     map[*apiv1.App]*DatabaseDepNeed
-}
-
-type DatabaseDepNeed struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Hostname string `json:"hostname"`
-	Database string `json:"database"`
-}
-
-func NewDatabaseDepNeed(in map[string]interface{}) (*DatabaseDepNeed, error) {
-	o := &DatabaseDepNeed{}
-
-	return o, plugin_util.MapstructureJSONDecode(in, o)
+	Needs     map[*apiv1.App]*types.DatabaseDepNeed
 }
 
 func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
@@ -66,18 +53,10 @@ func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
 	}, nil
 }
 
-type DatabaseDepOptionUser struct {
-	Password string `json:"password"`
-	Hostname string `json:"hostname"`
-}
-
 type DatabaseDepOptions struct {
-	Version         string                            `json:"version"`
-	HA              bool                              `json:"high_availability"`
-	Tier            string                            `json:"tier" default:"db-f1-micro"`
-	Flags           map[string]string                 `json:"flags"`
-	Users           map[string]*DatabaseDepOptionUser `json:"users"`
-	DatabaseVersion string                            `json:"-"`
+	*types.DatabaseDepOptions
+
+	DatabaseVersion string `json:"-"`
 }
 
 func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
@@ -88,9 +67,9 @@ func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepO
 		return nil, err
 	}
 
-	err = defaults.Set(o)
-	if err != nil {
-		return nil, err
+	// Manual defaults.
+	if o.Tier == "" {
+		o.Tier = "db-f1-micro"
 	}
 
 	o.DatabaseVersion, err = o.databaseVersion(typ)
@@ -171,11 +150,11 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 	}
 
 	// Add databases and users.
-	users := make(map[string]*DatabaseDepOptionUser)
+	users := make(map[string]*types.DatabaseDepOptionUser)
 
 	for username, u := range o.Opts.Users {
 		if u == nil {
-			u = &DatabaseDepOptionUser{}
+			u = &types.DatabaseDepOptionUser{}
 		}
 
 		users[username] = u
@@ -183,7 +162,7 @@ func (o *DatabaseDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *
 
 	for _, n := range c.Needs {
 		if _, ok := users[n.User]; !ok {
-			users[n.User] = &DatabaseDepOptionUser{
+			users[n.User] = &types.DatabaseDepOptionUser{
 				Password: n.Password,
 				Hostname: n.Hostname,
 			}
