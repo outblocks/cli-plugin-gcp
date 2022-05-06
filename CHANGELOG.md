@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.84](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.83...v0.1.84)
+
+> 2022-05-06
+
+### BUG FIXES
+
+[`0c0b982`](https://github.com/outblocks/cli-plugin-gcp/commit/0c0b98214d309922b905ad1b7c58e76c3dfa408b) fix error with incorrect user on dbdump, type cleanup
+
 ## [v0.1.83](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.82...v0.1.83)
 
 > 2022-04-28
