@@ -14,10 +14,6 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-var errCredentialsMissing = fmt.Errorf(`error getting google credentials!
-Supported credentials through environment variables: 'GOOGLE_APPLICATION_CREDENTIALS' pointing to a file or 'GCLOUD_SERVICE_KEY' with file contents.
-Alternatively install 'gcloud' and authorize with your account: 'gcloud application-default login'`)
-
 func (p *Plugin) Init(ctx context.Context, e env.Enver, l log.Logger, cli apiv1.HostServiceClient) error {
 	p.env = e
 	p.hostCli = cli
@@ -37,12 +33,12 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 		return nil, err
 	}
 
-	p.Settings.ProjectID = project
-	p.Settings.Region = region
+	p.settings.ProjectID = project
+	p.settings.Region = region
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return nil, errCredentialsMissing
+		return nil, err
 	}
 
 	p.gcred = cred
@@ -52,9 +48,9 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 		return nil, fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
-	proj, err := crmCli.Projects.Get(p.Settings.ProjectID).Do()
+	proj, err := crmCli.Projects.Get(p.settings.ProjectID).Do()
 	if gcp.ErrIs404(err) || gcp.ErrIs403(err) {
-		p.log.Warnf("Project '%s' not found or caller lacks permission!\n", p.Settings.ProjectID)
+		p.log.Warnf("Project '%s' not found or caller lacks permission!\n", p.settings.ProjectID)
 
 		crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 		if err != nil {
@@ -86,10 +82,10 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 			return nil, fmt.Errorf("unable to create GCP project: %w", err)
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("error getting project '%s': %w", p.Settings.ProjectID, err)
+		return nil, fmt.Errorf("error getting project '%s': %w", p.settings.ProjectID, err)
 	}
 
-	p.Settings.ProjectNumber = proj.ProjectNumber
+	p.settings.ProjectNumber = proj.ProjectNumber
 
 	return &apiv1.StartResponse{}, nil
 }

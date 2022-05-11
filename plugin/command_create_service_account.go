@@ -83,7 +83,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("error creating gcp iam client: %w", err)
 	}
 
-	accountID := fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", p.Settings.ProjectID, name, p.Settings.ProjectID)
+	accountID := fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", p.settings.ProjectID, name, p.settings.ProjectID)
 
 	_, err = iamCli.Projects.ServiceAccounts.Get(accountID).Do()
 	if err != nil {
@@ -92,7 +92,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		}
 	} else {
 		res, err := p.hostCli.PromptConfirmation(ctx, &apiv1.PromptConfirmationRequest{
-			Message: fmt.Sprintf("Service account with name '%s' already exists in project '%s'! Do you want to recreate it?", name, p.Settings.ProjectID),
+			Message: fmt.Sprintf("Service account with name '%s' already exists in project '%s'! Do you want to recreate it?", name, p.settings.ProjectID),
 		})
 		if err != nil {
 			if s, ok := status.FromError(err); ok && s.Code() == codes.Aborted {
@@ -112,7 +112,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		}
 	}
 
-	sa, err := iamCli.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", p.Settings.ProjectID), &iam.CreateServiceAccountRequest{
+	sa, err := iamCli.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", p.settings.ProjectID), &iam.CreateServiceAccountRequest{
 		AccountId: name,
 		ServiceAccount: &iam.ServiceAccount{
 			DisplayName: name,
@@ -123,7 +123,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("error creating service account: %w", err)
 	}
 
-	key, err := iamCli.Projects.ServiceAccounts.Keys.Create(fmt.Sprintf("projects/%s/serviceAccounts/%s", p.Settings.ProjectID, sa.UniqueId), &iam.CreateServiceAccountKeyRequest{
+	key, err := iamCli.Projects.ServiceAccounts.Keys.Create(fmt.Sprintf("projects/%s/serviceAccounts/%s", p.settings.ProjectID, sa.UniqueId), &iam.CreateServiceAccountKeyRequest{
 		KeyAlgorithm:   "KEY_ALG_RSA_2048",
 		PrivateKeyType: "TYPE_GOOGLE_CREDENTIALS_FILE",
 	}).Do()
@@ -149,7 +149,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 	}
 
 	reqAPI := gcp.APIService{
-		ProjectNumber: fields.Int(int(p.Settings.ProjectNumber)),
+		ProjectNumber: fields.Int(int(p.settings.ProjectNumber)),
 		Name:          fields.String("cloudresourcemanager.googleapis.com"),
 	}
 
@@ -163,7 +163,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
-	err = addServiceAccountToEditor(crmCli, p.Settings.ProjectID, name)
+	err = addServiceAccountToEditor(crmCli, p.settings.ProjectID, name)
 	if err != nil {
 		return err
 	}

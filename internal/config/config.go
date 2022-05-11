@@ -20,12 +20,27 @@ import (
 
 const CredentialsEnvVar = "GCLOUD_SERVICE_KEY"
 
-func GoogleCredentials(ctx context.Context, scopes ...string) (*google.Credentials, error) {
+var errCredentialsMissing = fmt.Errorf(`error getting google credentials!
+Supported credentials through environment variables: 'GOOGLE_APPLICATION_CREDENTIALS' pointing to a file or 'GCLOUD_SERVICE_KEY' with file contents.
+Alternatively install 'gcloud' and authorize with your account: 'gcloud application-default login'`)
+
+func GoogleCredentials(ctx context.Context, scopes ...string) (cred *google.Credentials, err error) {
 	if key := os.Getenv(CredentialsEnvVar); key != "" {
-		return google.CredentialsFromJSON(ctx, []byte(key), scopes...)
+		cred, err = google.CredentialsFromJSON(ctx, []byte(key), scopes...)
+		if err != nil {
+			return nil, errCredentialsMissing
+		}
+
+		return cred, nil
 	}
 
-	return google.FindDefaultCredentials(ctx, scopes...)
+	cred, err = google.FindDefaultCredentials(ctx, scopes...)
+
+	if err != nil {
+		return nil, errCredentialsMissing
+	}
+
+	return cred, nil
 }
 
 func NewGCPStorageClient(ctx context.Context, cred *google.Credentials) (*storage.Client, error) {

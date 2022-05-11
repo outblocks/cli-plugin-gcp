@@ -126,8 +126,8 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 	o.TimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.TimeoutSeconds))
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
 	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
-	o.CPUThrottling.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == "true")
-	o.ExecutionEnvironment.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/execution-environment"])
+	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == "true")
+	o.ExecutionEnvironment.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/execution-environment"])
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
 	o.MinScale.SetCurrent(v)

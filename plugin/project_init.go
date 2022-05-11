@@ -94,7 +94,7 @@ func (p *Plugin) ProjectInit(ctx context.Context, r *apiv1.ProjectInitRequest) (
 
 	cred, err := config.GoogleCredentials(ctx, compute.CloudPlatformScope)
 	if err != nil {
-		return nil, errCredentialsMissing
+		return nil, err
 	}
 
 	p.gcred = cred

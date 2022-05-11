@@ -104,7 +104,7 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.LockingPluginService_AcquireLocksServer) error {
 	ctx := stream.Context()
 
-	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
+	project, err := validate.OptionalString(p.settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 	b := cli.Bucket(bucket)
 
 	_, _, err = getBucket(ctx, b, project, &storage.BucketAttrs{
-		Location: p.Settings.Region,
+		Location: p.settings.Region,
 	}, true)
 	if err != nil {
 		return err
@@ -184,7 +184,7 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 }
 
 func (p *Plugin) ReleaseLocks(ctx context.Context, r *apiv1.ReleaseLocksRequest) (*apiv1.ReleaseLocksResponse, error) {
-	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
+	project, err := validate.OptionalString(p.settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
 	if err != nil {
 		return nil, err
 	}

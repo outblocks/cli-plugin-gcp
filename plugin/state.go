@@ -153,7 +153,7 @@ func (p *Plugin) lockState(ctx context.Context, cli *storage.Client, project, lo
 	lockingB := cli.Bucket(lockingBucket)
 
 	_, _, err := getBucket(ctx, lockingB, project, &storage.BucketAttrs{
-		Location:          p.Settings.Region,
+		Location:          p.settings.Region,
 		VersioningEnabled: false,
 	}, true)
 	if err != nil {
@@ -211,7 +211,7 @@ func (p *Plugin) lockState(ctx context.Context, cli *storage.Client, project, lo
 func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginService_GetStateServer) error {
 	ctx := stream.Context()
 
-	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
+	project, err := validate.OptionalString(p.settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 	b := cli.Bucket(bucket)
 
 	created, exists, err := getBucket(ctx, b, project, &storage.BucketAttrs{
-		Location:          p.Settings.Region,
+		Location:          p.settings.Region,
 		VersioningEnabled: true,
 		Lifecycle: storage.Lifecycle{
 			Rules: []storage.LifecycleRule{
@@ -319,7 +319,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 }
 
 func (p *Plugin) SaveState(ctx context.Context, r *apiv1.SaveStateRequest) (*apiv1.SaveStateResponse, error) {
-	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
+	project, err := validate.OptionalString(p.settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +354,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *apiv1.SaveStateRequest) (*api
 }
 
 func (p *Plugin) ReleaseStateLock(ctx context.Context, r *apiv1.ReleaseStateLockRequest) (*apiv1.ReleaseStateLockResponse, error) {
-	project, err := validate.OptionalString(p.Settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
+	project, err := validate.OptionalString(p.settings.ProjectID, r.Properties.Fields, "project", "GCP project must be a string")
 	if err != nil {
 		return nil, err
 	}

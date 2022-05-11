@@ -116,7 +116,7 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 	reg := registry.NewRegistry(nil)
 
 	gcp.RegisterTypes(reg)
-	_ = reg.Load(r.PluginState.Registry)
+	_ = reg.Load(r.State.Registry)
 
 	for _, app := range r.Apps {
 		gcpID := gcp.ID(p.env, app.Id)
@@ -130,7 +130,7 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 			db := &gcp.CloudSQL{}
 
 			if reg.GetDependencyResource(dep, "cloud_sql", db) {
-				gcpID := fmt.Sprintf("%s:%s", p.Settings.ProjectID, db.Name.Any())
+				gcpID := fmt.Sprintf("%s:%s", p.settings.ProjectID, db.Name.Any())
 				cloudSQLNames = append(cloudSQLNames, gcpID)
 				idMap[gcpID] = dep.Id
 			}
@@ -192,13 +192,13 @@ func (p *Plugin) Logs(r *apiv1.LogsRequest, srv apiv1.LogsPluginService_LogsServ
 	}
 
 	loggingURL := fmt.Sprintf("https://console.cloud.google.com/logs/query;query=%s?project=%s",
-		strings.ReplaceAll(url.PathEscape(filter), "=", "%3D"), p.Settings.ProjectID)
+		strings.ReplaceAll(url.PathEscape(filter), "=", "%3D"), p.settings.ProjectID)
 
 	p.log.Infof("Logs Explorer Web UI: %s\n", loggingURL)
 
 	iter := loggingCli.ListLogEntries(ctx, &loggingpb.ListLogEntriesRequest{
 		ResourceNames: []string{
-			"projects/" + p.Settings.ProjectID,
+			"projects/" + p.settings.ProjectID,
 		},
 		Filter:   filter,
 		PageSize: 1000,
@@ -231,7 +231,7 @@ func (p *Plugin) Logs(r *apiv1.LogsRequest, srv apiv1.LogsPluginService_LogsServ
 
 	req := &loggingpb.TailLogEntriesRequest{
 		ResourceNames: []string{
-			"projects/" + p.Settings.ProjectID,
+			"projects/" + p.settings.ProjectID,
 		},
 		Filter: filter,
 	}

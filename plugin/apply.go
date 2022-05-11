@@ -8,7 +8,7 @@ import (
 )
 
 func (p *Plugin) Apply(r *apiv1.ApplyRequest, reg *registry.Registry, stream apiv1.DeployPluginService_ApplyServer) error {
-	a, err := actions.NewPlan(p.PluginContext(), p.log, r.PluginState, r.Domains, reg, r.Destroy, false)
+	a, err := actions.NewPlan(p.PluginContext(), p.log, r.State, r.Domains, reg, r.Destroy, false)
 	if err != nil {
 		return err
 	}

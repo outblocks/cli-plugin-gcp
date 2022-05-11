@@ -285,7 +285,25 @@ func (p *PlanAction) getOrCreateDependencyState(dep *apiv1.Dependency) *apiv1.De
 	return state
 }
 
-func (p *PlanAction) saveAppSSLStates(curMapping map[string]interface{}) {
+func (p *PlanAction) saveAppSSLStates(curMapping, wantedMapping map[string]interface{}) {
+	for mapURL, appID := range wantedMapping {
+		id := appID.(string)
+		app := p.appIDMap[id]
+
+		if app == nil {
+			continue
+		}
+
+		u, _ := url.Parse(mapURL)
+		domain := u.Hostname()
+
+		p.dnsRecordsMap[domain] = &apiv1.DNSRecord{
+			Record: domain,
+			Type:   apiv1.DNSRecord_TYPE_A,
+			Value:  p.loadBalancer.Addresses[0].IP.Current(),
+		}
+	}
+
 	for mapURL, appID := range curMapping {
 		id := appID.(string)
 		app := p.appIDMap[id]
@@ -325,12 +343,6 @@ func (p *PlanAction) saveAppSSLStates(curMapping map[string]interface{}) {
 			SslStatus:     sslStatus,
 			SslStatusInfo: sslStatusInfo,
 		}
-
-		p.dnsRecordsMap[domain] = &apiv1.DNSRecord{
-			Record: domain,
-			Type:   apiv1.DNSRecord_TYPE_A,
-			Value:  p.loadBalancer.Addresses[0].IP.Current(),
-		}
 	}
 
 	for _, v := range p.dnsRecordsMap {
@@ -350,13 +362,14 @@ func (p *PlanAction) save() error {
 		return nil
 	}
 
-	var curMapping map[string]interface{}
+	var curMapping, wantedMapping map[string]interface{}
 	if len(p.loadBalancer.URLMaps) > 0 {
 		curMapping = p.loadBalancer.URLMaps[0].AppMapping.Current()
+		wantedMapping = p.loadBalancer.URLMaps[0].AppMapping.Wanted()
 	}
 
 	// App SSL states.
-	p.saveAppSSLStates(curMapping)
+	p.saveAppSSLStates(curMapping, wantedMapping)
 
 	// App states.
 	for id, app := range p.appDeployIDMap {

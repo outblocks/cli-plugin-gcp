@@ -113,7 +113,7 @@ func (o *LoadBalancer) processStaticApps(pctx *config.PluginContext, r *registry
 }
 
 func (o *LoadBalancer) processDomain(pctx *config.PluginContext, r *registry.Registry, c *LoadBalancerArgs, domain string, domainInfo *apiv1.DomainInfo) error {
-	if domainInfo == nil {
+	if domainInfo == nil || domainInfo.Cert == "" || domainInfo.Key == "" {
 		cert := &gcp.ManagedSSL{
 			Name:      gcp.IDField(pctx.Env(), domain),
 			ProjectID: fields.String(c.ProjectID),

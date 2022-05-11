@@ -15,7 +15,7 @@ type Plugin struct {
 	hostCli apiv1.HostServiceClient
 
 	gcred    *google.Credentials
-	Settings config.Settings
+	settings config.Settings
 }
 
 func NewPlugin() *Plugin {
@@ -23,7 +23,7 @@ func NewPlugin() *Plugin {
 }
 
 func (p *Plugin) PluginContext() *config.PluginContext {
-	return config.NewPluginContext(p.env, p.gcred, &p.Settings)
+	return config.NewPluginContext(p.env, p.gcred, &p.settings)
 }
 
 var (
