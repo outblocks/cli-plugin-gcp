@@ -1,5 +1,19 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.85](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.84...v0.1.85)
+
+> 2022-05-12
+
+### BUG FIXES
+
+[`24685f2`](https://github.com/outblocks/cli-plugin-gcp/commit/24685f265c707f71212806782f0e80e6f05064f0) database dep options unmarshal
+
+### FEATURES
+
+[`1a7878d`](https://github.com/outblocks/cli-plugin-gcp/commit/1a7878d93bf8f026c90c92d5822e3de2bcf00191) update plugin sdk
+
+[`953bf96`](https://github.com/outblocks/cli-plugin-gcp/commit/953bf96773d09afe8f02247cf20d7e04a2553792) ssl domains fixes, metadata matching
+
 ## [v0.1.84](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.83...v0.1.84)
 
 > 2022-05-06
