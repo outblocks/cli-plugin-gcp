@@ -54,7 +54,7 @@ func NewDatabaseDep(dep *apiv1.Dependency) (*DatabaseDep, error) {
 }
 
 type DatabaseDepOptions struct {
-	*types.DatabaseDepOptions
+	types.DatabaseDepOptions
 
 	DatabaseVersion string `json:"-"`
 }
