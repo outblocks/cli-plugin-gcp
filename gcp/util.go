@@ -1,7 +1,9 @@
 package gcp
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -136,6 +138,32 @@ func ErrIs403(err error) bool {
 	return checkErrCode(err, 403)
 }
 
+func ComputeOperationError(err *compute.OperationError) error {
+	if err == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+	for _, err := range err.Errors {
+		buf.WriteString(err.Message + "\n")
+	}
+
+	return errors.New(buf.String())
+}
+
+func SQLOperationError(err *sqladmin.OperationErrors) error {
+	if err == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+	for _, err := range err.Errors {
+		buf.WriteString(err.Message + "\n")
+	}
+
+	return errors.New(buf.String())
+}
+
 func WaitForGlobalComputeOperation(cli *compute.Service, project, name string) error {
 	for {
 		op, err := cli.GlobalOperations.Wait(project, name).Do()
@@ -144,7 +172,7 @@ func WaitForGlobalComputeOperation(cli *compute.Service, project, name string) e
 		}
 
 		if op.Status == OperationDone {
-			return nil
+			return ComputeOperationError(op.Error)
 		}
 	}
 }
@@ -157,7 +185,7 @@ func WaitForRegionComputeOperation(cli *compute.Service, project, region, name s
 		}
 
 		if op.Status == OperationDone {
-			return nil
+			return ComputeOperationError(op.Error)
 		}
 	}
 }
@@ -181,6 +209,10 @@ func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Op
 		<-t.C
 
 		if op.Done {
+			if op.Error != nil {
+				return errors.New(op.Error.Message)
+			}
+
 			return nil
 		}
 	}
@@ -205,6 +237,10 @@ func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op 
 		<-t.C
 
 		if op.Done {
+			if op.Error != nil {
+				return errors.New(op.Error.Message)
+			}
+
 			return nil
 		}
 	}
@@ -221,11 +257,11 @@ func WaitForSQLOperation(ctx context.Context, cli *sqladmin.Service, project, na
 		case <-t.C:
 			op, err := cli.Operations.Get(project, name).Do()
 			if err != nil {
-				return fmt.Errorf("failed to query sql service for readiness: %w", err)
+				return err
 			}
 
 			if op.Status == OperationDone {
-				return nil
+				return SQLOperationError(op.Error)
 			}
 		}
 	}
