@@ -85,9 +85,14 @@ func (o *Image) readImage(ctx context.Context, meta interface{}) (*apiv1.Descrip
 	} else {
 		if digest, ok := o.Digest.LookupCurrent(); ok {
 			ref = gcrrepo.Digest(digest)
-		} else {
-			ref = gcrrepo.Tag("latest")
+
+			desc, err := gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
+			if !ErrIs404(err) {
+				return desc, nil
+			}
 		}
+
+		ref = gcrrepo.Tag("latest")
 	}
 
 	return gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))

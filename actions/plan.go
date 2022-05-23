@@ -193,12 +193,7 @@ func (p *PlanAction) enableAPIs(ctx context.Context) error {
 		return err
 	}
 
-	err = p.apiRegistry.Process(ctx, p.pluginCtx)
-	if err != nil {
-		return err
-	}
-
-	diff, err := p.apiRegistry.Diff(ctx)
+	diff, err := p.apiRegistry.ProcessAndDiff(ctx, p.pluginCtx)
 	if err != nil {
 		return err
 	}
@@ -248,12 +243,6 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, dep
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
 	})
-	if err != nil {
-		return err
-	}
-
-	// Process registry.
-	err = p.registry.Process(ctx, p.pluginCtx)
 	if err != nil {
 		return err
 	}
@@ -430,14 +419,9 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 		return nil, err
 	}
 
-	diff, err := p.registry.Diff(ctx)
+	diff, err := p.registry.ProcessAndDiff(ctx, p.pluginCtx)
 	if err != nil {
 		return nil, err
-	}
-
-	var actions []*apiv1.PlanAction
-	for _, d := range diff {
-		actions = append(actions, d.ToPlanAction())
 	}
 
 	err = p.save()
@@ -446,7 +430,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 	}
 
 	return &apiv1.Plan{
-		Actions: actions,
+		Actions: registry.PlanActionFromDiff(diff),
 	}, nil
 }
 
@@ -466,7 +450,8 @@ func (p *PlanAction) Apply(ctx context.Context, appPlans []*apiv1.AppPlan, depPl
 		return err
 	}
 
-	diff, err := p.registry.Diff(ctx)
+	// Process registry.
+	diff, err := p.registry.ProcessAndDiff(ctx, p.pluginCtx)
 	if err != nil {
 		return err
 	}
