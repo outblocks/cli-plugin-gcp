@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.89](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.88...v0.1.89)
+
+> 2022-05-25
+
+### FEATURES
+
+[`578d846`](https://github.com/outblocks/cli-plugin-gcp/commit/578d8464423bfdaee33c5f9fc844433b152643c6) disable cloud proxy on managed certs
+
 ## [v0.1.88](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.87...v0.1.88)
 
 > 2022-05-23
