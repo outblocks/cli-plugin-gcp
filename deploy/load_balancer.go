@@ -11,6 +11,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/types"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type LoadBalancer struct {
@@ -123,6 +124,14 @@ func (o *LoadBalancer) processDomain(pctx *config.PluginContext, r *registry.Reg
 		_, err := r.RegisterPluginResource(LoadBalancerName, domain, cert)
 		if err != nil {
 			return err
+		}
+
+		if domainInfo != nil {
+			if domainInfo.Other.GetFields() == nil {
+				domainInfo.Other, _ = structpb.NewStruct(nil)
+			}
+
+			domainInfo.Other.GetFields()["cloudflare_proxy"] = structpb.NewBoolValue(false)
 		}
 
 		o.ManagedSSLs = append(o.ManagedSSLs, cert)
