@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.90](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.89...v0.1.90)
+
+> 2022-05-26
+
+### HOT FIXES
+
+[`1c1e402`](https://github.com/outblocks/cli-plugin-gcp/commit/1c1e4021a101ec9f641ea874416b966a5e622806) credential file usage with db proxy
+
 ## [v0.1.89](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.88...v0.1.89)
 
 > 2022-05-25
