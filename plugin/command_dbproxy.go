@@ -173,7 +173,7 @@ func (p *Plugin) execProxyCommand(ctx context.Context, cmd *command.Cmd, silent 
 	return nil
 }
 
-func (p *Plugin) prepareDBProxyCommand(ctx context.Context, dep *apiv1.DependencyState, cloudsqluser *gcp.CloudSQLUser, port int, bindAddr string, silent bool) (*command.Cmd, error) {
+func (p *Plugin) prepareDBProxyCommand(ctx context.Context, dep *apiv1.DependencyState, cloudsqluser *gcp.CloudSQLUser, port int, bindAddr, credentialFile string, silent bool) (*command.Cmd, error) {
 	if ip := net.ParseIP(bindAddr); ip == nil || ip.To4() == nil {
 		return nil, fmt.Errorf("invalid bind-addr specified, must be a valid ipv4 address")
 	}
@@ -206,16 +206,8 @@ func (p *Plugin) prepareDBProxyCommand(ctx context.Context, dep *apiv1.Dependenc
 
 	args := []string{"-instances", fmt.Sprintf("%s=tcp:%s:%d", connectionName, bindAddr, port)}
 
-	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
-	f, err := p.prepareTempFileCredentials()
-	if err != nil {
-		return nil, err
-	}
-
-	if f != nil {
-		defer os.Remove(f.Name())
-
-		args = append(args, "-credential_file", f.Name())
+	if credentialFile != "" {
+		args = append(args, "-credential_file", credentialFile)
 	}
 
 	cmd, err := command.New(
@@ -270,7 +262,21 @@ func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 		return err
 	}
 
-	cmd, err := p.prepareDBProxyCommand(ctx, dep, cloudsqluser, port, bindAddr, silent)
+	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
+	credentialFile := ""
+
+	cred, err := p.prepareTempFileCredentials()
+	if err != nil {
+		return err
+	}
+
+	if cred != nil {
+		credentialFile = cred.Name()
+
+		defer os.Remove(credentialFile)
+	}
+
+	cmd, err := p.prepareDBProxyCommand(ctx, dep, cloudsqluser, port, bindAddr, credentialFile, silent)
 	if err != nil {
 		return err
 	}

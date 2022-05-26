@@ -30,7 +30,21 @@ func (p *Plugin) runFuncOnDBConnection(ctx context.Context, dep *apiv1.Dependenc
 
 	p.log.Infoln("Creating proxy connection...")
 
-	cmd, err := p.prepareDBProxyCommand(ctx, dep, cloudsqluser, port, "0.0.0.0", true)
+	// Prepare temporary credential file if using GCLOUD_SERVICE_KEY.
+	credentialFile := ""
+
+	cred, err := p.prepareTempFileCredentials()
+	if err != nil {
+		return err
+	}
+
+	if cred != nil {
+		credentialFile = cred.Name()
+
+		defer os.Remove(credentialFile)
+	}
+
+	cmd, err := p.prepareDBProxyCommand(ctx, dep, cloudsqluser, port, "0.0.0.0", credentialFile, true)
 	if err != nil {
 		return err
 	}
