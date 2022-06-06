@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.91](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.90...v0.1.91)
+
+> 2022-06-06
+
+### FEATURES
+
+[`04cf170`](https://github.com/outblocks/cli-plugin-gcp/commit/04cf1707814e890b942c82ba63de5392b5eb8141) secrets management, multiple qol improvements
+
 ## [v0.1.90](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.89...v0.1.90)
 
 > 2022-05-26
