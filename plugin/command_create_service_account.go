@@ -10,7 +10,6 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
-	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/iam/v1"
@@ -85,7 +84,11 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 
 	accountID := fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", p.settings.ProjectID, name, p.settings.ProjectID)
 
-	_, err = iamCli.Projects.ServiceAccounts.Get(accountID).Do()
+	err = p.runAndEnsureAPI(ctx, func() error {
+		_, err := iamCli.Projects.ServiceAccounts.Get(accountID).Do()
+		return err
+	})
+
 	if err != nil {
 		if !gcp.ErrIs404(err) {
 			return fmt.Errorf("error checking if service account exists: %w", err)
@@ -148,25 +151,15 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("could not decode service account key: %w", err)
 	}
 
-	reqAPI := gcp.APIService{
-		ProjectNumber: fields.Int(int(p.settings.ProjectNumber)),
-		Name:          fields.String("cloudresourcemanager.googleapis.com"),
-	}
-
-	err = reqAPI.Create(ctx, p.PluginContext())
-	if err != nil {
-		return fmt.Errorf("error enabling required apis: %w", err)
-	}
-
 	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
 	if err != nil {
 		return fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
-	err = addServiceAccountToEditor(crmCli, p.settings.ProjectID, name)
-	if err != nil {
+	err = p.runAndEnsureAPI(ctx, func() error {
+		err = addServiceAccountToEditor(crmCli, p.settings.ProjectID, name)
 		return err
-	}
+	})
 
 	p.log.Successf("Created '%s' service account with Editor role!\n", name)
 	p.log.Printf("\nTo use it in CI or locally add following environment variable:\nGCLOUD_SERVICE_KEY='%s'\n", string(encoded))

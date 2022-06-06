@@ -14,6 +14,7 @@ import (
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	"google.golang.org/api/run/v1"
+	"google.golang.org/api/secretmanager/v1"
 	"google.golang.org/api/serviceusage/v1"
 	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
@@ -77,4 +78,8 @@ func NewGCPIAMClient(ctx context.Context, cred *google.Credentials) (*iam.Servic
 
 func NewGCPLoggingClient(ctx context.Context, cred *google.Credentials) (*logging.Client, error) {
 	return logging.NewClient(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPSecretManagerClient(ctx context.Context, cred *google.Credentials) (*secretmanager.Service, error) {
+	return secretmanager.NewService(ctx, option.WithCredentials(cred))
 }

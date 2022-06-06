@@ -48,7 +48,13 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 		return nil, fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
 	}
 
-	proj, err := crmCli.Projects.Get(p.settings.ProjectID).Do()
+	var proj *cloudresourcemanager.Project
+
+	err = p.runAndEnsureAPI(ctx, func() error {
+		proj, err = crmCli.Projects.Get(p.settings.ProjectID).Do()
+		return err
+	})
+
 	if gcp.ErrIs404(err) || gcp.ErrIs403(err) {
 		p.log.Warnf("Project '%s' not found or caller lacks permission!\n", p.settings.ProjectID)
 

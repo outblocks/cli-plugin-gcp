@@ -138,6 +138,40 @@ func ErrIs403(err error) bool {
 	return checkErrCode(err, 403)
 }
 
+func ErrExtractMissingAPI(err error) string {
+	e := &googleapi.Error{}
+
+	if !errors.As(err, &e) {
+		return ""
+	}
+
+	for _, d := range e.Details {
+		m, ok := d.(map[string]interface{})
+
+		if !ok {
+			continue
+		}
+
+		if m["@type"] != "type.googleapis.com/google.rpc.ErrorInfo" {
+			continue
+		}
+
+		meta, ok := m["metadata"]
+		if !ok {
+			continue
+		}
+
+		metamap, ok := meta.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		return metamap["service"].(string)
+	}
+
+	return ""
+}
+
 func ComputeOperationError(err *compute.OperationError) error {
 	if err == nil {
 		return nil

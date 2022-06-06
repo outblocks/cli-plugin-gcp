@@ -9,6 +9,7 @@ actions:
   - deploy
   - lock
   - state
+  - secrets
 commands:
   dbproxy:
     short: Create a database proxy
@@ -147,6 +148,8 @@ commands:
         type: string
         usage: Name of service account (defaults to 'outblocks-ci')
 
+secrets_types:
+  - gcp
 state_types:
   - gcp
 supports:
