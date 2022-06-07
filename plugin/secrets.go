@@ -371,7 +371,7 @@ func (p *Plugin) ReplaceSecrets(ctx context.Context, req *apiv1.ReplaceSecretsRe
 				return err
 			}
 
-			if existingVal != val {
+			if !existingSet || existingVal != val {
 				err = setSecretValue(cli, p.settings.ProjectID, cur, val, existingSet)
 				if err != nil {
 					return err
