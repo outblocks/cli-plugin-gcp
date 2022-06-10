@@ -1,5 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.92](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.91...v0.1.92)
+
+> 2022-06-10
+
+### BUG FIXES
+
+[`d02d639`](https://github.com/outblocks/cli-plugin-gcp/commit/d02d639040d03ec10651e8841f4955f359ce74c4) delete secrets
+
+### FEATURES
+
+[`b0482d5`](https://github.com/outblocks/cli-plugin-gcp/commit/b0482d54ad4a8116e074cf216fbec7f29517d129) dependency updates, typo
+
 ## [v0.1.91](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.90...v0.1.91)
 
 > 2022-06-06
