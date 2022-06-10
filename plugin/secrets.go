@@ -429,6 +429,8 @@ func (p *Plugin) DeleteSecrets(ctx context.Context, req *apiv1.DeleteSecretsRequ
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 	for _, cur := range secrets {
+		cur := cur
+
 		g.Go(func() error {
 			_, err = deleteSecret(cli, p.settings.ProjectID, cur)
 
