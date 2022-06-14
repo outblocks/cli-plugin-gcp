@@ -82,6 +82,11 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 
 			for _, pr := range pm.PathRules {
 				for _, p := range pr.Paths {
+					pathRedirect := pathRedirect
+					if pr.RouteAction != nil && pr.RouteAction.UrlRewrite != nil {
+						pathRedirect = pr.RouteAction.UrlRewrite.PathPrefixRewrite
+					}
+
 					urlMap[host+p] = map[string]interface{}{
 						URLPathMatcherServiceIDKey:         pr.Service,
 						URLPathMatcherPathPrefixRewriteKey: pathRedirect,
