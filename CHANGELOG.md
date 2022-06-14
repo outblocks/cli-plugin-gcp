@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.93](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.92...v0.1.93)
+
+> 2022-06-14
+
+### BUG FIXES
+
+[`5042891`](https://github.com/outblocks/cli-plugin-gcp/commit/5042891fb35e6a88864cf81eb7f4f44a1edc0e82) cors and url mapping reading
+
 ## [v0.1.92](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.91...v0.1.92)
 
 > 2022-06-10
