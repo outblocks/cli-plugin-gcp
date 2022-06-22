@@ -35,6 +35,12 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 	instance := o.Instance.Any()
 	name := o.Name.Any()
 
+	if projectID == "" || instance == "" || name == "" {
+		o.MarkAsNew()
+
+		return nil
+	}
+
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
 		return err
@@ -72,7 +78,7 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error fetching cloud sql database status: %w", err)
+		return fmt.Errorf("error fetching cloud sql user status: %w", err)
 	}
 
 	o.MarkAsExisting()

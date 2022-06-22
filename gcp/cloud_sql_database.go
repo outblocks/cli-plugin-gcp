@@ -33,6 +33,12 @@ func (o *CloudSQLDatabase) Read(ctx context.Context, meta interface{}) error {
 	instance := o.Instance.Any()
 	name := o.Name.Any()
 
+	if projectID == "" || instance == "" || name == "" {
+		o.MarkAsNew()
+
+		return nil
+	}
+
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
 		return err

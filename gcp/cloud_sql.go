@@ -71,7 +71,7 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("error fetching cloud sql status: %w", err)
+		return fmt.Errorf("error fetching cloud sql instance status: %w", err)
 	}
 
 	o.MarkAsExisting()
