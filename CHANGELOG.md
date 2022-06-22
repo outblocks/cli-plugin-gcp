@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.94](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.93...v0.1.94)
+
+> 2022-06-22
+
+### BUG FIXES
+
+[`ca3a708`](https://github.com/outblocks/cli-plugin-gcp/commit/ca3a70832e530494702a6bfb0a7a91e759082a3c) empty verify of cloud sql user/db
+
 ## [v0.1.93](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.92...v0.1.93)
 
 > 2022-06-14
