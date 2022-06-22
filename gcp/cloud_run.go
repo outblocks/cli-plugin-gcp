@@ -204,13 +204,14 @@ func (o *CloudRun) Update(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	_, ready, msg, err := waitForRunServiceReady(ctx, cli, projectID, name)
+	svc, ready, msg, err := waitForRunServiceReady(ctx, cli, projectID, name)
 	if err != nil {
 		return err
 	}
 
 	o.Ready.SetCurrent(ready)
 	o.StatusMessage.SetCurrent(msg)
+	o.URL.SetCurrent(svc.Status.Url)
 
 	if o.IsPublic.IsChanged() {
 		return setRunServiceIAMPolicy(cli, projectID, region, name, o.IsPublic.Wanted())
