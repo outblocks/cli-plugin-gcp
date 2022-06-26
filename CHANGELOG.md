@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.96](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.95...v0.1.96)
+
+> 2022-06-26
+
+### FEATURES
+
+[`fc6298f`](https://github.com/outblocks/cli-plugin-gcp/commit/fc6298fadc91757f8d19908522b73be42bc67a3c) add secret accessor role to service account
+
 ## [v0.1.95](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.94...v0.1.95)
 
 > 2022-06-23
