@@ -17,51 +17,92 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func addServiceAccountToEditor(crmCli *cloudresourcemanager.Service, projectID, serviceAccountName string) error {
+func addServiceAccountRoles(crmCli *cloudresourcemanager.Service, projectID, serviceAccountName string, roles ...string) error {
 	policy, err := crmCli.Projects.GetIamPolicy(projectID, &cloudresourcemanager.GetIamPolicyRequest{}).Do()
 	if err != nil {
 		return fmt.Errorf("error getting project iam policy: %w", err)
 	}
 
-	var editorRoleBinding *cloudresourcemanager.Binding
+	for _, role := range roles {
+		var roleBinding *cloudresourcemanager.Binding
 
-	for _, b := range policy.Bindings {
-		if b.Role == "roles/editor" {
-			editorRoleBinding = b
-			break
-		}
-	}
-
-	if editorRoleBinding == nil {
-		editorRoleBinding = &cloudresourcemanager.Binding{
-			Role: "roles/editor",
+		for _, b := range policy.Bindings {
+			if b.Role == role {
+				roleBinding = b
+				break
+			}
 		}
 
-		policy.Bindings = append(policy.Bindings, editorRoleBinding)
-	}
-
-	editorRoleBinding.Members = append(editorRoleBinding.Members, fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", serviceAccountName, projectID))
-
-	for _, b := range policy.Bindings {
-		var members []string
-
-		for _, m := range b.Members {
-			if strings.HasPrefix(m, "deleted:") {
-				continue
+		if roleBinding == nil {
+			roleBinding = &cloudresourcemanager.Binding{
+				Role: role,
 			}
 
-			members = append(members, m)
+			policy.Bindings = append(policy.Bindings, roleBinding)
 		}
 
-		b.Members = members
+		roleBinding.Members = append(roleBinding.Members, fmt.Sprintf("serviceAccount:%s@%s.iam.gserviceaccount.com", serviceAccountName, projectID))
+
+		for _, b := range policy.Bindings {
+			var members []string
+
+			for _, m := range b.Members {
+				if strings.HasPrefix(m, "deleted:") {
+					continue
+				}
+
+				members = append(members, m)
+			}
+
+			b.Members = members
+		}
 	}
 
 	_, err = crmCli.Projects.SetIamPolicy(projectID, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
+
 	if err != nil {
 		return fmt.Errorf("error setting project iam policy: %w", err)
 	}
+
+	return nil
+}
+
+func (p *Plugin) setupOutblocksServiceAccountPermissions(ctx context.Context, name string, fresh bool) error {
+	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
+	if err != nil {
+		return fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
+	}
+
+	if !fresh {
+		res, err := p.hostCli.PromptConfirmation(ctx, &apiv1.PromptConfirmationRequest{
+			Message: "Do you want to reset service account's permissions?",
+		})
+		if err != nil {
+			if s, ok := status.FromError(err); ok && s.Code() == codes.Aborted {
+				return nil
+			}
+
+			return err
+		}
+
+		if !res.Confirmed {
+			return nil
+		}
+	}
+
+	err = p.runAndEnsureAPI(ctx, func() error {
+		err = addServiceAccountRoles(crmCli, p.settings.ProjectID, name, "roles/editor", "roles/secretmanager.secretAccessor")
+
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+
+	p.log.Successf("Set up '%s' service account with Editor and Secrets Accessor roles!\n", name)
 
 	return nil
 }
@@ -106,7 +147,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		}
 
 		if !res.Confirmed {
-			return nil
+			return p.setupOutblocksServiceAccountPermissions(ctx, name, false)
 		}
 
 		_, err = iamCli.Projects.ServiceAccounts.Delete(accountID).Do()
@@ -151,17 +192,11 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("could not decode service account key: %w", err)
 	}
 
-	crmCli, err := config.NewGCPCloudResourceManagerClient(ctx, p.gcred)
+	err = p.setupOutblocksServiceAccountPermissions(ctx, name, true)
 	if err != nil {
-		return fmt.Errorf("error creating gcp cloud resource manager client: %w", err)
+		return err
 	}
 
-	err = p.runAndEnsureAPI(ctx, func() error {
-		err = addServiceAccountToEditor(crmCli, p.settings.ProjectID, name)
-		return err
-	})
-
-	p.log.Successf("Created '%s' service account with Editor role!\n", name)
 	p.log.Printf("\nTo use it in CI or locally add following environment variable:\nGCLOUD_SERVICE_KEY='%s'\n", string(encoded))
 
 	return nil
