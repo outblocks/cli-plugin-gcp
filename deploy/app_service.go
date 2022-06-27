@@ -60,7 +60,7 @@ type ServiceAppDeployOptions struct {
 	types.ServiceAppDeployOptions
 
 	SkipRunsd            bool   `json:"skip_runsd"`
-	CPUThrottling        bool   `json:"cpu_throttling" default:"true"`
+	CPUThrottling        *bool  `json:"cpu_throttling" default:"true"`
 	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
 }
 
@@ -342,7 +342,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		MemoryLimit:          fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
 		CPULimit:             fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
 		ExecutionEnvironment: fields.String(o.DeployOpts.ExecutionEnvironment),
-		CPUThrottling:        fields.Bool(o.DeployOpts.CPUThrottling),
+		CPUThrottling:        fields.Bool(*o.DeployOpts.CPUThrottling),
 	}
 
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
