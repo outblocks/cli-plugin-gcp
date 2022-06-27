@@ -130,6 +130,10 @@ func checkErrCode(err error, code int) bool {
 	return false
 }
 
+func ErrIs400(err error) bool {
+	return checkErrCode(err, 400)
+}
+
 func ErrIs404(err error) bool {
 	return checkErrCode(err, 404)
 }

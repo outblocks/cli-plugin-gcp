@@ -63,6 +63,10 @@ func accessSecretValue(cli *secretmanager.Service, project, name string) (val st
 		return "", false, nil
 	}
 
+	if gcp.ErrIs400(err) {
+		return "", true, nil
+	}
+
 	if err != nil {
 		return "", false, fmt.Errorf("error accessing secret '%s' value: %w", name, err)
 	}
@@ -96,21 +100,26 @@ func listSecrets(cli *secretmanager.Service, project, prefix string) ([]string, 
 
 func setSecretValue(cli *secretmanager.Service, project, name, value string, cleanup bool) error {
 	secretPath := fmt.Sprintf("projects/%s/secrets/%s", project, name)
-	newVer, err := cli.Projects.Secrets.AddVersion(secretPath, &secretmanager.AddSecretVersionRequest{
-		Payload: &secretmanager.SecretPayload{
-			Data: base64.StdEncoding.EncodeToString([]byte(value)),
-		},
-	}).Do()
 
-	if err != nil {
-		return fmt.Errorf("error setting secret '%s' value: %w", name, err)
+	now := time.Now()
+
+	if value != "" {
+		newVer, err := cli.Projects.Secrets.AddVersion(secretPath, &secretmanager.AddSecretVersionRequest{
+			Payload: &secretmanager.SecretPayload{
+				Data: base64.StdEncoding.EncodeToString([]byte(value)),
+			},
+		}).Do()
+
+		if err != nil {
+			return fmt.Errorf("error setting secret '%s' value: %w", name, err)
+		}
+
+		now, _ = time.Parse(time.RFC3339, newVer.CreateTime)
 	}
 
 	if !cleanup {
 		return nil
 	}
-
-	newTime, _ := time.Parse(time.RFC3339, newVer.CreateTime)
 
 	versions, err := cli.Projects.Secrets.Versions.List(secretPath).Do()
 	if err != nil {
@@ -120,7 +129,7 @@ func setSecretValue(cli *secretmanager.Service, project, name, value string, cle
 	for _, v := range versions.Versions {
 		verTime, _ := time.Parse(time.RFC3339, v.CreateTime)
 
-		if !verTime.Before(newTime) || v.State != "ENABLED" {
+		if !verTime.Before(now) || v.State != "ENABLED" {
 			continue
 		}
 
