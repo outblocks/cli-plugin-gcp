@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.97](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.96...v0.1.97)
+
+> 2022-06-27
+
+### BUG FIXES
+
+[`72fdac8`](https://github.com/outblocks/cli-plugin-gcp/commit/72fdac8df7d84fc3eadf89e6b302ffb394e6e65c) cpu throttling support
+
 ## [v0.1.96](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.95...v0.1.96)
 
 > 2022-06-26
