@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.100](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.99...v0.1.100)
+
+> 2022-07-04
+
+### BUG FIXES
+
+[`853dbbf`](https://github.com/outblocks/cli-plugin-gcp/commit/853dbbf142340ca61d875fc4f68b7fb9afdeca68) use archive hash as name
+
 ## [v0.1.99](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.98...v0.1.99)
 
 > 2022-07-04
