@@ -111,7 +111,7 @@ func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *r
 
 	o.Archive = &gcp.BucketObject{
 		BucketName:  o.Bucket.Name,
-		Name:        fields.String(fmt.Sprintf("%s/archive.zip", o.Build.LocalArchiveHash)),
+		Name:        fields.String(fmt.Sprintf("%s.zip", o.Build.LocalArchiveHash)),
 		Hash:        fields.String(o.Build.LocalArchiveHash),
 		Path:        o.Build.LocalArchivePath,
 		IsPublic:    fields.Bool(false),
