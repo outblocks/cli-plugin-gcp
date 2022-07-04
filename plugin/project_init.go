@@ -41,7 +41,7 @@ func (p *Plugin) promptProject(ctx context.Context, crmCli *cloudresourcemanager
 			return "", fmt.Errorf("unable to create GCP project: %w", err)
 		}
 
-		err = gcp.WaitForCloudResourceManagerOperation(crmCli, op)
+		err = gcp.WaitForCloudResourceManagerOperation(ctx, crmCli, op)
 		if err != nil {
 			return "", fmt.Errorf("unable to create GCP project: %w", err)
 		}

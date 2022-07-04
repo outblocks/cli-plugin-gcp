@@ -63,8 +63,8 @@ func (p *PlanAction) prepareServiceAppsDeploy(appPlans []*apiv1.AppPlan) (ret []
 		vars["cloud_url"] = fmt.Sprintf("https://%s-%s.a.run.app", appDeploy.ID(p.pluginCtx), p.cloudRunSettings.URLSuffix())
 		vars["private_url"] = fmt.Sprintf("http://%s", appDeploy.ID(p.pluginCtx))
 
-		if appDeploy.Props.Private {
-			vars["url"] = vars["private_url"]
+		if appDeploy.App.Url == "" {
+			vars["url"] = vars["cloud_url"]
 		}
 
 		ret[i] = appDeploy

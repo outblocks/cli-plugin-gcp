@@ -90,6 +90,10 @@ func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOpt
 		o.MaxScale = 100
 	}
 
+	if o.Timeout == 0 {
+		o.Timeout = 300
+	}
+
 	return o, validation.ValidateStruct(o,
 		validation.Field(&o.CPULimit, validation.In(1.0, 2.0, 4.0)),
 		validation.Field(&o.MemoryLimit, validation.Min(128), validation.Max(8192)),
@@ -343,6 +347,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		CPULimit:             fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
 		ExecutionEnvironment: fields.String(o.DeployOpts.ExecutionEnvironment),
 		CPUThrottling:        fields.Bool(*o.DeployOpts.CPUThrottling),
+		TimeoutSeconds:       fields.Int(o.DeployOpts.Timeout),
 	}
 
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)

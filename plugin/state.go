@@ -228,7 +228,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 
 	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func (p *Plugin) SaveState(ctx context.Context, r *apiv1.SaveStateRequest) (*api
 
 	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (p *Plugin) ReleaseStateLock(ctx context.Context, r *apiv1.ReleaseStateLock
 
 	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}

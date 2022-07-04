@@ -83,7 +83,7 @@ func (p *Plugin) Start(ctx context.Context, r *apiv1.StartRequest) (*apiv1.Start
 			return nil, fmt.Errorf("unable to create GCP project: %w", err)
 		}
 
-		err = gcp.WaitForCloudResourceManagerOperation(crmCli, op)
+		err = gcp.WaitForCloudResourceManagerOperation(ctx, crmCli, op)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create GCP project: %w", err)
 		}

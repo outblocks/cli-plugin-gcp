@@ -29,6 +29,7 @@ type PlanAction struct {
 
 	staticApps   map[string]*deploy.StaticApp
 	serviceApps  map[string]*deploy.ServiceApp
+	functionApps map[string]*deploy.FunctionApp
 	databaseDeps map[string]*deploy.DatabaseDep
 	storageDeps  map[string]*deploy.StorageDep
 	loadBalancer *deploy.LoadBalancer
@@ -77,8 +78,9 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 
 func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, apply bool) error {
 	var (
-		staticAppsPlan  []*apiv1.AppPlan
-		serviceAppsPlan []*apiv1.AppPlan
+		staticAppsPlan   []*apiv1.AppPlan
+		serviceAppsPlan  []*apiv1.AppPlan
+		functionAppsPlan []*apiv1.AppPlan
 	)
 
 	apps := make([]*apiv1.App, 0, len(appPlans))
@@ -92,6 +94,8 @@ func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, ap
 			staticAppsPlan = append(staticAppsPlan, plan)
 		case deploy.AppTypeService:
 			serviceAppsPlan = append(serviceAppsPlan, plan)
+		case deploy.AppTypeFunction:
+			functionAppsPlan = append(functionAppsPlan, plan)
 		}
 	}
 
@@ -110,6 +114,11 @@ func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, ap
 		return err
 	}
 
+	functionApps, err := p.prepareFunctionAppsDeploy(functionAppsPlan)
+	if err != nil {
+		return err
+	}
+
 	// Plan static app deployment.
 	p.staticApps, err = p.planStaticAppsDeploy(staticApps, staticAppsPlan)
 	if err != nil {
@@ -118,6 +127,12 @@ func (p *PlanAction) planApps(ctx context.Context, appPlans []*apiv1.AppPlan, ap
 
 	// Plan service app deployment.
 	p.serviceApps, err = p.planServiceAppsDeploy(ctx, serviceApps, serviceAppsPlan, apply)
+	if err != nil {
+		return err
+	}
+
+	// Plan function app deployment.
+	p.functionApps, err = p.planFunctionAppsDeploy(ctx, functionApps, functionAppsPlan, apply)
 	if err != nil {
 		return err
 	}
@@ -238,7 +253,7 @@ func (p *PlanAction) planAll(ctx context.Context, appPlans []*apiv1.AppPlan, dep
 
 	p.loadBalancer = deploy.NewLoadBalancer()
 
-	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, p.serviceApps, p.domainMatcher, &deploy.LoadBalancerArgs{
+	err = p.loadBalancer.Plan(p.pluginCtx, p.registry, p.staticApps, p.serviceApps, p.functionApps, p.domainMatcher, &deploy.LoadBalancerArgs{
 		Name:      "load_balancer",
 		ProjectID: p.pluginCtx.Settings().ProjectID,
 		Region:    p.pluginCtx.Settings().Region,
@@ -377,14 +392,14 @@ func (p *PlanAction) save() error {
 		switch a := app.(type) {
 		case *deploy.ServiceApp:
 			state.Dns.InternalUrl = fmt.Sprintf("http://%s", a.CloudRun.Name.Current())
-
-			if !a.Props.Private {
-				state.Dns.CloudUrl = a.CloudRun.URL.Current()
-			}
+			state.Dns.CloudUrl = a.CloudRun.URL.Current()
 
 		case *deploy.StaticApp:
 			state.Dns.InternalUrl = fmt.Sprintf("http://%s", a.CloudRun.Name.Current())
 			state.Dns.CloudUrl = a.CloudRun.URL.Current()
+
+		case *deploy.FunctionApp:
+			state.Dns.CloudUrl = a.CloudFunction.URL.Current()
 		}
 	}
 

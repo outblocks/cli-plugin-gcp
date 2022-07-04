@@ -49,6 +49,10 @@ func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptio
 		o.MaxScale = 100
 	}
 
+	if o.Timeout == 0 {
+		o.Timeout = 300
+	}
+
 	return o, validation.ValidateStruct(o,
 		validation.Field(&o.MinScale, validation.Min(0), validation.Max(100)),
 		validation.Field(&o.MaxScale, validation.Min(1)),
@@ -182,8 +186,9 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		IsPublic:  fields.Bool(true),
 		EnvVars:   fields.Map(envVars),
 
-		MinScale: fields.Int(o.DeployOpts.MinScale),
-		MaxScale: fields.Int(o.DeployOpts.MaxScale),
+		MinScale:       fields.Int(o.DeployOpts.MinScale),
+		MaxScale:       fields.Int(o.DeployOpts.MaxScale),
+		TimeoutSeconds: fields.Int(o.DeployOpts.Timeout),
 	}
 
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)

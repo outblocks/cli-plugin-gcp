@@ -13,10 +13,11 @@ import (
 type ServerlessNEG struct {
 	registry.ResourceBase
 
-	Name      fields.StringInputField `state:"force_new"`
-	ProjectID fields.StringInputField `state:"force_new"`
-	Region    fields.StringInputField `state:"force_new"`
-	CloudRun  fields.StringInputField `state:"force_new"`
+	Name          fields.StringInputField `state:"force_new"`
+	ProjectID     fields.StringInputField `state:"force_new"`
+	Region        fields.StringInputField `state:"force_new"`
+	CloudRun      fields.StringInputField `state:"force_new"`
+	CloudFunction fields.StringInputField `state:"force_new"`
 }
 
 func (o *ServerlessNEG) ReferenceID() string {
@@ -61,6 +62,10 @@ func (o *ServerlessNEG) Read(ctx context.Context, meta interface{}) error {
 		o.CloudRun.SetCurrent(neg.CloudRun.Service)
 	}
 
+	if neg.CloudFunction != nil {
+		o.CloudFunction.SetCurrent(neg.CloudFunction.Function)
+	}
+
 	return nil
 }
 
@@ -76,14 +81,27 @@ func (o *ServerlessNEG) Create(ctx context.Context, meta interface{}) error {
 	region := o.Region.Wanted()
 	name := o.Name.Wanted()
 	cloudRun := o.CloudRun.Wanted()
+	cloudFunc := o.CloudFunction.Wanted()
 
-	oper, err := cli.RegionNetworkEndpointGroups.Insert(projectID, region, &compute.NetworkEndpointGroup{
+	neg := &compute.NetworkEndpointGroup{
 		Name:                name,
 		NetworkEndpointType: "SERVERLESS",
-		CloudRun: &compute.NetworkEndpointGroupCloudRun{
+	}
+
+	switch {
+	case cloudRun != "":
+		neg.CloudRun = &compute.NetworkEndpointGroupCloudRun{
 			Service: cloudRun,
-		},
-	}).Do()
+		}
+	case cloudFunc != "":
+		neg.CloudFunction = &compute.NetworkEndpointGroupCloudFunction{
+			Function: cloudFunc,
+		}
+	default:
+		return fmt.Errorf("either cloudrun or cloudfunction is required")
+	}
+
+	oper, err := cli.RegionNetworkEndpointGroups.Insert(projectID, region, neg).Do()
 	if err != nil {
 		return err
 	}

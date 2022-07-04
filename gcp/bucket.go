@@ -72,7 +72,7 @@ func (o *Bucket) GetName() string {
 func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}

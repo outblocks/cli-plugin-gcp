@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
@@ -82,4 +83,8 @@ func NewGCPLoggingClient(ctx context.Context, cred *google.Credentials) (*loggin
 
 func NewGCPSecretManagerClient(ctx context.Context, cred *google.Credentials) (*secretmanager.Service, error) {
 	return secretmanager.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPCloudfunctionsClient(ctx context.Context, cred *google.Credentials) (*cloudfunctions.Service, error) {
+	return cloudfunctions.NewService(ctx, option.WithCredentials(cred))
 }

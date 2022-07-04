@@ -9,6 +9,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/run/v1"
 	"google.golang.org/api/serviceusage/v1"
@@ -25,12 +26,13 @@ type PluginContext struct {
 	gcred    *google.Credentials
 	settings *Settings
 
-	storageCli      *storage.Client
-	dockerCli       *dockerclient.Client
-	runCliMap       map[string]*run.APIService
-	computeCli      *compute.Service
-	serviceusageCli *serviceusage.Service
-	sqlAdminCli     *sqladmin.Service
+	storageCli        *storage.Client
+	dockerCli         *dockerclient.Client
+	runCliMap         map[string]*run.APIService
+	computeCli        *compute.Service
+	serviceusageCli   *serviceusage.Service
+	sqlAdminCli       *sqladmin.Service
+	cloudfunctionsCli *cloudfunctions.Service
 
 	funcCache map[string]*funcCacheData
 
@@ -38,7 +40,7 @@ type PluginContext struct {
 		runCli, funcCache sync.Mutex
 	}
 	once struct {
-		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli sync.Once
+		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli, cloudfunctionsCli sync.Once
 	}
 }
 
@@ -64,7 +66,7 @@ func (c *PluginContext) GoogleCredentials() *google.Credentials {
 	return c.gcred
 }
 
-func (c *PluginContext) StorageClient(ctx context.Context) (*storage.Client, error) {
+func (c *PluginContext) GCPStorageClient(ctx context.Context) (*storage.Client, error) {
 	var err error
 
 	c.once.storageCli.Do(func() {
@@ -138,6 +140,20 @@ func (c *PluginContext) GCPSQLAdminClient(ctx context.Context) (*sqladmin.Servic
 	}
 
 	return c.sqlAdminCli, err
+}
+
+func (c *PluginContext) GCPCloudfunctionsClient(ctx context.Context) (*cloudfunctions.Service, error) {
+	var err error
+
+	c.once.cloudfunctionsCli.Do(func() {
+		c.cloudfunctionsCli, err = NewGCPCloudfunctionsClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp sqladmin client: %w", err)
+	}
+
+	return c.cloudfunctionsCli, err
 }
 
 func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {

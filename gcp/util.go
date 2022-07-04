@@ -28,6 +28,7 @@ var Types = []registry.Resource{
 	(*BackendService)(nil),
 	(*BucketObject)(nil),
 	(*Bucket)(nil),
+	(*CloudFunction)(nil),
 	(*CloudRun)(nil),
 	(*CloudSQLDatabase)(nil),
 	(*CloudSQLUser)(nil),
@@ -228,7 +229,7 @@ func WaitForRegionComputeOperation(cli *compute.Service, project, region, name s
 	}
 }
 
-func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Operation) error {
+func WaitForServiceUsageOperation(ctx context.Context, cli *serviceusage.Service, op *serviceusage.Operation) error {
 	if op.Done {
 		return nil
 	}
@@ -244,7 +245,11 @@ func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Op
 			return err
 		}
 
-		<-t.C
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+		}
 
 		if op.Done {
 			if op.Error != nil {
@@ -256,7 +261,7 @@ func WaitForServiceUsageOperation(cli *serviceusage.Service, op *serviceusage.Op
 	}
 }
 
-func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op *cloudresourcemanager.Operation) error {
+func WaitForCloudResourceManagerOperation(ctx context.Context, cli *cloudresourcemanager.Service, op *cloudresourcemanager.Operation) error {
 	if op.Done {
 		return nil
 	}
@@ -272,7 +277,11 @@ func WaitForCloudResourceManagerOperation(cli *cloudresourcemanager.Service, op 
 			return err
 		}
 
-		<-t.C
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+		}
 
 		if op.Done {
 			if op.Error != nil {

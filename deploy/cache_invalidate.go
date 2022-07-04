@@ -14,10 +14,11 @@ import (
 type CacheInvalidate struct {
 	registry.ResourceBase
 
-	URLMapName  fields.StringInputField
-	ProjectID   fields.StringInputField
-	StaticApps  []*StaticApp  `state:"-"`
-	ServiceApps []*ServiceApp `state:"-"`
+	URLMapName   fields.StringInputField
+	ProjectID    fields.StringInputField
+	StaticApps   []*StaticApp   `state:"-"`
+	ServiceApps  []*ServiceApp  `state:"-"`
+	FunctionApps []*FunctionApp `state:"-"`
 
 	changedURLs []string
 }
@@ -30,7 +31,7 @@ func (o *CacheInvalidate) SkipState() bool {
 	return true
 }
 
-func anyFileChanged(files []*gcp.BucketObject) bool {
+func anyFileChanged(files ...*gcp.BucketObject) bool {
 	for _, f := range files {
 		if f.Hash.IsChanged() && !f.IsNew() {
 			return true
@@ -42,13 +43,19 @@ func anyFileChanged(files []*gcp.BucketObject) bool {
 
 func (o *CacheInvalidate) CalculateDiff() registry.DiffType {
 	for _, app := range o.StaticApps {
-		if app.Props.CDN.Enabled && anyFileChanged(app.Files) {
+		if app.Props.CDN.Enabled && anyFileChanged(app.Files...) {
 			o.changedURLs = append(o.changedURLs, app.App.Url)
 		}
 	}
 
 	for _, app := range o.ServiceApps {
 		if app.Props.CDN.Enabled && app.Image.Digest.IsChanged() {
+			o.changedURLs = append(o.changedURLs, app.App.Url)
+		}
+	}
+
+	for _, app := range o.FunctionApps {
+		if app.Props.CDN.Enabled && anyFileChanged(app.Archive) {
 			o.changedURLs = append(o.changedURLs, app.App.Url)
 		}
 	}

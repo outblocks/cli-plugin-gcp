@@ -38,7 +38,7 @@ func (o *BucketObject) GetName() string {
 func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,10 @@ func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 		w.CacheControl = o.CacheControl.Wanted()
 	}
 
-	w.ACL = []storage.ACLRule{{Entity: storage.AllUsers, Role: storage.RoleReader}}
+	if o.IsPublic.Wanted() {
+		w.ACL = []storage.ACLRule{{Entity: storage.AllUsers, Role: storage.RoleReader}}
+	}
+
 	_, err = io.Copy(w, file)
 	_ = file.Close()
 
@@ -145,7 +148,7 @@ func (o *BucketObject) Update(ctx context.Context, meta interface{}) error {
 func (o *BucketObject) Delete(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}

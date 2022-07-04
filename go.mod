@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.9.0
-	github.com/outblocks/outblocks-plugin-go v0.0.0-20220614134113-d21fb3ab33bd
+	github.com/outblocks/outblocks-plugin-go v0.0.0-20220630124715-bf4c067bd696
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
 	google.golang.org/api v0.85.0
 	google.golang.org/genproto v0.0.0-20220622171453-ea41d75dfa0f

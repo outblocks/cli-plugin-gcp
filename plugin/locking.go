@@ -116,7 +116,7 @@ func (p *Plugin) AcquireLocks(r *apiv1.AcquireLocksRequest, stream apiv1.Locking
 
 	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (p *Plugin) ReleaseLocks(ctx context.Context, r *apiv1.ReleaseLocksRequest)
 
 	pctx := p.PluginContext()
 
-	cli, err := pctx.StorageClient(ctx)
+	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,9 @@ func computeAppDeploymentState(app interface{}) *apiv1.DeploymentState {
 	case *deploy.ServiceApp:
 		ready, ok = appDeploy.CloudRun.Ready.LookupCurrent()
 		message = appDeploy.CloudRun.StatusMessage.Current()
+	case *deploy.FunctionApp:
+		ready, ok = appDeploy.CloudFunction.Ready.LookupCurrent()
+		message = appDeploy.CloudFunction.StatusMessage.Current()
 	}
 
 	if !ok {
