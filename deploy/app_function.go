@@ -118,6 +118,10 @@ func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *r
 		ContentType: fields.String("application/zip"),
 	}
 
+	if o.Build.LocalArchiveHash == "" {
+		r.GetAppResource(o.App, "archive", o.Archive)
+	}
+
 	_, err = r.RegisterAppResource(o.App, "archive", o.Archive)
 	if err != nil {
 		return err
