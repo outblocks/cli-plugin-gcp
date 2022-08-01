@@ -148,6 +148,7 @@ func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *r
 		Runtime:      fields.String(o.Props.Runtime),
 		SourceBucket: o.Bucket.Name,
 		SourceObject: o.Archive.Name,
+		IsPublic:     fields.Bool(!o.Props.Private),
 
 		MinScale:       fields.Int(o.DeployOpts.MinScale),
 		MaxScale:       fields.Int(o.DeployOpts.MaxScale),

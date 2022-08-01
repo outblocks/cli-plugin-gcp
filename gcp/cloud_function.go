@@ -12,6 +12,7 @@ import (
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 	"google.golang.org/api/cloudfunctions/v1"
 )
 
@@ -25,6 +26,7 @@ type CloudFunction struct {
 	Runtime      fields.StringInputField
 	SourceBucket fields.StringInputField
 	SourceObject fields.StringInputField
+	IsPublic     fields.BoolInputField
 
 	URL           fields.StringOutputField
 	Ready         fields.BoolOutputField
@@ -103,6 +105,22 @@ func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
 	o.EnvVars.SetCurrent(envVars)
 	o.Ingress.SetCurrent(cf.IngressSettings)
 
+	policy, err := cli.Projects.Locations.Functions.GetIamPolicy(cf.Name).Do()
+	if err != nil {
+		return fmt.Errorf("error fetching cloud function policy: %w", err)
+	}
+
+	isPublic := false
+
+	for _, b := range policy.Bindings {
+		if b.Role == "roles/cloudfunctions.invoker" {
+			isPublic = plugin_util.StringSliceContains(b.Members, "allUsers")
+			break
+		}
+	}
+
+	o.IsPublic.SetCurrent(isPublic)
+
 	return nil
 }
 
@@ -166,6 +184,28 @@ func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
 
 	o.setCurrentStatusInfo(cf)
 
+	if !o.IsPublic.Wanted() {
+		return nil
+	}
+
+	policy, err := cli.Projects.Locations.Functions.GetIamPolicy(cf.Name).Do()
+	if err != nil {
+		return fmt.Errorf("error fetching cloud function policy: %w", err)
+	}
+
+	policy.Bindings = append(policy.Bindings, &cloudfunctions.Binding{
+		Members: []string{"allUsers"},
+		Role:    "roles/cloudfunctions.invoker",
+	})
+
+	_, err = cli.Projects.Locations.Functions.SetIamPolicy(cf.Name, &cloudfunctions.SetIamPolicyRequest{
+		Policy: policy,
+	}).Do()
+
+	if err != nil {
+		return fmt.Errorf("error settings cloud function policy: %w", err)
+	}
+
 	return nil
 }
 
@@ -198,6 +238,63 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 	}
 
 	o.setCurrentStatusInfo(cf)
+
+	policy, err := cli.Projects.Locations.Functions.GetIamPolicy(cf.Name).Do()
+	if err != nil {
+		return fmt.Errorf("error fetching cloud function policy: %w", err)
+	}
+
+	var newBindings []*cloudfunctions.Binding
+
+	added := false
+
+	for _, b := range policy.Bindings {
+		if b.Role == "roles/cloudfunctions.invoker" {
+			if !o.IsPublic.Wanted() {
+				if !plugin_util.StringSliceContains(b.Members, "allUsers") {
+					newBindings = append(newBindings, b)
+					continue
+				}
+
+				// Remove member or whole binding if it's the only member.
+				if len(b.Members) == 1 {
+					continue
+				}
+
+				var newMembers []string
+
+				for _, m := range b.Members {
+					if m != "allUsers" {
+						newMembers = append(newMembers, m)
+					}
+				}
+
+				b.Members = newMembers
+			} else if !plugin_util.StringSliceContains(b.Members, "allUsers") {
+				b.Members = append(b.Members, "allUsers")
+				added = true
+			}
+		}
+
+		newBindings = append(newBindings, b)
+	}
+
+	if o.IsPublic.Wanted() && !added {
+		newBindings = append(newBindings, &cloudfunctions.Binding{
+			Members: []string{"allUsers"},
+			Role:    "roles/cloudfunctions.invoker",
+		})
+	}
+
+	policy.Bindings = newBindings
+
+	_, err = cli.Projects.Locations.Functions.SetIamPolicy(cf.Name, &cloudfunctions.SetIamPolicyRequest{
+		Policy: policy,
+	}).Do()
+
+	if err != nil {
+		return fmt.Errorf("error settings cloud function policy: %w", err)
+	}
 
 	return nil
 }
