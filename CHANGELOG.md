@@ -1,5 +1,19 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.101](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.100...v0.1.101)
+
+> 2022-08-05
+
+### BUG FIXES
+
+[`9877cd9`](https://github.com/outblocks/cli-plugin-gcp/commit/9877cd96f50faa7667784d580c20c2c8707deceb) function with skip build
+
+[`84baced`](https://github.com/outblocks/cli-plugin-gcp/commit/84bacedac113a6c8abfb14db5df7aa311c6b6277) cloud function public iam
+
+### FEATURES
+
+[`7f3d24c`](https://github.com/outblocks/cli-plugin-gcp/commit/7f3d24ccf639b76f41c441e8fc738eacf9fb8495) monitoring support
+
 ## [v0.1.100](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.99...v0.1.100)
 
 > 2022-07-04
