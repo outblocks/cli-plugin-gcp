@@ -41,6 +41,9 @@ var Types = []registry.Resource{
 	(*TargetHTTPProxy)(nil),
 	(*TargetHTTPSProxy)(nil),
 	(*URLMap)(nil),
+	(*UptimeCheckConfig)(nil),
+	(*UptimeAlertPolicy)(nil),
+	(*NotificationChannel)(nil),
 }
 
 func RegisterTypes(reg *registry.Registry) {

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	logging "cloud.google.com/go/logging/apiv2"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
 	"golang.org/x/oauth2/google"
@@ -87,4 +88,16 @@ func NewGCPSecretManagerClient(ctx context.Context, cred *google.Credentials) (*
 
 func NewGCPCloudfunctionsClient(ctx context.Context, cred *google.Credentials) (*cloudfunctions.Service, error) {
 	return cloudfunctions.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPMonitoringUptimeCheckClient(ctx context.Context, cred *google.Credentials) (*monitoring.UptimeCheckClient, error) {
+	return monitoring.NewUptimeCheckClient(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPMonitoringNotificationChannelClient(ctx context.Context, cred *google.Credentials) (*monitoring.NotificationChannelClient, error) {
+	return monitoring.NewNotificationChannelClient(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPMonitoringAlertPolicyClient(ctx context.Context, cred *google.Credentials) (*monitoring.AlertPolicyClient, error) {
+	return monitoring.NewAlertPolicyClient(ctx, option.WithCredentials(cred))
 }

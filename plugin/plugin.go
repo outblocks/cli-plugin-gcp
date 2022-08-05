@@ -83,10 +83,11 @@ func (p *Plugin) runAndEnsureAPI(ctx context.Context, f func() error) error {
 }
 
 var (
-	_ plugin.LockingPluginHandler = (*Plugin)(nil)
-	_ plugin.StatePluginHandler   = (*Plugin)(nil)
-	_ plugin.DeployPluginHandler  = (*Plugin)(nil)
-	_ plugin.CommandPluginHandler = (*Plugin)(nil)
-	_ plugin.LogsPluginHandler    = (*Plugin)(nil)
-	_ plugin.SecretPluginHandler  = (*Plugin)(nil)
+	_ plugin.LockingPluginHandler    = (*Plugin)(nil)
+	_ plugin.StatePluginHandler      = (*Plugin)(nil)
+	_ plugin.DeployPluginHandler     = (*Plugin)(nil)
+	_ plugin.CommandPluginHandler    = (*Plugin)(nil)
+	_ plugin.LogsPluginHandler       = (*Plugin)(nil)
+	_ plugin.SecretPluginHandler     = (*Plugin)(nil)
+	_ plugin.MonitoringPluginHandler = (*Plugin)(nil)
 )

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/outblocks/outblocks-plugin-go/env"
@@ -26,13 +27,16 @@ type PluginContext struct {
 	gcred    *google.Credentials
 	settings *Settings
 
-	storageCli        *storage.Client
-	dockerCli         *dockerclient.Client
-	runCliMap         map[string]*run.APIService
-	computeCli        *compute.Service
-	serviceusageCli   *serviceusage.Service
-	sqlAdminCli       *sqladmin.Service
-	cloudfunctionsCli *cloudfunctions.Service
+	storageCli                       *storage.Client
+	dockerCli                        *dockerclient.Client
+	runCliMap                        map[string]*run.APIService
+	computeCli                       *compute.Service
+	serviceusageCli                  *serviceusage.Service
+	sqlAdminCli                      *sqladmin.Service
+	cloudfunctionsCli                *cloudfunctions.Service
+	monitoringUptimeChecksCli        *monitoring.UptimeCheckClient
+	monitoringNotificationChannelCli *monitoring.NotificationChannelClient
+	monitoringAlertPolicyCli         *monitoring.AlertPolicyClient
 
 	funcCache map[string]*funcCacheData
 
@@ -40,7 +44,8 @@ type PluginContext struct {
 		runCli, funcCache sync.Mutex
 	}
 	once struct {
-		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli, cloudfunctionsCli sync.Once
+		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli, cloudfunctionsCli,
+		monitoringUptimeChecksCli, monitoringNotificationChannelCli, monitoringAlertPolicyCli sync.Once
 	}
 }
 
@@ -150,10 +155,52 @@ func (c *PluginContext) GCPCloudfunctionsClient(ctx context.Context) (*cloudfunc
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating gcp sqladmin client: %w", err)
+		return nil, fmt.Errorf("error creating gcp cloud functions client: %w", err)
 	}
 
 	return c.cloudfunctionsCli, err
+}
+
+func (c *PluginContext) GCPMonitoringAlertPolicyClient(ctx context.Context) (*monitoring.AlertPolicyClient, error) {
+	var err error
+
+	c.once.monitoringAlertPolicyCli.Do(func() {
+		c.monitoringAlertPolicyCli, err = NewGCPMonitoringAlertPolicyClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp monitoring alert policy client: %w", err)
+	}
+
+	return c.monitoringAlertPolicyCli, err
+}
+
+func (c *PluginContext) GCPMonitoringUptimeCheckClient(ctx context.Context) (*monitoring.UptimeCheckClient, error) {
+	var err error
+
+	c.once.monitoringUptimeChecksCli.Do(func() {
+		c.monitoringUptimeChecksCli, err = NewGCPMonitoringUptimeCheckClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp monitoring uptime check client: %w", err)
+	}
+
+	return c.monitoringUptimeChecksCli, err
+}
+
+func (c *PluginContext) GCPMonitoringNotificationChannelClient(ctx context.Context) (*monitoring.NotificationChannelClient, error) {
+	var err error
+
+	c.once.monitoringNotificationChannelCli.Do(func() {
+		c.monitoringNotificationChannelCli, err = NewGCPMonitoringNotificationChannelClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp monitoring notification channel client: %w", err)
+	}
+
+	return c.monitoringNotificationChannelCli, err
 }
 
 func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {

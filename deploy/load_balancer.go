@@ -167,11 +167,11 @@ func (o *LoadBalancer) processDomain(pctx *config.PluginContext, r *registry.Reg
 		}
 
 		if domainInfo != nil {
-			if domainInfo.Other.GetFields() == nil {
-				domainInfo.Other, _ = structpb.NewStruct(nil)
+			if domainInfo.Properties.GetFields() == nil {
+				domainInfo.Properties, _ = structpb.NewStruct(nil)
 			}
 
-			domainInfo.Other.GetFields()["cloudflare_proxy"] = structpb.NewBoolValue(false)
+			domainInfo.Properties.GetFields()["cloudflare_proxy"] = structpb.NewBoolValue(false)
 		}
 
 		o.ManagedSSLs = append(o.ManagedSSLs, cert)

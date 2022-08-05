@@ -114,7 +114,7 @@ func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
 
 	for _, b := range policy.Bindings {
 		if b.Role == "roles/cloudfunctions.invoker" {
-			isPublic = plugin_util.StringSliceContains(b.Members, "allUsers")
+			isPublic = plugin_util.StringSliceContains(b.Members, ACLAllUsers)
 			break
 		}
 	}
@@ -194,7 +194,7 @@ func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
 	}
 
 	policy.Bindings = append(policy.Bindings, &cloudfunctions.Binding{
-		Members: []string{"allUsers"},
+		Members: []string{ACLAllUsers},
 		Role:    "roles/cloudfunctions.invoker",
 	})
 
@@ -251,7 +251,7 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 	for _, b := range policy.Bindings {
 		if b.Role == "roles/cloudfunctions.invoker" {
 			if !o.IsPublic.Wanted() {
-				if !plugin_util.StringSliceContains(b.Members, "allUsers") {
+				if !plugin_util.StringSliceContains(b.Members, ACLAllUsers) {
 					newBindings = append(newBindings, b)
 					continue
 				}
@@ -264,14 +264,14 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 				var newMembers []string
 
 				for _, m := range b.Members {
-					if m != "allUsers" {
+					if m != ACLAllUsers {
 						newMembers = append(newMembers, m)
 					}
 				}
 
 				b.Members = newMembers
-			} else if !plugin_util.StringSliceContains(b.Members, "allUsers") {
-				b.Members = append(b.Members, "allUsers")
+			} else if !plugin_util.StringSliceContains(b.Members, ACLAllUsers) {
+				b.Members = append(b.Members, ACLAllUsers)
 				added = true
 			}
 		}
@@ -281,7 +281,7 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 
 	if o.IsPublic.Wanted() && !added {
 		newBindings = append(newBindings, &cloudfunctions.Binding{
-			Members: []string{"allUsers"},
+			Members: []string{ACLAllUsers},
 			Role:    "roles/cloudfunctions.invoker",
 		})
 	}

@@ -148,7 +148,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint
 		return err
 	}
 
-	if err == nil && pol != nil && len(pol.Bindings) == 1 && len(pol.Bindings[0].Members) == 1 && pol.Bindings[0].Role == "roles/run.invoker" && pol.Bindings[0].Members[0] == "allUsers" {
+	if err == nil && pol != nil && len(pol.Bindings) == 1 && len(pol.Bindings[0].Members) == 1 && pol.Bindings[0].Role == "roles/run.invoker" && pol.Bindings[0].Members[0] == ACLAllUsers {
 		o.IsPublic.SetCurrent(true)
 	} else {
 		o.IsPublic.SetCurrent(false)
@@ -334,7 +334,7 @@ func setRunServiceIAMPolicy(cli *run.APIService, project, region, name string, p
 
 	if public {
 		policy = &run.Policy{Bindings: []*run.Binding{{
-			Members: []string{"allUsers"},
+			Members: []string{ACLAllUsers},
 			Role:    "roles/run.invoker",
 		}}}
 	}
