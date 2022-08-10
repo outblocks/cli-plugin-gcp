@@ -76,7 +76,7 @@ func acquireLock(ctx context.Context, o *storage.ObjectHandle) (lockinfo, owner 
 	_, _ = w.Write([]byte(lockdata))
 
 	err = w.Close()
-	if err != nil { // nolint: nestif
+	if err != nil { //nolint: nestif
 		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusPreconditionFailed {
 			lockinfo, owner, createdAt, err := checkLock(ctx, o)
 			if err != nil {

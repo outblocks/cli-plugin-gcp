@@ -240,7 +240,7 @@ func (p *Plugin) Logs(r *apiv1.LogsRequest, srv apiv1.LogsPluginService_LogsServ
 		return fmt.Errorf("sending logs request error: %w", err)
 	}
 
-	defer stream.CloseSend() // nolint
+	defer stream.CloseSend() //nolint
 
 	for {
 		resp, err := stream.Recv()

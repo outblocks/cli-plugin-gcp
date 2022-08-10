@@ -49,7 +49,7 @@ func (o *CloudRun) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { // nolint: gocyclo
+func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint: gocyclo
 	pctx := meta.(*config.PluginContext)
 
 	projectID := o.ProjectID.Any()

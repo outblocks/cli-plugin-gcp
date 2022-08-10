@@ -21,6 +21,7 @@ type FunctionApp struct {
 	CloudFunction *gcp.CloudFunction
 
 	App        *apiv1.App
+	Skip       bool
 	Build      *apiv1.AppBuild
 	Props      *types.FunctionAppProperties
 	DeployOpts *FunctionAppDeployOptions
@@ -85,6 +86,7 @@ func NewFunctionApp(plan *apiv1.AppPlan) (*FunctionApp, error) {
 
 	return &FunctionApp{
 		App:        plan.State.App,
+		Skip:       plan.Skip,
 		Build:      plan.Build,
 		Props:      opts,
 		DeployOpts: deployOpts,

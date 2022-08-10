@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,6 +41,7 @@ type ServiceApp struct {
 	CloudRun *gcp.CloudRun
 
 	App        *apiv1.App
+	Skip       bool
 	Build      *apiv1.AppBuild
 	Props      *types.ServiceAppProperties
 	DeployOpts *ServiceAppDeployOptions
@@ -119,6 +119,7 @@ func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
 
 	return &ServiceApp{
 		App:        plan.State.App,
+		Skip:       plan.Skip,
 		Build:      plan.Build,
 		Props:      opts,
 		DeployOpts: deployOpts,
@@ -145,7 +146,7 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 			return err
 		}
 
-		dir, err := ioutil.TempDir("", "runsd")
+		dir, err := os.MkdirTemp("", "runsd")
 		if err != nil {
 			return err
 		}
@@ -281,7 +282,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		return err
 	}
 
-	if !o.Image.IsExisting() && o.Build.LocalDockerHash == "" {
+	if !o.Image.IsExisting() && o.Build.LocalDockerHash == "" && !o.Skip {
 		return fmt.Errorf("image for app '%s' is missing", o.App.Name)
 	}
 

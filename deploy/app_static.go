@@ -22,7 +22,7 @@ type StaticApp struct {
 	CloudRun *gcp.CloudRun
 
 	App        *apiv1.App
-	SkipFiles  bool
+	Skip       bool
 	Props      *types.StaticAppProperties
 	DeployOpts *StaticAppDeployOptions
 }
@@ -72,7 +72,7 @@ func NewStaticApp(plan *apiv1.AppPlan) (*StaticApp, error) {
 
 	return &StaticApp{
 		App:        plan.State.App,
-		SkipFiles:  plan.Skip,
+		Skip:       plan.Skip,
 		Props:      opts,
 		DeployOpts: deployOpts,
 	}, nil
@@ -99,7 +99,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	}
 
 	// Add bucket contents.
-	if !o.SkipFiles {
+	if !o.Skip {
 		buildPath, ok := plugin_util.CheckDir(buildDir)
 		if !ok {
 			return fmt.Errorf("app '%s' build dir '%s' does not exist", o.App.Name, buildDir)
