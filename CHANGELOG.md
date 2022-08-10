@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.102](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.101...v0.1.102)
+
+> 2022-08-10
+
+### FEATURES
+
+[`2bfb56a`](https://github.com/outblocks/cli-plugin-gcp/commit/2bfb56a31f2b2d39947341a3c0c168834d047814) go updates, sdk updates, fix skipped service deploy
+
 ## [v0.1.101](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.100...v0.1.101)
 
 > 2022-08-05
