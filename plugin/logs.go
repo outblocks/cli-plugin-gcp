@@ -106,10 +106,11 @@ func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.Logs
 
 func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map[string]string, err error) {
 	var (
-		filterOrs     []string
-		filterAnds    []string
-		cloudRunNames []string
-		cloudSQLNames []string
+		filterOrs          []string
+		filterAnds         []string
+		cloudRunNames      []string
+		cloudFunctionNames []string
+		cloudSQLNames      []string
 	)
 
 	idMap = make(map[string]string)
@@ -120,8 +121,13 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 
 	for _, app := range r.Apps {
 		gcpID := gcp.ID(p.env, app.Id)
-		cloudRunNames = append(cloudRunNames, gcpID)
 		idMap[gcpID] = app.Id
+
+		if app.Type == deploy.AppTypeFunction {
+			cloudFunctionNames = append(cloudFunctionNames, gcpID)
+		} else {
+			cloudRunNames = append(cloudRunNames, gcpID)
+		}
 	}
 
 	for _, dep := range r.Dependencies {
@@ -141,11 +147,15 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_run_revision" resource.labels.service_name = ("%s"))`, strings.Join(cloudRunNames, `" OR "`)))
 	}
 
+	if len(cloudFunctionNames) > 0 {
+		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_function" resource.labels.function_name = ("%s"))`, strings.Join(cloudFunctionNames, `" OR "`)))
+	}
+
 	if len(cloudSQLNames) > 0 {
 		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloudsql_database" resource.labels.database_id = ("%s"))`, strings.Join(cloudSQLNames, `" OR "`)))
 	}
 
-	if len(cloudRunNames) == 0 && len(cloudSQLNames) == 0 {
+	if len(filterOrs) == 0 {
 		return "", nil, fmt.Errorf("no valid apps and/or dependencies defined")
 	}
 
