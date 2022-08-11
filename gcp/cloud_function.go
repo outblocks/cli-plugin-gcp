@@ -126,7 +126,13 @@ func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
 
 func (o *CloudFunction) setCurrentStatusInfo(cf *cloudfunctions.CloudFunction) {
 	o.Ready.SetCurrent(cf.Status == CloudFunctionReady)
-	o.StatusMessage.SetCurrent(fmt.Sprintf("Function status: %s", cf.Status))
+
+	if cf.Status == CloudFunctionOffline {
+		o.StatusMessage.SetCurrent(fmt.Sprintf("Function failed on loading user code. This is likely due to a bug in the user code. Please examine your function logs to see the error cause: \nhttps://console.cloud.google.com/functions/details/%s/%s?project=%s&tab=logs", o.Region.Wanted(), o.Name.Wanted(), o.ProjectID.Wanted()))
+	} else {
+		o.StatusMessage.SetCurrent(fmt.Sprintf("Function failed to deploy: %s", cf.Status))
+	}
+
 	o.URL.SetCurrent(cf.HttpsTrigger.Url)
 }
 
