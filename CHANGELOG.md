@@ -1,5 +1,21 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.103](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.102...v0.1.103)
+
+> 2022-08-11
+
+### BUG FIXES
+
+[`5eb7812`](https://github.com/outblocks/cli-plugin-gcp/commit/5eb78129b0883a6bd15400bb5f61b61f39036cf8) domain processing for functions
+
+[`505ffd5`](https://github.com/outblocks/cli-plugin-gcp/commit/505ffd5adb3f6c83a5ebef6dea5077dd77aeb007) logging of cloud function
+
+[`86b736e`](https://github.com/outblocks/cli-plugin-gcp/commit/86b736e49c92f41fbcd592afd1a72509c07948d2) add cloud build api to required
+
+### FEATURES
+
+[`24e8cad`](https://github.com/outblocks/cli-plugin-gcp/commit/24e8cadfa545397730f3e96b9359574fc8205e5c) better cloud function status message
+
 ## [v0.1.102](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.101...v0.1.102)
 
 > 2022-08-10
