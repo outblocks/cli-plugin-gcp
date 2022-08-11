@@ -15,7 +15,8 @@ const (
 	CloudRunStatusTrue  = "True"
 	CloudRunStatusFalse = "False"
 
-	CloudFunctionReady = "ACTIVE"
+	CloudFunctionReady   = "ACTIVE"
+	CloudFunctionOffline = "OFFLINE"
 
 	GCSProxyImageName   = "nginx-gcs-static-proxy"
 	GCSProxyVersion     = "1.21-v5"

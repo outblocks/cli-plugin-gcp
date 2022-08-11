@@ -110,7 +110,7 @@ func (o *LoadBalancer) addCloudFunction(pctx *config.PluginContext, r *registry.
 
 func (o *LoadBalancer) processServiceApps(pctx *config.PluginContext, r *registry.Registry, service map[string]*ServiceApp, c *LoadBalancerArgs) error {
 	for _, app := range service {
-		if app.App.Url == "" {
+		if app.App.Url == "" || (app.Skip && !app.CloudRun.IsExisting()) {
 			continue
 		}
 
@@ -125,7 +125,7 @@ func (o *LoadBalancer) processServiceApps(pctx *config.PluginContext, r *registr
 
 func (o *LoadBalancer) processStaticApps(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, c *LoadBalancerArgs) error {
 	for _, app := range static {
-		if app.App.Url == "" {
+		if app.App.Url == "" || (app.Skip && !app.CloudRun.IsExisting()) {
 			continue
 		}
 
@@ -140,7 +140,7 @@ func (o *LoadBalancer) processStaticApps(pctx *config.PluginContext, r *registry
 
 func (o *LoadBalancer) processFunctionApps(pctx *config.PluginContext, r *registry.Registry, function map[string]*FunctionApp, c *LoadBalancerArgs) error {
 	for _, app := range function {
-		if app.App.Url == "" {
+		if app.App.Url == "" || (app.Skip && !app.CloudFunction.IsExisting()) {
 			continue
 		}
 
@@ -247,6 +247,15 @@ func (o *LoadBalancer) planHTTP(pctx *config.PluginContext, r *registry.Registry
 	return nil
 }
 
+func addURLIfNeeded(domainsList map[string]struct{}, app *apiv1.App) {
+	if app.Url == "" {
+		return
+	}
+
+	u, _ := url.Parse(app.Url)
+	domainsList[u.Hostname()] = struct{}{}
+}
+
 func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, static map[string]*StaticApp, service map[string]*ServiceApp, function map[string]*FunctionApp, domainMatch *types.DomainInfoMatcher, c *LoadBalancerArgs) error {
 	staticApps := make([]*StaticApp, 0, len(static))
 	serviceApps := make([]*ServiceApp, 0, len(service))
@@ -289,21 +298,18 @@ func (o *LoadBalancer) Plan(pctx *config.PluginContext, r *registry.Registry, st
 	domainsList := make(map[string]struct{})
 
 	for _, app := range static {
-		u, _ := url.Parse(app.App.Url)
-		domainsList[u.Hostname()] = struct{}{}
-
+		addURLIfNeeded(domainsList, app.App)
 		staticApps = append(staticApps, app)
 	}
 
 	for _, app := range service {
-		if app.App.Url == "" {
-			continue
-		}
-
-		u, _ := url.Parse(app.App.Url)
-		domainsList[u.Hostname()] = struct{}{}
-
+		addURLIfNeeded(domainsList, app.App)
 		serviceApps = append(serviceApps, app)
+	}
+
+	for _, app := range function {
+		addURLIfNeeded(domainsList, app.App)
+		functionApps = append(functionApps, app)
 	}
 
 	// Sort domains to make sure state remains the same.
