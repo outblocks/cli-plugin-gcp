@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.104](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.103...v0.1.104)
+
+> 2022-08-22
+
+### FEATURES
+
+[`b6a7541`](https://github.com/outblocks/cli-plugin-gcp/commit/b6a7541d5986222238ca1c680088ec365edf200f) add endpoint for google storage
+
 ## [v0.1.103](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.102...v0.1.103)
 
 > 2022-08-11
