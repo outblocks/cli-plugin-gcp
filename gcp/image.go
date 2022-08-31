@@ -120,10 +120,12 @@ func (o *Image) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Image) BeforeDiff() {
+func (o *Image) BeforeDiff(context.Context, interface{}) error {
 	if o.Source.IsChanged() || o.SourceHash.IsChanged() {
 		o.Digest.Invalidate()
 	}
+
+	return nil
 }
 
 func (o *Image) Create(ctx context.Context, meta interface{}) error {

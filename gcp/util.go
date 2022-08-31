@@ -46,6 +46,10 @@ var Types = []registry.Resource{
 	(*NotificationChannel)(nil),
 }
 
+var (
+	_ registry.ResourceBeforeDiffHook = (*Image)(nil)
+)
+
 func RegisterTypes(reg *registry.Registry) {
 	for _, t := range Types {
 		reg.RegisterType(t)

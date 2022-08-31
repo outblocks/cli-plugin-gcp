@@ -19,9 +19,10 @@ type Plugin struct {
 	env     env.Enver
 	hostCli apiv1.HostServiceClient
 
-	gcred       *google.Credentials
-	settings    config.Settings
-	apisEnabled map[string]struct{}
+	gcred         *google.Credentials
+	settings      config.Settings
+	apisEnabled   map[string]struct{}
+	pluginContext *config.PluginContext
 }
 
 func NewPlugin() *Plugin {
@@ -31,7 +32,11 @@ func NewPlugin() *Plugin {
 }
 
 func (p *Plugin) PluginContext() *config.PluginContext {
-	return config.NewPluginContext(p.env, p.gcred, &p.settings)
+	if p.pluginContext == nil {
+		p.pluginContext = config.NewPluginContext(p.env, p.gcred, &p.settings)
+	}
+
+	return p.pluginContext
 }
 
 func (p *Plugin) ensureAPI(ctx context.Context, api ...string) error {

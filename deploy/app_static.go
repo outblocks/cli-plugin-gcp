@@ -102,10 +102,10 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 	if !o.Skip {
 		buildPath, ok := plugin_util.CheckDir(buildDir)
 		if !ok {
-			return fmt.Errorf("app '%s' build dir '%s' does not exist", o.App.Name, buildDir)
+			return fmt.Errorf("%s app '%s' build dir '%s' does not exist", o.App.Type, o.App.Name, buildDir)
 		}
 
-		files, err := findFiles(buildPath)
+		files, err := findFiles(buildPath, o.DeployOpts.Patterns)
 		if err != nil {
 			return err
 		}

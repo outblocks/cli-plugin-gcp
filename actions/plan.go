@@ -418,8 +418,8 @@ func (p *PlanAction) save() error {
 	return nil
 }
 
-func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) (*apiv1.Plan, error) {
-	err := p.prepareCloudRunURL(ctx, false)
+func (p *PlanAction) process(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, apply bool) ([]*registry.Diff, error) {
+	err := p.prepareCloudRunURL(ctx, apply && !p.destroy)
 	if err != nil {
 		return nil, err
 	}
@@ -429,12 +429,18 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 		return nil, err
 	}
 
-	err = p.planAll(ctx, appPlans, depPlans, false)
+	err = p.planAll(ctx, appPlans, depPlans, apply)
 	if err != nil {
 		return nil, err
 	}
 
 	diff, err := p.registry.ProcessAndDiff(ctx, p.pluginCtx)
+
+	return diff, err
+}
+
+func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan) (*apiv1.Plan, error) {
+	diff, err := p.process(ctx, appPlans, depPlans, false)
 	if err != nil {
 		return nil, err
 	}
@@ -450,23 +456,7 @@ func (p *PlanAction) Plan(ctx context.Context, appPlans []*apiv1.AppPlan, depPla
 }
 
 func (p *PlanAction) Apply(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, cb func(a *apiv1.ApplyAction)) error {
-	err := p.prepareCloudRunURL(ctx, !p.destroy)
-	if err != nil {
-		return err
-	}
-
-	err = p.enableAPIs(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = p.planAll(ctx, appPlans, depPlans, true)
-	if err != nil {
-		return err
-	}
-
-	// Process registry.
-	diff, err := p.registry.ProcessAndDiff(ctx, p.pluginCtx)
+	diff, err := p.process(ctx, appPlans, depPlans, true)
 	if err != nil {
 		return err
 	}

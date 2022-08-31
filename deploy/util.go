@@ -5,7 +5,13 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"path/filepath"
+
+	"github.com/outblocks/outblocks-plugin-go/registry"
+	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
+)
+
+var (
+	_ registry.ResourceDiffCalculator = (*CacheInvalidate)(nil)
 )
 
 func hashFile(f string) (string, error) {
@@ -41,33 +47,23 @@ func hashFile(f string) (string, error) {
 	return hex.EncodeToString(sum), nil
 }
 
-func findFiles(root string) (ret map[string]string, err error) {
+func findFiles(root string, patterns []string) (ret map[string]string, err error) {
 	ret = make(map[string]string)
 
-	err = filepath.Walk(root,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			rel, err := filepath.Rel(root, path)
-			if err != nil {
-				return err
-			}
-
-			hash, err := hashFile(path)
-			if err != nil {
-				return err
-			}
-
-			ret[rel] = hash
-
+	err = plugin_util.WalkWithExclusions(root, patterns, func(path, rel string, info os.FileInfo) error {
+		if info.IsDir() {
 			return nil
-		})
+		}
+
+		hash, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+
+		ret[rel] = hash
+
+		return nil
+	})
 
 	return ret, err
 }
