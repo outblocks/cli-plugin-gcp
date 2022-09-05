@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.105](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.104...v0.1.105)
+
+> 2022-09-05
+
+### FEATURES
+
+[`02e6561`](https://github.com/outblocks/cli-plugin-gcp/commit/02e65611b08ee0716d1e627620626193928c03f0) support for deletion of sevice apps with missing image
+
+[`d8e482a`](https://github.com/outblocks/cli-plugin-gcp/commit/d8e482a264dfcd791256e4b3d41bd1b740923418) support for file patterns in app static
+
 ## [v0.1.104](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.103...v0.1.104)
 
 > 2022-08-22
