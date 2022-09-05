@@ -419,12 +419,14 @@ func (p *PlanAction) save() error {
 }
 
 func (p *PlanAction) process(ctx context.Context, appPlans []*apiv1.AppPlan, depPlans []*apiv1.DependencyPlan, apply bool) ([]*registry.Diff, error) {
-	err := p.prepareCloudRunURL(ctx, apply && !p.destroy)
-	if err != nil {
-		return nil, err
+	if len(appPlans) != 0 {
+		err := p.prepareCloudRunURL(ctx, apply && !p.destroy)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	err = p.enableAPIs(ctx)
+	err := p.enableAPIs(ctx)
 	if err != nil {
 		return nil, err
 	}
