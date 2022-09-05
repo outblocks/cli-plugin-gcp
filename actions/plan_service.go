@@ -53,7 +53,7 @@ func (p *PlanAction) prepareServiceAppsDeploy(appPlans []*apiv1.AppPlan) (ret []
 	ret = make([]*deploy.ServiceApp, len(appPlans))
 
 	for i, plan := range appPlans {
-		appDeploy, err := deploy.NewServiceApp(plan)
+		appDeploy, err := deploy.NewServiceApp(plan, p.destroy)
 		if err != nil {
 			return nil, err
 		}

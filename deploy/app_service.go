@@ -42,6 +42,7 @@ type ServiceApp struct {
 
 	App        *apiv1.App
 	Skip       bool
+	Destroy    bool
 	Build      *apiv1.AppBuild
 	Props      *types.ServiceAppProperties
 	DeployOpts *ServiceAppDeployOptions
@@ -102,7 +103,7 @@ func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOpt
 	)
 }
 
-func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
+func NewServiceApp(plan *apiv1.AppPlan, destroy bool) (*ServiceApp, error) {
 	opts, err := types.NewServiceAppProperties(plan.State.App.Properties.AsMap())
 	if err != nil {
 		return nil, err
@@ -120,6 +121,7 @@ func NewServiceApp(plan *apiv1.AppPlan) (*ServiceApp, error) {
 	return &ServiceApp{
 		App:        plan.State.App,
 		Skip:       plan.Skip,
+		Destroy:    destroy,
 		Build:      plan.Build,
 		Props:      opts,
 		DeployOpts: deployOpts,
@@ -282,7 +284,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		return err
 	}
 
-	if !o.Image.IsExisting() && o.Build.LocalDockerHash == "" && !o.Skip {
+	if !o.Image.IsExisting() && o.Build.LocalDockerHash == "" && !o.Skip && !o.Destroy {
 		return fmt.Errorf("image for app '%s' is missing", o.App.Name)
 	}
 
