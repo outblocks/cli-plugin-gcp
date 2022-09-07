@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.106](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.105...v0.1.106)
+
+> 2022-09-07
+
+### BUG FIXES
+
+[`d705474`](https://github.com/outblocks/cli-plugin-gcp/commit/d70547426dc11c113b4533a6ca26cac0ad4a3d77) cloud function deletion
+
+[`8864155`](https://github.com/outblocks/cli-plugin-gcp/commit/8864155351729a7a9021af370fb1377a1933a43b) skip cloud run url if it's not needed
+
 ## [v0.1.105](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.104...v0.1.105)
 
 > 2022-09-05
