@@ -104,6 +104,7 @@ func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *r
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
+		Critical:   false,
 	}
 
 	_, err := r.RegisterAppResource(o.App, "bucket", o.Bucket)

@@ -76,6 +76,7 @@ func (o *StorageDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *S
 		MaxVersions:          fields.Int(o.Opts.MaxVersions),
 		Public:               fields.Bool(o.Opts.Public),
 		CORS:                 gcp.BucketCORS(cors),
+		Critical:             true,
 	}
 
 	_, err := r.RegisterDependencyResource(o.Dep, "bucket", o.Bucket)

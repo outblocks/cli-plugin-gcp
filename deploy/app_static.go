@@ -91,6 +91,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Location:   fields.String(c.Region),
 		ProjectID:  fields.String(c.ProjectID),
 		Versioning: fields.Bool(false),
+		Critical:   false,
 	}
 
 	_, err := r.RegisterAppResource(o.App, "bucket", o.Bucket)

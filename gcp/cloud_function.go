@@ -308,9 +308,9 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 func (o *CloudFunction) Delete(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	projectID := o.ProjectID.Wanted()
-	region := o.Region.Wanted()
-	name := o.Name.Wanted()
+	projectID := o.ProjectID.Current()
+	region := o.Region.Current()
+	name := o.Name.Current()
 
 	cli, err := pctx.GCPCloudfunctionsClient(ctx)
 	if err != nil {

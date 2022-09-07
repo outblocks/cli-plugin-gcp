@@ -59,6 +59,8 @@ type Bucket struct {
 	Public               fields.BoolInputField
 
 	CORS fields.ArrayInputField
+
+	Critical bool `state:"-"`
 }
 
 func (o *Bucket) ReferenceID() string {
@@ -312,5 +314,5 @@ func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 }
 
 func (o *Bucket) IsCritical(t registry.DiffType, fieldList []string) bool {
-	return t == registry.DiffTypeDelete || t == registry.DiffTypeRecreate
+	return o.Critical && (t == registry.DiffTypeDelete || t == registry.DiffTypeRecreate)
 }
