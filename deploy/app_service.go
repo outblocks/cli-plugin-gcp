@@ -37,8 +37,9 @@ func (s *CloudRunSettings) URLSuffix() string {
 }
 
 type ServiceApp struct {
-	Image    *gcp.Image
-	CloudRun *gcp.CloudRun
+	Image              *gcp.Image
+	CloudRun           *gcp.CloudRun
+	CloudSchedulerJobs []*gcp.CloudSchedulerJob
 
 	App        *apiv1.App
 	Skip       bool
@@ -254,7 +255,7 @@ ENTRYPOINT ["%s"]
 	return nil
 }
 
-func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error {
+func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error { //nolint: gocyclo
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
 		Name:      fields.String(gcp.ImageID(pctx.Env(), o.App.Id)),
@@ -356,6 +357,15 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)
 	if err != nil {
 		return err
+	}
+
+	if o.App.Url != "" {
+		schedulers, err := addCloudSchedulers(r, o.App, c.ProjectID, c.Region, o.Props.Scheduler)
+		if err != nil {
+			return err
+		}
+
+		o.CloudSchedulerJobs = schedulers
 	}
 
 	return nil

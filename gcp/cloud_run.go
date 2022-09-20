@@ -69,7 +69,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint:
 	}
 
 	if err != nil {
-		return fmt.Errorf("error fetching cloud run service status: %w", err)
+		return fmt.Errorf("error fetching cloud run service: %w", err)
 	}
 
 	o.MarkAsExisting()

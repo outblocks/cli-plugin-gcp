@@ -12,6 +12,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/cloudscheduler/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
@@ -86,7 +87,7 @@ func NewGCPSecretManagerClient(ctx context.Context, cred *google.Credentials) (*
 	return secretmanager.NewService(ctx, option.WithCredentials(cred))
 }
 
-func NewGCPCloudfunctionsClient(ctx context.Context, cred *google.Credentials) (*cloudfunctions.Service, error) {
+func NewGCPCloudFunctionsClient(ctx context.Context, cred *google.Credentials) (*cloudfunctions.Service, error) {
 	return cloudfunctions.NewService(ctx, option.WithCredentials(cred))
 }
 
@@ -100,4 +101,8 @@ func NewGCPMonitoringNotificationChannelClient(ctx context.Context, cred *google
 
 func NewGCPMonitoringAlertPolicyClient(ctx context.Context, cred *google.Credentials) (*monitoring.AlertPolicyClient, error) {
 	return monitoring.NewAlertPolicyClient(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPCloudSchedulerClient(ctx context.Context, cred *google.Credentials) (*cloudscheduler.Service, error) {
+	return cloudscheduler.NewService(ctx, option.WithCredentials(cred))
 }

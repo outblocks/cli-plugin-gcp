@@ -44,6 +44,7 @@ var Types = []registry.Resource{
 	(*UptimeCheckConfig)(nil),
 	(*UptimeAlertPolicy)(nil),
 	(*NotificationChannel)(nil),
+	(*CloudSchedulerJob)(nil),
 }
 
 var (

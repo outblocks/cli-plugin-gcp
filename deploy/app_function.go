@@ -16,9 +16,10 @@ import (
 )
 
 type FunctionApp struct {
-	Bucket        *gcp.Bucket
-	Archive       *gcp.BucketObject
-	CloudFunction *gcp.CloudFunction
+	Bucket             *gcp.Bucket
+	Archive            *gcp.BucketObject
+	CloudFunction      *gcp.CloudFunction
+	CloudSchedulerJobs []*gcp.CloudSchedulerJob
 
 	App        *apiv1.App
 	Skip       bool
@@ -167,6 +168,15 @@ func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *r
 	_, err = r.RegisterAppResource(o.App, "cloud_function", o.CloudFunction)
 	if err != nil {
 		return err
+	}
+
+	if o.App.Url != "" {
+		schedulers, err := addCloudSchedulers(r, o.App, c.ProjectID, c.Region, o.Props.Scheduler)
+		if err != nil {
+			return err
+		}
+
+		o.CloudSchedulerJobs = schedulers
 	}
 
 	return nil

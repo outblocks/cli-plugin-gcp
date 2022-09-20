@@ -11,6 +11,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudfunctions/v1"
+	"google.golang.org/api/cloudscheduler/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/run/v1"
 	"google.golang.org/api/serviceusage/v1"
@@ -37,6 +38,7 @@ type PluginContext struct {
 	monitoringUptimeChecksCli        *monitoring.UptimeCheckClient
 	monitoringNotificationChannelCli *monitoring.NotificationChannelClient
 	monitoringAlertPolicyCli         *monitoring.AlertPolicyClient
+	cloudschedulerCli                *cloudscheduler.Service
 
 	funcCache map[string]*funcCacheData
 
@@ -45,7 +47,8 @@ type PluginContext struct {
 	}
 	once struct {
 		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli, cloudfunctionsCli,
-		monitoringUptimeChecksCli, monitoringNotificationChannelCli, monitoringAlertPolicyCli sync.Once
+		monitoringUptimeChecksCli, monitoringNotificationChannelCli, monitoringAlertPolicyCli,
+		cloudschedulerCli sync.Once
 	}
 }
 
@@ -147,11 +150,11 @@ func (c *PluginContext) GCPSQLAdminClient(ctx context.Context) (*sqladmin.Servic
 	return c.sqlAdminCli, err
 }
 
-func (c *PluginContext) GCPCloudfunctionsClient(ctx context.Context) (*cloudfunctions.Service, error) {
+func (c *PluginContext) GCPCloudFunctionsClient(ctx context.Context) (*cloudfunctions.Service, error) {
 	var err error
 
 	c.once.cloudfunctionsCli.Do(func() {
-		c.cloudfunctionsCli, err = NewGCPCloudfunctionsClient(ctx, c.GoogleCredentials())
+		c.cloudfunctionsCli, err = NewGCPCloudFunctionsClient(ctx, c.GoogleCredentials())
 	})
 
 	if err != nil {
@@ -201,6 +204,20 @@ func (c *PluginContext) GCPMonitoringNotificationChannelClient(ctx context.Conte
 	}
 
 	return c.monitoringNotificationChannelCli, err
+}
+
+func (c *PluginContext) GCPCloudSchedulerClient(ctx context.Context) (*cloudscheduler.Service, error) {
+	var err error
+
+	c.once.cloudschedulerCli.Do(func() {
+		c.cloudschedulerCli, err = NewGCPCloudSchedulerClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp cloud scheduler client: %w", err)
+	}
+
+	return c.cloudschedulerCli, err
 }
 
 func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {

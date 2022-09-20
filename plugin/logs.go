@@ -40,13 +40,16 @@ func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.Logs
 	var severity apiv1.LogSeverity
 
 	switch {
-	case e.Severity <= loggingtype.LogSeverity_DEBUG:
+	case e.Severity < loggingtype.LogSeverity_DEBUG:
+		severity = apiv1.LogSeverity_LOG_SEVERITY_INFO
+	case e.Severity == loggingtype.LogSeverity_DEBUG:
 		severity = apiv1.LogSeverity_LOG_SEVERITY_DEBUG
 	case e.Severity <= loggingtype.LogSeverity_INFO:
 		severity = apiv1.LogSeverity_LOG_SEVERITY_INFO
 	case e.Severity <= loggingtype.LogSeverity_NOTICE:
 		severity = apiv1.LogSeverity_LOG_SEVERITY_NOTICE
 	case e.Severity <= loggingtype.LogSeverity_WARNING:
+		severity = apiv1.LogSeverity_LOG_SEVERITY_WARN
 	default:
 		severity = apiv1.LogSeverity_LOG_SEVERITY_ERROR
 	}
@@ -56,7 +59,7 @@ func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.Logs
 	switch {
 	case strings.HasSuffix(e.LogName, "%2Fstdout"):
 		typ = apiv1.LogsResponse_TYPE_STDOUT
-	case strings.HasSuffix(e.LogName, "%2Ftderrr"):
+	case strings.HasSuffix(e.LogName, "%2Fstderr") || strings.HasSuffix(e.LogName, "%2Fvarlog%2Fsystem"):
 		typ = apiv1.LogsResponse_TYPE_STDERR
 	}
 
@@ -86,8 +89,14 @@ func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.Logs
 			panic(err)
 		}
 
-		ret.Payload = &apiv1.LogsResponse_Text{
-			Text: msg.Status.Message,
+		if msg.Status != nil {
+			ret.Payload = &apiv1.LogsResponse_Text{
+				Text: msg.Status.Message,
+			}
+		} else {
+			ret.Payload = &apiv1.LogsResponse_Text{
+				Text: msg.MethodName,
+			}
 		}
 
 	case *loggingpb.LogEntry_TextPayload:

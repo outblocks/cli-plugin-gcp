@@ -55,7 +55,7 @@ func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
 	region := o.Region.Any()
 	name := o.Name.Any()
 
-	cli, err := pctx.GCPCloudfunctionsClient(ctx)
+	cli, err := pctx.GCPCloudFunctionsClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
 	region := o.Region.Wanted()
 	name := o.Name.Wanted()
 
-	cli, err := pctx.GCPCloudfunctionsClient(ctx)
+	cli, err := pctx.GCPCloudFunctionsClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 	region := o.Region.Wanted()
 	name := o.Name.Wanted()
 
-	cli, err := pctx.GCPCloudfunctionsClient(ctx)
+	cli, err := pctx.GCPCloudFunctionsClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (o *CloudFunction) Delete(ctx context.Context, meta interface{}) error {
 	region := o.Region.Current()
 	name := o.Name.Current()
 
-	cli, err := pctx.GCPCloudfunctionsClient(ctx)
+	cli, err := pctx.GCPCloudFunctionsClient(ctx)
 	if err != nil {
 		return err
 	}
