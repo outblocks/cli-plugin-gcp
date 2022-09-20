@@ -1,5 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.107](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.106...v0.1.107)
+
+> 2022-09-20
+
+### BUG FIXES
+
+[`5173479`](https://github.com/outblocks/cli-plugin-gcp/commit/5173479b07cf7415c56f26f971e70e9b178f99b1) potential runsd dns fix
+
+### FEATURES
+
+[`a8d88c5`](https://github.com/outblocks/cli-plugin-gcp/commit/a8d88c5d05c450509f41b25b6b538c9d4dfb0bf7) scheduler support
+
 ## [v0.1.106](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.105...v0.1.106)
 
 > 2022-09-07
