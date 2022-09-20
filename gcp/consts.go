@@ -21,7 +21,7 @@ const (
 	GCSProxyImageName   = "nginx-gcs-static-proxy"
 	GCSProxyVersion     = "1.21-v5"
 	GCSProxyDockerImage = "docker.io/outblocks/nginx-gcs-static-proxy:" + GCSProxyVersion
-	RunsdDownloadLink   = "https://github.com/ahmetb/runsd/releases/download/v0.0.0-rc.15/runsd"
+	RunsdDownloadLink   = "https://github.com/outblocks/runsd/releases/tag/v0.0.1-rc.1/runsd"
 	CloudSQLVersion     = "1.28.1"
 
 	DefaultConcurrency = 5
