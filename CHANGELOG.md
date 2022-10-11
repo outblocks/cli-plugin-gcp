@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.108](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.107...v0.1.108)
+
+> 2022-10-11
+
+### BUG FIXES
+
+[`7730f11`](https://github.com/outblocks/cli-plugin-gcp/commit/7730f11815a9e61c0b1e0b385f22566cb83d48a8) runsd download link
+
 ## [v0.1.107](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.106...v0.1.107)
 
 > 2022-09-20
