@@ -26,7 +26,7 @@ const CredentialsEnvVar = "GCLOUD_SERVICE_KEY"
 
 var errCredentialsMissing = fmt.Errorf(`error getting google credentials!
 Supported credentials through environment variables: 'GOOGLE_APPLICATION_CREDENTIALS' pointing to a file or 'GCLOUD_SERVICE_KEY' with file contents.
-Alternatively install 'gcloud' and authorize with your account: 'gcloud application-default login'`)
+Alternatively install 'gcloud' and authorize with your account: 'gcloud auth application-default login'`)
 
 func GoogleCredentials(ctx context.Context, scopes ...string) (cred *google.Credentials, err error) {
 	if key := os.Getenv(CredentialsEnvVar); key != "" {
