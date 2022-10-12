@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.109](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.108...v0.1.109)
+
+> 2022-10-12
+
+### BUG FIXES
+
+[`726b695`](https://github.com/outblocks/cli-plugin-gcp/commit/726b695f16434facfd9822c9b996e1c7ae978eac) error message when credentials dont work
+
 ## [v0.1.108](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.107...v0.1.108)
 
 > 2022-10-11
