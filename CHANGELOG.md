@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.110](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.109...v0.1.110)
+
+> 2022-10-31
+
+### BUG FIXES
+
+[`3ec465d`](https://github.com/outblocks/cli-plugin-gcp/commit/3ec465d6abe83945ee754ae603e4ed35ee8708b5) add cloud functions admin to SA by default
+
 ## [v0.1.109](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.108...v0.1.109)
 
 > 2022-10-12
