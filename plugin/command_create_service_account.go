@@ -93,7 +93,11 @@ func (p *Plugin) setupOutblocksServiceAccountPermissions(ctx context.Context, na
 	}
 
 	err = p.runAndEnsureAPI(ctx, func() error {
-		err = addServiceAccountRoles(crmCli, p.settings.ProjectID, name, "roles/editor", "roles/secretmanager.secretAccessor")
+		err = addServiceAccountRoles(crmCli, p.settings.ProjectID, name,
+			"roles/editor",
+			"roles/secretmanager.secretAccessor",
+			"roles/cloudfunctions.admin",
+		)
 
 		return err
 	})
