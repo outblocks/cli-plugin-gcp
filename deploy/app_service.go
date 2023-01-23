@@ -360,7 +360,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 	}
 
 	if o.App.Url != "" {
-		schedulers, err := addCloudSchedulers(r, o.App, c.ProjectID, c.Region, o.Props.Scheduler)
+		schedulers, err := addCloudSchedulers(pctx, r, o.App, c.ProjectID, c.Region, o.Props.Scheduler)
 		if err != nil {
 			return err
 		}

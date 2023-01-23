@@ -129,7 +129,7 @@ func setSecretValue(cli *secretmanager.Service, project, name, value string, cle
 	for _, v := range versions.Versions {
 		verTime, _ := time.Parse(time.RFC3339, v.CreateTime)
 
-		if !verTime.Before(now) || v.State != "ENABLED" {
+		if verTime.After(now) || v.State != "ENABLED" {
 			continue
 		}
 

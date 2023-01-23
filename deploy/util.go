@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/outblocks/cli-plugin-gcp/gcp"
+	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	apiv1 "github.com/outblocks/outblocks-plugin-go/gen/api/v1"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
@@ -75,7 +76,7 @@ func findFiles(root string, patterns []string) (ret map[string]string, err error
 	return ret, err
 }
 
-func addCloudSchedulers(r *registry.Registry, app *apiv1.App, projectID, region string, schedulers []*types.AppScheduler) ([]*gcp.CloudSchedulerJob, error) {
+func addCloudSchedulers(pctx *config.PluginContext, r *registry.Registry, app *apiv1.App, projectID, region string, schedulers []*types.AppScheduler) ([]*gcp.CloudSchedulerJob, error) {
 	ret := make([]*gcp.CloudSchedulerJob, 0, len(schedulers))
 
 	for i, sch := range schedulers {
@@ -95,10 +96,19 @@ func addCloudSchedulers(r *registry.Registry, app *apiv1.App, projectID, region 
 			log.Fatal(err)
 		}
 
+		var cronName string
+
+		if sch.Name != "" {
+			cronName = gcp.ID(pctx.Env(), sch.Name)
+		} else {
+			cronName = gcp.ID(pctx.Env(), fmt.Sprintf("%d", i+1))
+		}
+
 		job := &gcp.CloudSchedulerJob{
-			Name:        fields.String(fmt.Sprintf("%d: %s", i+1, sch.Cron)),
+			Name:        fields.String(cronName),
 			ProjectID:   fields.String(projectID),
 			Region:      fields.String(region),
+			Schedule:    fields.String(sch.Cron),
 			HTTPMethod:  fields.String(sch.Method),
 			HTTPURL:     fields.String(base.ResolveReference(u).String()),
 			HTTPHeaders: fields.Map(headers),

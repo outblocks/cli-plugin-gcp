@@ -30,7 +30,7 @@ func databaseDockerPostgresRestoreArgs(port int, database, user, password string
 	}
 
 	if !override {
-		args = append(args, "--single-transaction")
+		args = append(args, "--single-transaction", "--no-owner", "--if-exists")
 	}
 
 	if verbose {

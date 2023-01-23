@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -101,6 +102,7 @@ func (o *CloudSchedulerJob) Create(ctx context.Context, meta interface{}) error 
 	}
 
 	_, err = cli.Projects.Locations.Jobs.Create(parentID, o.makeJob()).Do()
+	fmt.Fprintln(os.Stderr, "wtf", err, o.makeJob().Schedule)
 
 	return err
 }
@@ -112,8 +114,10 @@ func (o *CloudSchedulerJob) makeJob() *cloudscheduler.Job {
 		headers[k] = v.(string)
 	}
 
+	id := fmt.Sprintf("projects/%s/locations/%s/jobs/%s", o.ProjectID.Wanted(), o.Region.Wanted(), o.Name.Wanted())
+
 	return &cloudscheduler.Job{
-		Name:     o.Name.Wanted(),
+		Name:     id,
 		Schedule: o.Schedule.Wanted(),
 		HttpTarget: &cloudscheduler.HttpTarget{
 			HttpMethod: o.HTTPMethod.Wanted(),

@@ -137,7 +137,7 @@ commands:
       - name: override
         type: bool
         usage: >
-          Override all default command params (for pg_restore/psql: '--single-transaction'),
+          Override all default command params (for pg_restore/psql: '--single-transaction --no-owner --if-exists'),
           use only params from positional arguments
 
   create-service-account:
