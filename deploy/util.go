@@ -104,6 +104,10 @@ func addCloudSchedulers(pctx *config.PluginContext, r *registry.Registry, app *a
 			cronName = gcp.ID(pctx.Env(), fmt.Sprintf("%d", i+1))
 		}
 
+		if sch.Method == "" {
+			sch.Method = "GET"
+		}
+
 		job := &gcp.CloudSchedulerJob{
 			Name:        fields.String(cronName),
 			ProjectID:   fields.String(projectID),

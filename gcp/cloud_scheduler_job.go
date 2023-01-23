@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
@@ -17,10 +16,10 @@ type CloudSchedulerJob struct {
 	Name        fields.StringInputField `state:"force_new"`
 	ProjectID   fields.StringInputField `state:"force_new"`
 	Region      fields.StringInputField `state:"force_new"`
-	Schedule    fields.StringInputField
-	HTTPMethod  fields.StringInputField `default:"GET"`
-	HTTPURL     fields.StringInputField
-	HTTPHeaders fields.MapInputField
+	Schedule    fields.StringInputField `state:"force_new"`
+	HTTPMethod  fields.StringInputField `state:"force_new" default:"GET"`
+	HTTPURL     fields.StringInputField `state:"force_new"`
+	HTTPHeaders fields.MapInputField    `state:"force_new"`
 }
 
 func (o *CloudSchedulerJob) ReferenceID() string {
@@ -102,7 +101,6 @@ func (o *CloudSchedulerJob) Create(ctx context.Context, meta interface{}) error 
 	}
 
 	_, err = cli.Projects.Locations.Jobs.Create(parentID, o.makeJob()).Do()
-	fmt.Fprintln(os.Stderr, "wtf", err, o.makeJob().Schedule)
 
 	return err
 }
@@ -130,11 +128,6 @@ func (o *CloudSchedulerJob) makeJob() *cloudscheduler.Job {
 func (o *CloudSchedulerJob) Update(ctx context.Context, meta interface{}) error {
 	pctx := meta.(*config.PluginContext)
 
-	projectID := o.ProjectID.Wanted()
-	region := o.Region.Wanted()
-	name := o.Name.Wanted()
-	id := fmt.Sprintf("projects/%s/locations/%s/jobs/%s", projectID, region, name)
-
 	cli, err := pctx.GCPCloudSchedulerClient(ctx)
 	if err != nil {
 		return err
@@ -146,7 +139,9 @@ func (o *CloudSchedulerJob) Update(ctx context.Context, meta interface{}) error 
 		headers[k] = v.(string)
 	}
 
-	_, err = cli.Projects.Locations.Jobs.Patch(id, o.makeJob()).Do()
+	job := o.makeJob()
+
+	_, err = cli.Projects.Locations.Jobs.Patch(job.Name, job).Do()
 
 	return err
 }
