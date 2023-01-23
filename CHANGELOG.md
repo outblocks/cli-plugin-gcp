@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.111](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.110...v0.1.111)
+
+> 2023-01-23
+
+### FEATURES
+
+[`23ca9a1`](https://github.com/outblocks/cli-plugin-gcp/commit/23ca9a152c180c9afc5b53cb83d0dec9b168f4fb) cloud scheduler fixes, dbrestore default params update
+
 ## [v0.1.110](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.109...v0.1.110)
 
 > 2022-10-31
