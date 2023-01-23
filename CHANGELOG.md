@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.112](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.111...v0.1.112)
+
+> 2023-01-23
+
+### BUG FIXES
+
+[`eaa733c`](https://github.com/outblocks/cli-plugin-gcp/commit/eaa733caebebe4970aa529c3fa0d67362a24eecc) scheduler updates
+
 ## [v0.1.111](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.110...v0.1.111)
 
 > 2023-01-23
