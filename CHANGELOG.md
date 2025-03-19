@@ -1,5 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.114](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.113...v0.1.114)
+
+> 2025-03-19
+
+### BUG FIXES
+
+[`d3fc4ef`](https://github.com/outblocks/cli-plugin-gcp/commit/d3fc4ef9d4f8a9565757ca0bca7d3913ce66884c) update golangci-lint action
+
+### FEATURES
+
+[`ce025ad`](https://github.com/outblocks/cli-plugin-gcp/commit/ce025ada73556bce6df3de53e3a4e251f21d806e) artifact registry support
+
 ## [v0.1.113](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.112...v0.1.113)
 
 > 2023-02-07
