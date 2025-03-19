@@ -172,7 +172,7 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 			entrypoint = append(entrypoint, inspect.Config.Entrypoint...)
 
 			if len(inspect.Config.Cmd) > 0 {
-				dockerSuffix = fmt.Sprintf(`CMD ["%s"]`, strings.Join(inspect.Config.Cmd, `" , "`))
+				dockerSuffix = fmt.Sprintf(`CMD ["%s"]`, strings.Join(inspect.Config.Cmd, `" , "`)) //nolint:gocritic
 			}
 		} else {
 			entrypoint = append(entrypoint, inspect.Config.Cmd...)
@@ -260,7 +260,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 	o.Image = &gcp.Image{
 		Name:      fields.String(gcp.ImageID(pctx.Env(), o.App.Id)),
 		ProjectID: fields.String(c.ProjectID),
-		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
+		Region:    fields.String(c.Region),
 		Pull:      false,
 	}
 

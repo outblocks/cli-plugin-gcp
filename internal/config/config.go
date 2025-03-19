@@ -10,6 +10,7 @@ import (
 	"cloud.google.com/go/storage"
 	dockerclient "github.com/docker/docker/client"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/artifactregistry/v1"
 	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/cloudscheduler/v1"
@@ -39,7 +40,6 @@ func GoogleCredentials(ctx context.Context, scopes ...string) (cred *google.Cred
 	}
 
 	cred, err = google.FindDefaultCredentials(ctx, scopes...)
-
 	if err != nil {
 		return nil, errCredentialsMissing
 	}
@@ -105,4 +105,8 @@ func NewGCPMonitoringAlertPolicyClient(ctx context.Context, cred *google.Credent
 
 func NewGCPCloudSchedulerClient(ctx context.Context, cred *google.Credentials) (*cloudscheduler.Service, error) {
 	return cloudscheduler.NewService(ctx, option.WithCredentials(cred))
+}
+
+func NewGCPArtifactRegistryClient(ctx context.Context, cred *google.Credentials) (*artifactregistry.Service, error) {
+	return artifactregistry.NewService(ctx, option.WithCredentials(cred))
 }

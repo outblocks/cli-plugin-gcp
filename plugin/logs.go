@@ -153,15 +153,15 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 	}
 
 	if len(cloudRunNames) > 0 {
-		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_run_revision" resource.labels.service_name = ("%s"))`, strings.Join(cloudRunNames, `" OR "`)))
+		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_run_revision" resource.labels.service_name = ("%s"))`, strings.Join(cloudRunNames, `" OR "`))) //nolint:gocritic
 	}
 
 	if len(cloudFunctionNames) > 0 {
-		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_function" resource.labels.function_name = ("%s"))`, strings.Join(cloudFunctionNames, `" OR "`)))
+		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloud_function" resource.labels.function_name = ("%s"))`, strings.Join(cloudFunctionNames, `" OR "`))) //nolint:gocritic
 	}
 
 	if len(cloudSQLNames) > 0 {
-		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloudsql_database" resource.labels.database_id = ("%s"))`, strings.Join(cloudSQLNames, `" OR "`)))
+		filterOrs = append(filterOrs, fmt.Sprintf(`(resource.type = "cloudsql_database" resource.labels.database_id = ("%s"))`, strings.Join(cloudSQLNames, `" OR "`))) //nolint:gocritic
 	}
 
 	if len(filterOrs) == 0 {
@@ -171,23 +171,23 @@ func (p *Plugin) createLogFilter(r *apiv1.LogsRequest) (filter string, idMap map
 	filterAnds = append(filterAnds, fmt.Sprintf("(%s)", strings.Join(filterOrs, " OR ")))
 
 	if r.Severity > apiv1.LogSeverity_LOG_SEVERITY_UNSPECIFIED {
-		filterAnds = append(filterAnds, fmt.Sprintf(`severity >= "%s"`, r.Severity.String()[len("LOG_SEVERITY_"):]))
+		filterAnds = append(filterAnds, fmt.Sprintf(`severity >= "%s"`, r.Severity.String()[len("LOG_SEVERITY_"):])) //nolint:gocritic
 	}
 
 	if r.Start.IsValid() {
-		filterAnds = append(filterAnds, fmt.Sprintf(`timestamp >= "%s"`, r.Start.AsTime().Format(time.RFC3339)))
+		filterAnds = append(filterAnds, fmt.Sprintf(`timestamp >= "%s"`, r.Start.AsTime().Format(time.RFC3339))) //nolint:gocritic
 	}
 
 	if r.End.IsValid() && !r.End.AsTime().IsZero() {
-		filterAnds = append(filterAnds, fmt.Sprintf(`timestamp <= "%s"`, r.End.AsTime().Format(time.RFC3339)))
+		filterAnds = append(filterAnds, fmt.Sprintf(`timestamp <= "%s"`, r.End.AsTime().Format(time.RFC3339))) //nolint:gocritic
 	}
 
 	for _, c := range r.Contains {
-		filterAnds = append(filterAnds, fmt.Sprintf(`"%s"`, c))
+		filterAnds = append(filterAnds, fmt.Sprintf(`"%s"`, c)) //nolint:gocritic
 	}
 
 	for _, c := range r.NotContains {
-		filterAnds = append(filterAnds, fmt.Sprintf(`NOT "%s"`, c))
+		filterAnds = append(filterAnds, fmt.Sprintf(`NOT "%s"`, c)) //nolint:gocritic
 	}
 
 	if r.Filter != "" {

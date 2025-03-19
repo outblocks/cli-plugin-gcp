@@ -146,7 +146,7 @@ func (o *StaticApp) Plan(pctx *config.PluginContext, r *registry.Registry, c *St
 		Name:      fields.String(gcp.ImageID(pctx.Env(), gcp.GCSProxyImageName)),
 		Tag:       fields.String(gcp.GCSProxyVersion),
 		ProjectID: fields.String(c.ProjectID),
-		GCR:       fields.String(gcp.RegionToGCR(c.Region)),
+		Region:    fields.String(c.Region),
 		Source:    fields.String(gcp.GCSProxyDockerImage),
 		Pull:      true,
 	}

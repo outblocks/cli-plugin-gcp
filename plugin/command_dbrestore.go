@@ -161,6 +161,7 @@ func (p *Plugin) DBRestore(ctx context.Context, req *apiv1.CommandRequest) error
 		}
 
 		var wg sync.WaitGroup
+
 		wg.Add(2)
 
 		cmd.SetStdin(f)

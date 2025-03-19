@@ -1,6 +1,6 @@
 module github.com/outblocks/cli-plugin-gcp
 
-go 1.19
+go 1.24
 
 require (
 	cloud.google.com/go/logging v1.4.2

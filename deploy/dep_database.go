@@ -218,6 +218,7 @@ func (o *DatabaseDep) registerUser(r *registry.Registry, user, password, hostnam
 		randomPassword := &resources.RandomString{
 			Name: fields.Sprintf("%s password", user),
 		}
+
 		_, err := r.RegisterDependencyResource(o.Dep, user, randomPassword)
 		if err != nil {
 			return err

@@ -260,6 +260,7 @@ func (p *Plugin) DBDump(ctx context.Context, req *apiv1.CommandRequest) error {
 		var stdout []byte
 
 		var wg sync.WaitGroup
+
 		wg.Add(2)
 
 		go func() {

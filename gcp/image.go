@@ -9,13 +9,10 @@ import (
 	"strings"
 
 	dockertypes "github.com/docker/docker/api/types"
-	gcrauthn "github.com/google/go-containerregistry/pkg/authn"
-	gcrname "github.com/google/go-containerregistry/pkg/name"
-	apiv1 "github.com/google/go-containerregistry/pkg/v1"
-	gcrremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
+	"google.golang.org/api/artifactregistry/v1"
 )
 
 type Image struct {
@@ -24,7 +21,7 @@ type Image struct {
 	Name       fields.StringInputField
 	Tag        fields.StringInputField
 	ProjectID  fields.StringInputField `state:"force_new"`
-	GCR        fields.StringInputField `state:"force_new"`
+	Region     fields.StringInputField `state:"force_new"`
 	Digest     fields.StringOutputField
 	Source     fields.StringInputField
 	SourceHash fields.StringInputField
@@ -34,7 +31,7 @@ type Image struct {
 }
 
 func (o *Image) ReferenceID() string {
-	return fields.GenerateID("image/%s/%s/%s", o.GCR, o.ProjectID, o.Name)
+	return fields.GenerateID("image/%s/%s/%s", o.Region, o.ProjectID, o.Name)
 }
 
 func (o *Image) GetName() string {
@@ -48,58 +45,52 @@ func (o *Image) GetName() string {
 	return name
 }
 
-func (o *Image) imageName(gcr, projectID, name string) string {
-	return fmt.Sprintf("%s/%s/%s", gcr, projectID, name)
+func (o *Image) imageName(region, projectID, name string) string {
+	return fmt.Sprintf("%s-docker.pkg.dev/%s/%s", region, projectID, name)
 }
 
 func (o *Image) ImageName() fields.StringInputField {
-	return fields.Sprintf("%s/%s/%s@%s", o.GCR, o.ProjectID, o.Name, o.Digest)
+	return fields.Sprintf("%s-docker.pkg.dev/%s/%s@%s", o.Region, o.ProjectID, o.Name, o.Digest)
 }
 
-func (o *Image) readImage(ctx context.Context, meta interface{}) (*apiv1.Descriptor, error) {
+func (o *Image) readImage(ctx context.Context, meta interface{}) (*string, error) {
 	pctx := meta.(*config.PluginContext)
 
-	token, err := pctx.GoogleCredentials().TokenSource.Token()
-	if err != nil {
-		return nil, fmt.Errorf("error getting google credentials token: %w", err)
-	}
-
-	gcr := o.GCR.Any()
+	region := o.Region.Any()
 	projectID := o.ProjectID.Any()
 	name := o.Name.Any()
 	tag := o.Tag.Any()
 
-	gcrrepo, err := gcrname.NewRepository(o.imageName(gcr, projectID, name))
+	cli, err := pctx.GCPArtifactRegistryClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := &gcrauthn.Bearer{
-		Token: token.AccessToken,
+	repo := ""
+
+	nameSplit := strings.Split(name, "/")
+	if len(nameSplit) > 1 {
+		repo = nameSplit[0]
+		name = nameSplit[1]
 	}
 
-	var ref gcrname.Reference
-
-	if tag != "" {
-		ref = gcrrepo.Tag(tag)
-	} else {
-		if digest, ok := o.Digest.LookupCurrent(); ok {
-			ref = gcrrepo.Digest(digest)
-
-			desc, err := gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
-			if !ErrIs404(err) {
-				return desc, nil
-			}
-		}
-
-		ref = gcrrepo.Tag("latest")
+	if tag == "" {
+		tag = "latest"
 	}
 
-	return gcrremote.Head(ref, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
+	tagData, err := cli.Projects.Locations.Repositories.Packages.Tags.Get(fmt.Sprintf("projects/%s/locations/%s/repositories/%s/packages/%s/tags/%s", projectID, region, repo, name, tag)).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	digest := tagData.Version
+	digest = strings.Split(digest, "versions/")[1]
+
+	return &digest, nil
 }
 
 func (o *Image) Read(ctx context.Context, meta interface{}) error {
-	desc, err := o.readImage(ctx, meta)
+	digest, err := o.readImage(ctx, meta)
 	if ErrIs404(err) {
 		o.Digest.Invalidate()
 		o.MarkAsNew()
@@ -112,8 +103,8 @@ func (o *Image) Read(ctx context.Context, meta interface{}) error {
 	o.MarkAsExisting()
 	o.Name.SetCurrent(o.Name.Any())
 	o.Tag.SetCurrent(o.Tag.Any())
-	o.Digest.SetCurrent(desc.Digest.String())
-	o.GCR.SetCurrent(o.GCR.Any())
+	o.Digest.SetCurrent(*digest)
+	o.Region.SetCurrent(o.Region.Any())
 	o.ProjectID.SetCurrent(o.ProjectID.Any())
 	o.Source.SetCurrent(o.Source.Any())
 
@@ -147,7 +138,7 @@ func (o *Image) Update(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Image) push(ctx context.Context, meta interface{}) error {
+func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:gocyclo
 	pctx := meta.(*config.PluginContext)
 
 	token, err := pctx.GoogleCredentials().TokenSource.Token()
@@ -167,12 +158,12 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 
 	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
 
-	cli, err := pctx.DockerClient()
+	dockerCli, err := pctx.DockerClient()
 	if err != nil {
 		return err
 	}
 
-	_, err = cli.Ping(ctx)
+	_, err = dockerCli.Ping(ctx)
 	if err != nil {
 		return fmt.Errorf("docker is required for GCR image upload!\n%w", err)
 	}
@@ -184,7 +175,7 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 			pullOpts.RegistryAuth = authStr
 		}
 
-		reader, err := cli.ImagePull(ctx, o.Source.Wanted(), pullOpts)
+		reader, err := dockerCli.ImagePull(ctx, o.Source.Wanted(), pullOpts)
 		if err != nil {
 			return err
 		}
@@ -200,22 +191,51 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 		}
 	}
 
-	gcr := o.GCR.Wanted()
+	region := o.Region.Wanted()
 	projectID := o.ProjectID.Wanted()
 	name := o.Name.Wanted()
 	tag := o.Tag.Wanted()
-	imageName := o.imageName(gcr, projectID, name)
+	imageName := o.imageName(region, projectID, name)
 
 	if tag != "" {
 		imageName += ":" + tag
 	}
 
-	err = cli.ImageTag(ctx, o.Source.Wanted(), imageName)
+	repo := ""
+
+	nameSplit := strings.Split(name, "/")
+	if len(nameSplit) > 1 {
+		repo = nameSplit[0]
+		name = nameSplit[1]
+	}
+
+	err = dockerCli.ImageTag(ctx, o.Source.Wanted(), imageName)
 	if err != nil {
 		return err
 	}
 
-	reader, err := cli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
+	cli, err := pctx.GCPArtifactRegistryClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.Projects.Locations.Repositories.DockerImages.Get(fmt.Sprintf("projects/%s/locations/%s/repositories/%s/packages/%s", projectID, region, repo, name)).Do()
+	if err != nil {
+		if !ErrIs404(err) {
+			return err
+		}
+
+		_, err = cli.Projects.Locations.Repositories.Create(fmt.Sprintf("projects/%s/locations/%s", projectID, region), &artifactregistry.Repository{
+			Description: "Created by Outblocks",
+			Format:      "DOCKER",
+			Name:        fmt.Sprintf("projects/%s/locations/%s/repositories/%s", projectID, region, repo),
+		}).RepositoryId(name).Do()
+		if err != nil && !ErrIs409(err) {
+			return fmt.Errorf("error creating repository: %w", err)
+		}
+	}
+
+	reader, err := dockerCli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
 		RegistryAuth: authStr,
 	})
 	if err != nil {
@@ -232,7 +252,7 @@ func (o *Image) push(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	insp, _, err := cli.ImageInspectWithRaw(ctx, imageName)
+	insp, _, err := dockerCli.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		return err
 	}
@@ -247,22 +267,30 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, di
 		return nil
 	}
 
-	pctx := meta.(*config.PluginContext)
-
-	token, err := pctx.GoogleCredentials().TokenSource.Token()
-	if err != nil {
-		return fmt.Errorf("error getting google credentials token: %w", err)
-	}
-
-	imageName := o.imageName(o.GCR.Current(), o.ProjectID.Current(), o.Name.Current())
-
-	gcrrepo, err := gcrname.NewRepository(imageName)
-	if err != nil {
+	if o.Region.Current() == "" {
 		return nil
 	}
 
-	auth := &gcrauthn.Bearer{
-		Token: token.AccessToken,
+	pctx := meta.(*config.PluginContext)
+
+	cli, err := pctx.GCPArtifactRegistryClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	region := o.Region.Current()
+	projectID := o.ProjectID.Current()
+	name := o.Name.Current()
+	repo := ""
+
+	nameSplit := strings.Split(name, "/")
+	if len(nameSplit) > 1 {
+		repo = nameSplit[0]
+		name = nameSplit[1]
+	}
+
+	if name == "" {
+		return nil
 	}
 
 	if deleteTag {
@@ -271,21 +299,19 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, di
 			tag = "latest"
 		}
 
-		tagRef := gcrrepo.Tag(tag)
-
-		err = gcrremote.Delete(tagRef, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
+		_, err := cli.Projects.Locations.Repositories.Packages.Tags.Delete(fmt.Sprintf("projects/%s/locations/%s/repositories/%s/packages/%s/tags/%s", projectID, region, repo, name, tag)).Do()
 		if err != nil {
 			return err
 		}
 	}
 
 	if digest != "" {
-		digestRef := gcrrepo.Digest(digest)
-
-		err = gcrremote.Delete(digestRef, gcrremote.WithAuth(auth), gcrremote.WithContext(ctx))
+		op, err := cli.Projects.Locations.Repositories.Packages.Versions.Delete(fmt.Sprintf("projects/%s/locations/%s/repositories/%s/packages/%s/versions/%s", projectID, region, repo, name, digest)).Do()
 		if err != nil {
 			return err
 		}
+
+		return WaitForArtifactRegistryOperation(ctx, cli, op)
 	}
 
 	return nil

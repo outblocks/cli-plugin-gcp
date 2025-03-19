@@ -47,7 +47,7 @@ func NewStorageDep(dep *apiv1.Dependency) (*StorageDep, error) {
 	}, nil
 }
 
-func (o *StorageDep) Plan(pctx *config.PluginContext, r *registry.Registry, c *StorageDepArgs) error {
+func (o *StorageDep) Plan(_ *config.PluginContext, r *registry.Registry, c *StorageDepArgs) error {
 	o.Needs = c.Needs
 
 	location := o.Opts.Location

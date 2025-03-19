@@ -75,10 +75,10 @@ func (o *APIService) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *APIService) Update(ctx context.Context, meta interface{}) error {
+func (o *APIService) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *APIService) Delete(ctx context.Context, meta interface{}) error {
+func (o *APIService) Delete(_ context.Context, _ interface{}) error {
 	return nil
 }

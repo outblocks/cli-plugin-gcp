@@ -137,7 +137,7 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *ManagedSSL) Update(ctx context.Context, meta interface{}) error {
+func (o *ManagedSSL) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 

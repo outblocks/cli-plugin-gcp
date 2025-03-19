@@ -96,7 +96,7 @@ func (o *CloudSQLDatabase) Create(ctx context.Context, meta interface{}) error {
 	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
 }
 
-func (o *CloudSQLDatabase) Update(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLDatabase) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 

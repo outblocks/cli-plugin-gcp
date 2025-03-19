@@ -101,7 +101,7 @@ func (o *UptimeAlertPolicy) createAlertPolicy(update bool) *monitoring.AlertPoli
 				DisplayName: "uptime check",
 				Condition: &monitoring.AlertPolicy_Condition_ConditionThreshold{
 					ConditionThreshold: &monitoring.AlertPolicy_Condition_MetricThreshold{
-						Filter:         fmt.Sprintf("resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"%s\"", checkID),
+						Filter:         fmt.Sprintf("resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"%s\"", checkID), //nolint:gocritic
 						Duration:       durationpb.New(60 * time.Second),
 						Comparison:     monitoring.ComparisonType_COMPARISON_GT,
 						ThresholdValue: 2,

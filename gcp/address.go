@@ -87,7 +87,7 @@ func (o *Address) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Address) Update(ctx context.Context, meta interface{}) error {
+func (o *Address) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 

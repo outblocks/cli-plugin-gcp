@@ -88,7 +88,7 @@ func (o *SelfManagedSSL) Create(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *SelfManagedSSL) Update(ctx context.Context, meta interface{}) error {
+func (o *SelfManagedSSL) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 

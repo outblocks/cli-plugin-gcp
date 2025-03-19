@@ -10,6 +10,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/outblocks/outblocks-plugin-go/env"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/artifactregistry/v1"
 	"google.golang.org/api/cloudfunctions/v1"
 	"google.golang.org/api/cloudscheduler/v1"
 	"google.golang.org/api/compute/v1"
@@ -39,6 +40,7 @@ type PluginContext struct {
 	monitoringNotificationChannelCli *monitoring.NotificationChannelClient
 	monitoringAlertPolicyCli         *monitoring.AlertPolicyClient
 	cloudschedulerCli                *cloudscheduler.Service
+	artifactregistryCli              *artifactregistry.Service
 
 	funcCache map[string]*funcCacheData
 
@@ -48,7 +50,7 @@ type PluginContext struct {
 	once struct {
 		storageCli, dockerCli, computeCli, serviceusageCli, sqlAdminCli, cloudfunctionsCli,
 		monitoringUptimeChecksCli, monitoringNotificationChannelCli, monitoringAlertPolicyCli,
-		cloudschedulerCli sync.Once
+		cloudschedulerCli, artifactregistryCli sync.Once
 	}
 }
 
@@ -218,6 +220,20 @@ func (c *PluginContext) GCPCloudSchedulerClient(ctx context.Context) (*cloudsche
 	}
 
 	return c.cloudschedulerCli, err
+}
+
+func (c *PluginContext) GCPArtifactRegistryClient(ctx context.Context) (*artifactregistry.Service, error) {
+	var err error
+
+	c.once.artifactregistryCli.Do(func() {
+		c.artifactregistryCli, err = NewGCPArtifactRegistryClient(ctx, c.GoogleCredentials())
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating gcp artifact registry client: %w", err)
+	}
+
+	return c.artifactregistryCli, err
 }
 
 func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {

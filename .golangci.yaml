@@ -1,35 +1,36 @@
 run:
   timeout: 2m
   tests: false
-  skip-dirs:
-    - assets
-    - proto
-    - mocks
 
 issues:
   exclude-rules:
     - text: declaration of "err" shadows declaration
       linters:
         - govet
+  exclude-dirs:
+    - assets
+    - proto
+    - mocks
+    - example*
 
 linters-settings:
   govet:
-    check-shadowing: true
     disable:
       - structtag
-  golint:
-    min-confidence: 0
   gocyclo:
     min-complexity: 20
-  maligned:
-    suggest-new: true
   dupl:
-    threshold: 250
+    threshold: 200
   goconst:
     min-len: 3
     min-occurrences: 3
   misspell:
     locale: US
+  revive:
+    rules:
+      - name: "unused-parameter"
+        disabled: true
+
   gocritic:
     enabled-tags:
       - diagnostic
@@ -40,16 +41,15 @@ linters-settings:
     disabled-checks:
       - whyNoLint
       - commentedOutCode
-      - sprintfQuotedString
+      - octalLiteral
 
 linters:
   disable-all: true
   enable:
     # - bodyclose
-    - depguard
+    # - depguard
     - dogsled
     - dupl
-    - exportloopref
     - errcheck
     - exhaustive
     - goconst

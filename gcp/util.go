@@ -14,6 +14,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"github.com/outblocks/outblocks-plugin-go/resources"
 	"github.com/outblocks/outblocks-plugin-go/util"
+	"google.golang.org/api/artifactregistry/v1"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
@@ -47,9 +48,7 @@ var Types = []registry.Resource{
 	(*CloudSchedulerJob)(nil),
 }
 
-var (
-	_ registry.ResourceBeforeDiffHook = (*Image)(nil)
-)
+var _ registry.ResourceBeforeDiffHook = (*Image)(nil)
 
 func RegisterTypes(reg *registry.Registry) {
 	for _, t := range Types {
@@ -141,6 +140,10 @@ func checkErrCode(err error, code int) bool {
 
 func ErrIs400(err error) bool {
 	return checkErrCode(err, 400)
+}
+
+func ErrIs409(err error) bool {
+	return checkErrCode(err, 409)
 }
 
 func ErrIs404(err error) bool {
@@ -318,6 +321,38 @@ func WaitForSQLOperation(ctx context.Context, cli *sqladmin.Service, project, na
 			if op.Status == OperationDone {
 				return SQLOperationError(op.Error)
 			}
+		}
+	}
+}
+
+func WaitForArtifactRegistryOperation(ctx context.Context, cli *artifactregistry.Service, op *artifactregistry.Operation) error {
+	if op.Done {
+		return nil
+	}
+
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+
+	var err error
+
+	for {
+		op, err = cli.Projects.Locations.Operations.Get(op.Name).Do()
+		if err != nil {
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-t.C:
+		}
+
+		if op.Done {
+			if op.Error != nil {
+				return errors.New(op.Error.Message)
+			}
+
+			return nil
 		}
 	}
 }

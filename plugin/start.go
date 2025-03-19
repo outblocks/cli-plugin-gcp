@@ -14,7 +14,7 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-func (p *Plugin) Init(ctx context.Context, e env.Enver, l log.Logger, cli apiv1.HostServiceClient) error {
+func (p *Plugin) Init(_ context.Context, e env.Enver, l log.Logger, cli apiv1.HostServiceClient) error {
 	p.env = e
 	p.hostCli = cli
 	p.log = l

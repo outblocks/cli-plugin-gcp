@@ -109,7 +109,6 @@ func setSecretValue(cli *secretmanager.Service, project, name, value string, cle
 				Data: base64.StdEncoding.EncodeToString([]byte(value)),
 			},
 		}).Do()
-
 		if err != nil {
 			return fmt.Errorf("error setting secret '%s' value: %w", name, err)
 		}
@@ -129,7 +128,7 @@ func setSecretValue(cli *secretmanager.Service, project, name, value string, cle
 	for _, v := range versions.Versions {
 		verTime, _ := time.Parse(time.RFC3339, v.CreateTime)
 
-		if !verTime.Before(now) || v.State != "ENABLED" { //nolint: gocritic
+		if !verTime.Before(now) || v.State != "ENABLED" {
 			continue
 		}
 
@@ -280,7 +279,7 @@ func (p *Plugin) DeleteSecret(ctx context.Context, req *apiv1.DeleteSecretReques
 	}, nil
 }
 
-func (p *Plugin) GetSecrets(ctx context.Context, req *apiv1.GetSecretsRequest) (*apiv1.GetSecretsResponse, error) {
+func (p *Plugin) GetSecrets(ctx context.Context, _ *apiv1.GetSecretsRequest) (*apiv1.GetSecretsResponse, error) {
 	cli, err := p.initSecrets(ctx)
 	if err != nil {
 		return nil, err
@@ -417,7 +416,7 @@ func (p *Plugin) ReplaceSecrets(ctx context.Context, req *apiv1.ReplaceSecretsRe
 	return &apiv1.ReplaceSecretsResponse{}, nil
 }
 
-func (p *Plugin) DeleteSecrets(ctx context.Context, req *apiv1.DeleteSecretsRequest) (*apiv1.DeleteSecretsResponse, error) {
+func (p *Plugin) DeleteSecrets(ctx context.Context, _ *apiv1.DeleteSecretsRequest) (*apiv1.DeleteSecretsResponse, error) {
 	cli, err := p.initSecrets(ctx)
 	if err != nil {
 		return nil, err

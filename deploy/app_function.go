@@ -98,7 +98,8 @@ func (o *FunctionApp) ID(pctx *config.PluginContext) string {
 	return gcp.ID(pctx.Env(), o.App.Id)
 }
 
-func (o *FunctionApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *FunctionAppArgs, apply bool) error {
+func (o *FunctionApp) Plan(_ context.Context, pctx *config.PluginContext, r *registry.Registry, c *FunctionAppArgs, _ bool, // apply bool
+) error {
 	// Add bucket.
 	o.Bucket = &gcp.Bucket{
 		Name:       gcp.GlobalIDField(pctx.Env(), c.ProjectID, o.App.Id),

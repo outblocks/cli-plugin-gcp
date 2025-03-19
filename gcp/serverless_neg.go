@@ -109,7 +109,7 @@ func (o *ServerlessNEG) Create(ctx context.Context, meta interface{}) error {
 	return WaitForRegionComputeOperation(cli, projectID, region, oper.Name)
 }
 
-func (o *ServerlessNEG) Update(ctx context.Context, meta interface{}) error {
+func (o *ServerlessNEG) Update(_ context.Context, _ interface{}) error {
 	return fmt.Errorf("unimplemented")
 }
 
