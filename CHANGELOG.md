@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.116](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.115...v0.1.116)
+
+> 2025-03-20
+
+### BUG FIXES
+
+[`75803a9`](https://github.com/outblocks/cli-plugin-gcp/commit/75803a99824977a9eae6127b0a234ea6836477d7) artifact registry repo already exists
+
 ## [v0.1.115](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.114...v0.1.115)
 
 > 2025-03-20
