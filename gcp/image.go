@@ -234,9 +234,11 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 			return fmt.Errorf("error creating repository: %w", err)
 		}
 
-		err = WaitForArtifactRegistryOperation(ctx, cli, op)
-		if err != nil {
-			return fmt.Errorf("error waiting for repository creation: %w", err)
+		if op != nil {
+			err = WaitForArtifactRegistryOperation(ctx, cli, op)
+			if err != nil {
+				return fmt.Errorf("error waiting for repository creation: %w", err)
+			}
 		}
 	}
 
