@@ -225,13 +225,18 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 			return err
 		}
 
-		_, err = cli.Projects.Locations.Repositories.Create(fmt.Sprintf("projects/%s/locations/%s", projectID, region), &artifactregistry.Repository{
+		op, err := cli.Projects.Locations.Repositories.Create(fmt.Sprintf("projects/%s/locations/%s", projectID, region), &artifactregistry.Repository{
 			Description: "Created by Outblocks",
 			Format:      "DOCKER",
 			Name:        fmt.Sprintf("projects/%s/locations/%s/repositories/%s", projectID, region, repo),
-		}).RepositoryId(name).Do()
+		}).RepositoryId(repo).Do()
 		if err != nil && !ErrIs409(err) {
 			return fmt.Errorf("error creating repository: %w", err)
+		}
+
+		err = WaitForArtifactRegistryOperation(ctx, cli, op)
+		if err != nil {
+			return fmt.Errorf("error waiting for repository creation: %w", err)
 		}
 	}
 
