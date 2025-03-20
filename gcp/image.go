@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -242,31 +243,45 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 		}
 	}
 
-	reader, err := dockerCli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
-		RegistryAuth: authStr,
-	})
-	if err != nil {
-		return err
+	var insp dockertypes.ImageInspect
+
+	for try := 0; try < 3; try++ {
+		reader, err := dockerCli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
+			RegistryAuth: authStr,
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(io.Discard, reader)
+		if err != nil {
+			return err
+		}
+
+		err = reader.Close()
+		if err != nil {
+			return err
+		}
+
+		insp, _, err = dockerCli.ImageInspectWithRaw(ctx, imageName)
+		if err != nil {
+			return err
+		}
+
+		if len(insp.RepoDigests) > 0 {
+			break
+		}
+
+		time.Sleep(3 * time.Second)
 	}
 
-	_, err = io.Copy(io.Discard, reader)
-	if err != nil {
-		return err
-	}
-
-	err = reader.Close()
-	if err != nil {
-		return err
-	}
-
-	insp, _, err := dockerCli.ImageInspectWithRaw(ctx, imageName)
-	if err != nil {
-		return err
+	if len(insp.RepoDigests) == 0 {
+		return fmt.Errorf("error getting image digest")
 	}
 
 	o.Digest.SetCurrent(strings.Split(insp.RepoDigests[0], "@")[1])
 
-	return reader.Close()
+	return nil
 }
 
 func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, digest string) error {
