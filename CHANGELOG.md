@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.117](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.116...v0.1.117)
+
+> 2025-03-20
+
+### FEATURES
+
+[`1de3f13`](https://github.com/outblocks/cli-plugin-gcp/commit/1de3f13541f2eb2c5b310c30c77d4fb876a3e089) handle repo digest missing better
+
 ## [v0.1.116](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.115...v0.1.116)
 
 > 2025-03-20
