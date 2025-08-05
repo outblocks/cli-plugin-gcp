@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/monitoring v1.24.2
 	cloud.google.com/go/storage v1.56.0
 	github.com/creasty/defaults v1.8.0
-	github.com/docker/docker v28.2.2+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.20.6
 	github.com/outblocks/outblocks-plugin-go v0.0.0-20230123145739-c26f926b1595
