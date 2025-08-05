@@ -208,6 +208,7 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 		DatabaseVersion: o.DatabaseVersion.Wanted(),
 		RootPassword:    plugin_util.RandomStringCrypto(16),
 		Settings: &sqladmin.Settings{
+			Edition:          "ENTERPRISE",
 			Tier:             o.Tier.Wanted(),
 			AvailabilityType: o.AvailabilityZone.Wanted(),
 			IpConfiguration: &sqladmin.IpConfiguration{
