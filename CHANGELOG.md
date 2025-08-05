@@ -1,5 +1,17 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.119](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.118...v0.1.119)
+
+> 2025-08-05
+
+### BUG FIXES
+
+[`f9527d4`](https://github.com/outblocks/cli-plugin-gcp/commit/f9527d40efd9df5b559732709d2375e9a7adfb7f) workflow golang version
+
+[`c1639ad`](https://github.com/outblocks/cli-plugin-gcp/commit/c1639adb40ee881733662a312bc791445fcdeedd) lint
+
+[`44e5bcc`](https://github.com/outblocks/cli-plugin-gcp/commit/44e5bcc02c474137feb5c52e3b67a5ee592d0680) lint version
+
 ## [v0.1.118](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.117...v0.1.118)
 
 > 2025-08-05
