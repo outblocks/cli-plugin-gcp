@@ -30,8 +30,8 @@ func (o *CloudSchedulerJob) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudSchedulerJob) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSchedulerJob) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
 	region := o.Region.Any()
@@ -71,7 +71,7 @@ func (o *CloudSchedulerJob) Read(ctx context.Context, meta interface{}) error {
 	o.HTTPMethod.SetCurrent(job.HttpTarget.HttpMethod)
 	o.HTTPURL.SetCurrent(job.HttpTarget.Uri)
 
-	headers := make(map[string]interface{})
+	headers := make(map[string]any)
 
 	for k, v := range job.HttpTarget.Headers {
 		headers[k] = v
@@ -82,8 +82,8 @@ func (o *CloudSchedulerJob) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSchedulerJob) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSchedulerJob) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Wanted()
 	region := o.Region.Wanted()
@@ -97,7 +97,7 @@ func (o *CloudSchedulerJob) Create(ctx context.Context, meta interface{}) error 
 	headers := make(map[string]string)
 
 	for k, v := range o.HTTPHeaders.Wanted() {
-		headers[k] = v.(string)
+		headers[k] = v.(string) //nolint:errcheck
 	}
 
 	_, err = cli.Projects.Locations.Jobs.Create(parentID, o.makeJob()).Do()
@@ -109,7 +109,7 @@ func (o *CloudSchedulerJob) makeJob() *cloudscheduler.Job {
 	headers := make(map[string]string)
 
 	for k, v := range o.HTTPHeaders.Wanted() {
-		headers[k] = v.(string)
+		headers[k] = v.(string) //nolint:errcheck
 	}
 
 	id := fmt.Sprintf("projects/%s/locations/%s/jobs/%s", o.ProjectID.Wanted(), o.Region.Wanted(), o.Name.Wanted())
@@ -125,8 +125,8 @@ func (o *CloudSchedulerJob) makeJob() *cloudscheduler.Job {
 	}
 }
 
-func (o *CloudSchedulerJob) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSchedulerJob) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPCloudSchedulerClient(ctx)
 	if err != nil {
@@ -136,7 +136,7 @@ func (o *CloudSchedulerJob) Update(ctx context.Context, meta interface{}) error 
 	headers := make(map[string]string)
 
 	for k, v := range o.HTTPHeaders.Wanted() {
-		headers[k] = v.(string)
+		headers[k] = v.(string) //nolint:errcheck
 	}
 
 	job := o.makeJob()
@@ -146,8 +146,8 @@ func (o *CloudSchedulerJob) Update(ctx context.Context, meta interface{}) error 
 	return err
 }
 
-func (o *CloudSchedulerJob) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSchedulerJob) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 	projectID := o.ProjectID.Any()
 	region := o.Region.Any()
 	name := o.Name.Any()

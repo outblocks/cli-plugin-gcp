@@ -20,7 +20,7 @@ import (
 )
 
 type funcCacheData struct {
-	ret interface{}
+	ret any
 	err error
 }
 
@@ -250,7 +250,7 @@ func (c *PluginContext) DockerClient() (*dockerclient.Client, error) {
 	return c.dockerCli, err
 }
 
-func (c *PluginContext) FuncCache(key string, f func() (interface{}, error)) (interface{}, error) {
+func (c *PluginContext) FuncCache(key string, f func() (any, error)) (any, error) {
 	c.mu.funcCache.Lock()
 
 	cache, ok := c.funcCache[key]

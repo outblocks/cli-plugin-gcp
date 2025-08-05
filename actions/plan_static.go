@@ -14,7 +14,6 @@ func (p *PlanAction) planStaticAppDeploy(appDeploy *deploy.StaticApp, appPlan *a
 		ProjectID: pctx.Settings().ProjectID,
 		Region:    pctx.Settings().Region,
 	})
-
 	if err != nil {
 		return nil, err
 	}

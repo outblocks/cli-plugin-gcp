@@ -162,7 +162,7 @@ func ErrExtractMissingAPI(err error) string {
 	}
 
 	for _, d := range e.Details {
-		m, ok := d.(map[string]interface{})
+		m, ok := d.(map[string]any)
 
 		if !ok {
 			continue
@@ -177,12 +177,12 @@ func ErrExtractMissingAPI(err error) string {
 			continue
 		}
 
-		metamap, ok := meta.(map[string]interface{})
+		metamap, ok := meta.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		return metamap["service"].(string)
+		return metamap["service"].(string) //nolint:errcheck
 	}
 
 	return ""

@@ -1,12 +1,14 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"strings"
 	"time"
 
+	"cloud.google.com/go/logging/apiv2/loggingpb"
 	"github.com/outblocks/cli-plugin-gcp/deploy"
 	"github.com/outblocks/cli-plugin-gcp/gcp"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -15,7 +17,6 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/genproto/googleapis/cloud/audit"
 	loggingtype "google.golang.org/genproto/googleapis/logging/type"
-	loggingpb "google.golang.org/genproto/googleapis/logging/v2"
 )
 
 func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.LogsResponse {
@@ -65,10 +66,10 @@ func logEntryToProto(e *loggingpb.LogEntry, idMap map[string]string) *apiv1.Logs
 
 	var src string
 
-	switch {
-	case e.Resource.Type == "cloud_run_revision":
+	switch e.Resource.Type {
+	case "cloud_run_revision":
 		src = idMap[e.Resource.Labels["service_name"]]
-	case e.Resource.Type == "cloudsql_database":
+	case "cloudsql_database":
 		src = idMap[e.Resource.Labels["database_id"]]
 	}
 
@@ -226,7 +227,7 @@ func (p *Plugin) Logs(r *apiv1.LogsRequest, srv apiv1.LogsPluginService_LogsServ
 	for {
 		entry, err := iter.Next()
 		if err != nil {
-			if err == iterator.Done {
+			if errors.Is(err, iterator.Done) {
 				break
 			}
 
@@ -263,7 +264,7 @@ func (p *Plugin) Logs(r *apiv1.LogsRequest, srv apiv1.LogsPluginService_LogsServ
 
 	for {
 		resp, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return err
 		}
 

@@ -48,8 +48,8 @@ func (o *CloudFunction) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudFunction) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
 	region := o.Region.Any()
@@ -96,7 +96,7 @@ func (o *CloudFunction) Read(ctx context.Context, meta interface{}) error {
 	t, _ := strconv.Atoi(strings.TrimSuffix(cf.Timeout, "s"))
 	o.TimeoutSeconds.SetCurrent(t)
 
-	envVars := make(map[string]interface{})
+	envVars := make(map[string]any)
 
 	for k, v := range cf.EnvironmentVariables {
 		envVars[k] = v
@@ -141,7 +141,7 @@ func (o *CloudFunction) wantedAPICloudFunction() *cloudfunctions.CloudFunction {
 	envvars := make(map[string]string, len(envvarsIntf))
 
 	for k, v := range envvarsIntf {
-		envvars[k] = v.(string)
+		envvars[k] = v.(string) //nolint:errcheck
 	}
 
 	return &cloudfunctions.CloudFunction{
@@ -160,8 +160,8 @@ func (o *CloudFunction) wantedAPICloudFunction() *cloudfunctions.CloudFunction {
 	}
 }
 
-func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudFunction) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Wanted()
 	region := o.Region.Wanted()
@@ -207,7 +207,6 @@ func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
 	_, err = cli.Projects.Locations.Functions.SetIamPolicy(cf.Name, &cloudfunctions.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
-
 	if err != nil {
 		return fmt.Errorf("error settings cloud function policy: %w", err)
 	}
@@ -215,8 +214,8 @@ func (o *CloudFunction) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudFunction) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Wanted()
 	region := o.Region.Wanted()
@@ -297,7 +296,6 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 	_, err = cli.Projects.Locations.Functions.SetIamPolicy(cf.Name, &cloudfunctions.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
-
 	if err != nil {
 		return fmt.Errorf("error settings cloud function policy: %w", err)
 	}
@@ -305,8 +303,8 @@ func (o *CloudFunction) Update(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudFunction) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudFunction) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Current()
 	region := o.Region.Current()

@@ -211,7 +211,7 @@ func (p *Plugin) prepareDBProxyCommand(ctx context.Context, dep *apiv1.Dependenc
 	}
 
 	cmd, err := command.New(
-		exec.Command(binPath, args...),
+		exec.Command(binPath, args...), //nolint:noctx
 	)
 	if err != nil {
 		return cmd, err
@@ -241,11 +241,11 @@ func (p *Plugin) databaseDefaultPort(dep *apiv1.DependencyState, port int) (int,
 
 func (p *Plugin) DBProxy(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
-	name := flags["name"].(string)
-	user := flags["user"].(string)
-	port := int(flags["port"].(float64))
-	bindAddr := flags["bind-addr"].(string)
-	silent := flags["silent"].(bool)
+	name := flags["name"].(string)          //nolint:errcheck
+	user := flags["user"].(string)          //nolint:errcheck
+	port := int(flags["port"].(float64))    //nolint:errcheck
+	bindAddr := flags["bind-addr"].(string) //nolint:errcheck
+	silent := flags["silent"].(bool)        //nolint:errcheck
 
 	dep, err := filterDepByName(name, req.DependencyStates)
 	if err != nil {

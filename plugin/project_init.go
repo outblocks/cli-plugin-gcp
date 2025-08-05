@@ -143,7 +143,7 @@ func (p *Plugin) ProjectInit(ctx context.Context, r *apiv1.ProjectInitRequest) (
 		region = res.Answer
 	}
 
-	props := plugin_util.MustNewStruct(map[string]interface{}{
+	props := plugin_util.MustNewStruct(map[string]any{
 		"project": project,
 		"region":  region,
 	})

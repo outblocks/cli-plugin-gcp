@@ -8,11 +8,11 @@ include $(SELF_DIR)shared.mk
 GO ?= go
 FORMAT_FILES ?= .
 
-GOFUMPT_VERSION ?= 0.1.1
+GOFUMPT_VERSION ?= 0.7.0
 GOFUMPT := go run mvdan.cc/gofumpt@v$(GOFUMPT_VERSION)
 
-GOLANGCILINT_VERSION ?= 1.64.7
-GOLANGCILINT := go run github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCILINT_VERSION)
+GOLANGCILINT_VERSION ?= 2.3.1
+GOLANGCILINT := golangci-lint
 GOLANGCILINT_CONCURRENCY ?= 16
 
 .PHONY: deps-go format-go lint-go test-go test-coverage-go integration-test-go
@@ -27,7 +27,8 @@ format: format-go ## Format code
 
 format-go:
 	$(info $(_bullet) Formatting code)
-	$(GOFUMPT) -w $(FORMAT_FILES)
+	gofmt -r 'interface{} -> any' -w .
+	$(GOFUMPT) -extra -w $(FORMAT_FILES)
 
 lint: lint-go ## Lint code
 

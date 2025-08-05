@@ -26,7 +26,7 @@ func (o *CloudSQLDatabase) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudSQLDatabase) Read(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLDatabase) Read(ctx context.Context, meta any) error {
 	pctx := meta.(*config.PluginContext)
 
 	projectID := o.ProjectID.Any()
@@ -70,7 +70,7 @@ func (o *CloudSQLDatabase) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSQLDatabase) Create(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLDatabase) Create(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Wanted(), o.Instance.Wanted())
 	o.Lock(key)
 	defer o.Unlock(key)
@@ -96,11 +96,11 @@ func (o *CloudSQLDatabase) Create(ctx context.Context, meta interface{}) error {
 	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
 }
 
-func (o *CloudSQLDatabase) Update(_ context.Context, _ interface{}) error {
+func (o *CloudSQLDatabase) Update(_ context.Context, _ any) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *CloudSQLDatabase) Delete(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLDatabase) Delete(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Current(), o.Instance.Current())
 	o.Lock(key)
 	defer o.Unlock(key)

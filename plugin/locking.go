@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -48,8 +49,8 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 				break
 			}
 
-			if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
-				if err != errAcquireLockFailed {
+			if lockWait == 0 || time.Since(start) > lockWait {
+				if !errors.Is(err, errAcquireLockFailed) {
 					return nil, nil, err
 				}
 
@@ -63,7 +64,7 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 
 						g.Go(func() error {
 							lockInfo, owner, createdAt, err := checkLock(ctx, lockObject)
-							if err == storage.ErrObjectNotExist {
+							if errors.Is(err, storage.ErrObjectNotExist) {
 								return nil
 							}
 
@@ -72,7 +73,9 @@ func (p *Plugin) acquireLocks(ctx context.Context, lockfiles []string, lockNames
 							}
 
 							mu.Lock()
+
 							lockInfoFailed = append(lockInfoFailed, types.NewLockError(name, lockInfo, owner, createdAt))
+
 							mu.Unlock()
 
 							return nil
@@ -205,9 +208,6 @@ func (p *Plugin) ReleaseLocks(ctx context.Context, r *apiv1.ReleaseLocksRequest)
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 	for name, info := range r.Locks {
-		name := name
-		info := info
-
 		g.Go(func() error {
 			return releaseLock(ctx, b.Object(p.lockfile(name)), info)
 		})

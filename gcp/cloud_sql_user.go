@@ -28,8 +28,8 @@ func (o *CloudSQLUser) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSQLUser) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
 	instance := o.Instance.Any()
@@ -46,7 +46,7 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 		return err
 	}
 
-	users, err := pctx.FuncCache(fmt.Sprintf("CloudSQLUsers:list:%s:%s", projectID, instance), func() (interface{}, error) {
+	users, err := pctx.FuncCache(fmt.Sprintf("CloudSQLUsers:list:%s:%s", projectID, instance), func() (any, error) {
 		_, err = cli.Instances.Get(projectID, instance).Do()
 		if ErrIs404(err) {
 			return nil, err
@@ -68,7 +68,7 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 
 	var user *sqladmin.User
 	if users != nil {
-		user = users.(map[string]*sqladmin.User)[name]
+		user = users.(map[string]*sqladmin.User)[name] //nolint:errcheck
 	}
 
 	if user == nil || ErrIs404(err) || ErrIs403(err) {
@@ -90,12 +90,13 @@ func (o *CloudSQLUser) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSQLUser) Create(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLUser) Create(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Wanted(), o.Instance.Wanted())
+
 	o.Lock(key)
 	defer o.Unlock(key)
 
-	pctx := meta.(*config.PluginContext)
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
@@ -120,12 +121,13 @@ func (o *CloudSQLUser) Create(ctx context.Context, meta interface{}) error {
 	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
 }
 
-func (o *CloudSQLUser) Update(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLUser) Update(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Wanted(), o.Instance.Wanted())
 	o.Lock(key)
+
 	defer o.Unlock(key)
 
-	pctx := meta.(*config.PluginContext)
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
@@ -148,12 +150,13 @@ func (o *CloudSQLUser) Update(ctx context.Context, meta interface{}) error {
 	return WaitForSQLOperation(ctx, cli, projectID, op.Name)
 }
 
-func (o *CloudSQLUser) Delete(ctx context.Context, meta interface{}) error {
+func (o *CloudSQLUser) Delete(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Current(), o.Instance.Current())
+
 	o.Lock(key)
 	defer o.Unlock(key)
 
-	pctx := meta.(*config.PluginContext)
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {

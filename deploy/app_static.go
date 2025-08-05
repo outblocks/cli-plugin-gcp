@@ -36,7 +36,7 @@ type StaticAppDeployOptions struct {
 	types.StaticAppDeployOptions
 }
 
-func NewStaticAppDeployOptions(in map[string]interface{}) (*StaticAppDeployOptions, error) {
+func NewStaticAppDeployOptions(in map[string]any) (*StaticAppDeployOptions, error) {
 	o := &StaticAppDeployOptions{}
 
 	err := plugin_util.MapstructureJSONDecode(in, o)

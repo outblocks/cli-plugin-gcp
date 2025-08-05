@@ -60,6 +60,7 @@ func (o *LoadBalancer) createCloudFunctionServerlessNEG(pctx *config.PluginConte
 		CloudFunction: cloudfunction,
 	}
 }
+
 func (o *LoadBalancer) addServerlessNEG(pctx *config.PluginContext, r *registry.Registry, app *apiv1.App, neg *gcp.ServerlessNEG, cdnEnabled bool, c *LoadBalancerArgs) error {
 	_, err := r.RegisterPluginResource(LoadBalancerName, app.Id, neg)
 	if err != nil {

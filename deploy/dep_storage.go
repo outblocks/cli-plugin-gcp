@@ -29,7 +29,7 @@ type StorageDepArgs struct {
 
 type StorageDepNeed struct{}
 
-func NewStorageDepNeed(in map[string]interface{}) (*StorageDepNeed, error) {
+func NewStorageDepNeed(in map[string]any) (*StorageDepNeed, error) {
 	o := &StorageDepNeed{}
 
 	return o, plugin_util.MapstructureJSONDecode(in, o)

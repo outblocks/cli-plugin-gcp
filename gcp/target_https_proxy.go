@@ -32,8 +32,8 @@ func (o *TargetHTTPSProxy) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpsProxies/%s", o.ProjectID, o.Name)
 }
 
-func (o *TargetHTTPSProxy) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPSProxy) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -62,8 +62,8 @@ func (o *TargetHTTPSProxy) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPSProxy) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -80,8 +80,8 @@ func (o *TargetHTTPSProxy) Create(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPSProxy) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPSProxy) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -113,7 +113,7 @@ func (o *TargetHTTPSProxy) makeHTTPSProxy() *compute.TargetHttpsProxy {
 	var certs []string
 
 	for _, cert := range o.SSLCertificates.Wanted() {
-		certs = append(certs, cert.(string))
+		certs = append(certs, cert.(string)) //nolint:errcheck
 	}
 
 	return &compute.TargetHttpsProxy{
@@ -124,8 +124,8 @@ func (o *TargetHTTPSProxy) makeHTTPSProxy() *compute.TargetHttpsProxy {
 	}
 }
 
-func (o *TargetHTTPSProxy) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPSProxy) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

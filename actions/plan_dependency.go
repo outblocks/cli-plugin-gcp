@@ -41,7 +41,6 @@ func (p *PlanAction) planDatabaseDepDeploy(depPlan *apiv1.DependencyPlan, needs 
 		Region:    pctx.Settings().Region,
 		Needs:     depNeeds,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,6 @@ func (p *PlanAction) planStorageDepDeploy(depPlan *apiv1.DependencyPlan, needs m
 		Region:    pctx.Settings().Region,
 		Needs:     depNeeds,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -115,11 +113,11 @@ func (p *PlanAction) planStorageDepsDeploy(depPlans []*apiv1.DependencyPlan, all
 	return ret, nil
 }
 
-func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) (map[string]interface{}, error) {
+func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) (map[string]any, error) {
 	if dep, ok := p.databaseDeps[need.Dependency]; ok {
 		depNeed := dep.Needs[app]
 
-		vars := make(map[string]interface{})
+		vars := make(map[string]any)
 		vars["user"] = dep.CloudSQLUsers[depNeed.User].Name
 		vars["password"] = dep.CloudSQLUsers[depNeed.User].Password
 		vars["database"] = dep.CloudSQLDatabases[depNeed.Database].Name
@@ -131,7 +129,7 @@ func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) 
 	}
 
 	if dep, ok := p.storageDeps[need.Dependency]; ok {
-		vars := make(map[string]interface{})
+		vars := make(map[string]any)
 		vars["name"] = dep.Bucket.Name
 		vars["url"] = fields.Sprintf("https://storage.googleapis.com/%s", dep.Bucket.Name)
 		vars["endpoint"] = "https://storage.googleapis.com/storage/v1/"
@@ -142,8 +140,8 @@ func (p *PlanAction) findDependencyEnvVars(app *apiv1.App, need *apiv1.AppNeed) 
 	return nil, fmt.Errorf("unable to find dependency '%s'", need.Dependency)
 }
 
-func (p *PlanAction) findDependenciesEnvVars(app *apiv1.App) (map[string]interface{}, error) {
-	depVars := make(map[string]interface{})
+func (p *PlanAction) findDependenciesEnvVars(app *apiv1.App) (map[string]any, error) {
+	depVars := make(map[string]any)
 
 	for _, need := range app.Needs {
 		vars, err := p.findDependencyEnvVars(app, need)

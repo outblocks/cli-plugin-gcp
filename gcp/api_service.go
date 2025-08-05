@@ -25,8 +25,8 @@ func (o *APIService) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *APIService) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *APIService) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 	name := o.Name.Any()
 
 	apiCli, err := pctx.GCPServiceUsageClient(ctx)
@@ -52,8 +52,8 @@ func (o *APIService) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *APIService) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *APIService) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPServiceUsageClient(ctx)
 	if err != nil {
@@ -75,10 +75,10 @@ func (o *APIService) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *APIService) Update(_ context.Context, _ interface{}) error {
+func (o *APIService) Update(_ context.Context, _ any) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *APIService) Delete(_ context.Context, _ interface{}) error {
+func (o *APIService) Delete(_ context.Context, _ any) error {
 	return nil
 }

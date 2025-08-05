@@ -43,7 +43,8 @@ func (p *Plugin) registerMonitoring(reg *registry.Registry, data *apiv1.Monitori
 
 	for _, ch := range data.Channels {
 		labels := make(map[string]fields.Field)
-		chID := ""
+
+		var chID string
 
 		switch ch.Type {
 		case "slack":

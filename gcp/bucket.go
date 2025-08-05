@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -29,13 +30,13 @@ func BucketCORS(in []storage.CORS) fields.ArrayInputField {
 	return fields.Array(ret)
 }
 
-func bucketCORSFromInterface(arr []interface{}) []storage.CORS {
+func bucketCORSFromInterface(arr []any) []storage.CORS {
 	ret := make([]storage.CORS, 0, len(arr))
 
 	for _, v := range arr {
 		o := &storage.CORS{}
 
-		err := json.Unmarshal([]byte(v.(string)), o)
+		err := json.Unmarshal([]byte(v.(string)), o) //nolint:errcheck
 		if err != nil {
 			continue
 		}
@@ -71,8 +72,8 @@ func (o *Bucket) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Bucket) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -82,7 +83,7 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	b := cli.Bucket(o.Name.Any())
 
 	attrs, err := b.Attrs(ctx)
-	if err == storage.ErrBucketNotExist {
+	if errors.Is(err, storage.ErrBucketNotExist) {
 		o.MarkAsNew()
 
 		return nil
@@ -112,8 +113,8 @@ func (o *Bucket) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Bucket) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -185,8 +186,8 @@ func (o *Bucket) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Bucket) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -267,8 +268,8 @@ func (o *Bucket) Update(ctx context.Context, meta interface{}) error {
 	return err
 }
 
-func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Bucket) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -284,7 +285,7 @@ func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 
 	for {
 		attrs, err := iter.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 
@@ -298,8 +299,6 @@ func (o *Bucket) Delete(ctx context.Context, meta interface{}) error {
 	g, _ := errgroup.WithConcurrency(ctx, DefaultConcurrency)
 
 	for _, d := range todel {
-		d := d
-
 		g.Go(func() error {
 			return b.Object(d.Name).Generation(d.Generation).Delete(ctx)
 		})

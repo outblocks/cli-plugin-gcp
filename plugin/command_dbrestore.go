@@ -15,7 +15,7 @@ import (
 	"github.com/outblocks/outblocks-plugin-go/util/command"
 )
 
-func databaseDockerPostgresRestoreArgs(port int, database, user, password string, tables, excludeTables []interface{}, usePsql, verbose, override bool, additionalArgs []string) (args, env []string) {
+func databaseDockerPostgresRestoreArgs(port int, database, user, password string, tables, excludeTables []any, usePsql, verbose, override bool, additionalArgs []string) (args, env []string) {
 	env = []string{
 		"PGHOST=host.docker.internal",
 		fmt.Sprintf("PGPORT=%d", port),
@@ -75,7 +75,7 @@ func databaseDockerMySQLRestoreArgs(port int, database, user, password string, v
 	return args, env
 }
 
-func databaseDockerRestoreArgs(dbVersion string, port int, database, user, password string, tables, excludeTables []interface{}, usePsql, verbose, override bool, additionalArgs []string) (args, env []string) {
+func databaseDockerRestoreArgs(dbVersion string, port int, database, user, password string, tables, excludeTables []any, usePsql, verbose, override bool, additionalArgs []string) (args, env []string) {
 	switch {
 	case strings.HasPrefix(dbVersion, "POSTGRES_"):
 		return databaseDockerPostgresRestoreArgs(port, database, user, password, tables, excludeTables, usePsql, verbose, override, additionalArgs)
@@ -88,15 +88,15 @@ func databaseDockerRestoreArgs(dbVersion string, port int, database, user, passw
 
 func (p *Plugin) DBRestore(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
-	name := flags["name"].(string)
-	user := flags["user"].(string)
-	file := flags["file"].(string)
-	database := flags["database"].(string)
-	verbose := flags["verbose"].(bool)
-	usePsql := flags["pg-psql"].(bool)
-	override := flags["override"].(bool)
-	tables := flags["tables"].([]interface{})
-	excludeTables := flags["exclude-tables"].([]interface{})
+	name := flags["name"].(string)                   //nolint:errcheck
+	user := flags["user"].(string)                   //nolint:errcheck
+	file := flags["file"].(string)                   //nolint:errcheck
+	database := flags["database"].(string)           //nolint:errcheck
+	verbose := flags["verbose"].(bool)               //nolint:errcheck
+	usePsql := flags["pg-psql"].(bool)               //nolint:errcheck
+	override := flags["override"].(bool)             //nolint:errcheck
+	tables := flags["tables"].([]any)                //nolint:errcheck
+	excludeTables := flags["exclude-tables"].([]any) //nolint:errcheck
 	isHelp := hasHelpParam(req.Args.Positional)
 
 	dep, err := filterDepByName(name, req.DependencyStates)
@@ -154,7 +154,7 @@ func (p *Plugin) DBRestore(ctx context.Context, req *apiv1.CommandRequest) error
 		runArgs = append(runArgs, dockerImage)
 
 		cmd, err := command.New(
-			exec.Command("docker", append(runArgs, args...)...),
+			exec.Command("docker", append(runArgs, args...)...), //nolint:gosec,noctx
 		)
 		if err != nil {
 			return err

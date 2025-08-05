@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
-	"google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -35,8 +35,8 @@ func (o *UptimeCheckConfig) GetName() string {
 	return fields.VerboseString(o.DisplayName)
 }
 
-func (o *UptimeCheckConfig) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeCheckConfig) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringUptimeCheckClient(ctx)
 	if err != nil {
@@ -50,7 +50,7 @@ func (o *UptimeCheckConfig) Read(ctx context.Context, meta interface{}) error {
 		return nil
 	}
 
-	obj, err := cli.GetUptimeCheckConfig(ctx, &monitoring.GetUptimeCheckConfigRequest{
+	obj, err := cli.GetUptimeCheckConfig(ctx, &monitoringpb.GetUptimeCheckConfigRequest{
 		Name: id,
 	})
 	if ErrIs404(err) {
@@ -81,12 +81,12 @@ func (o *UptimeCheckConfig) Read(ctx context.Context, meta interface{}) error {
 	o.Frequency.SetCurrent(int(obj.Period.AsDuration() / time.Minute))
 	o.Timeout.SetCurrent(int(obj.Timeout.AsDuration() / time.Second))
 
-	wantedRegions := make(map[monitoring.UptimeCheckRegion]struct{})
+	wantedRegions := make(map[monitoringpb.UptimeCheckRegion]struct{})
 
 	for _, reg := range o.Regions.Wanted() {
-		r := stringToUptimeCheckRegion(reg.(string))
+		r := stringToUptimeCheckRegion(reg.(string)) //nolint:errcheck
 
-		if r == monitoring.UptimeCheckRegion_REGION_UNSPECIFIED {
+		if r == monitoringpb.UptimeCheckRegion_REGION_UNSPECIFIED {
 			continue
 		}
 
@@ -100,7 +100,7 @@ func (o *UptimeCheckConfig) Read(ctx context.Context, meta interface{}) error {
 	if len(wantedRegions) == 0 {
 		o.Regions.SetCurrent(o.Regions.Wanted())
 	} else {
-		regs := make([]interface{}, len(obj.SelectedRegions))
+		regs := make([]any, len(obj.SelectedRegions))
 		for i, r := range obj.SelectedRegions {
 			regs[i] = r.String()
 		}
@@ -111,22 +111,22 @@ func (o *UptimeCheckConfig) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func stringToUptimeCheckRegion(r string) monitoring.UptimeCheckRegion {
+func stringToUptimeCheckRegion(r string) monitoringpb.UptimeCheckRegion {
 	switch strings.ToLower(r) {
 	case "usa":
-		return monitoring.UptimeCheckRegion_USA
+		return monitoringpb.UptimeCheckRegion_USA
 	case "europe":
-		return monitoring.UptimeCheckRegion_EUROPE
+		return monitoringpb.UptimeCheckRegion_EUROPE
 	case "south_america":
-		return monitoring.UptimeCheckRegion_SOUTH_AMERICA
+		return monitoringpb.UptimeCheckRegion_SOUTH_AMERICA
 	case "asia":
-		return monitoring.UptimeCheckRegion_ASIA_PACIFIC
+		return monitoringpb.UptimeCheckRegion_ASIA_PACIFIC
 	}
 
-	return monitoring.UptimeCheckRegion_REGION_UNSPECIFIED
+	return monitoringpb.UptimeCheckRegion_REGION_UNSPECIFIED
 }
 
-func (o *UptimeCheckConfig) createUptimeCheckConfig(update bool) *monitoring.UptimeCheckConfig {
+func (o *UptimeCheckConfig) createUptimeCheckConfig(update bool) *monitoringpb.UptimeCheckConfig {
 	projectID := o.ProjectID.Wanted()
 	displayName := o.DisplayName.Wanted()
 	u, _ := url.Parse(o.URL.Wanted())
@@ -134,20 +134,20 @@ func (o *UptimeCheckConfig) createUptimeCheckConfig(update bool) *monitoring.Upt
 	timeout := o.Timeout.Wanted()
 	regions := o.Regions.Wanted()
 
-	var selRegions []monitoring.UptimeCheckRegion
+	var selRegions []monitoringpb.UptimeCheckRegion
 
 	for _, reg := range regions {
-		r := stringToUptimeCheckRegion(reg.(string))
-		if r == monitoring.UptimeCheckRegion_REGION_UNSPECIFIED {
+		r := stringToUptimeCheckRegion(reg.(string)) //nolint:errcheck
+		if r == monitoringpb.UptimeCheckRegion_REGION_UNSPECIFIED {
 			continue
 		}
 
 		selRegions = append(selRegions, r)
 	}
 
-	cfg := &monitoring.UptimeCheckConfig{
+	cfg := &monitoringpb.UptimeCheckConfig{
 		DisplayName: displayName,
-		Resource: &monitoring.UptimeCheckConfig_MonitoredResource{
+		Resource: &monitoringpb.UptimeCheckConfig_MonitoredResource{
 			MonitoredResource: &monitoredres.MonitoredResource{
 				Type: "uptime_url",
 				Labels: map[string]string{
@@ -156,9 +156,9 @@ func (o *UptimeCheckConfig) createUptimeCheckConfig(update bool) *monitoring.Upt
 				},
 			},
 		},
-		CheckRequestType: &monitoring.UptimeCheckConfig_HttpCheck_{
-			HttpCheck: &monitoring.UptimeCheckConfig_HttpCheck{
-				RequestMethod: monitoring.UptimeCheckConfig_HttpCheck_GET,
+		CheckRequestType: &monitoringpb.UptimeCheckConfig_HttpCheck_{
+			HttpCheck: &monitoringpb.UptimeCheckConfig_HttpCheck{
+				RequestMethod: monitoringpb.UptimeCheckConfig_HttpCheck_GET,
 				UseSsl:        u.Scheme == "https",
 				Path:          u.Path,
 			},
@@ -175,8 +175,8 @@ func (o *UptimeCheckConfig) createUptimeCheckConfig(update bool) *monitoring.Upt
 	return cfg
 }
 
-func (o *UptimeCheckConfig) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeCheckConfig) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringUptimeCheckClient(ctx)
 	if err != nil {
@@ -185,7 +185,7 @@ func (o *UptimeCheckConfig) Create(ctx context.Context, meta interface{}) error 
 
 	projectID := o.ProjectID.Wanted()
 
-	obj, err := cli.CreateUptimeCheckConfig(ctx, &monitoring.CreateUptimeCheckConfigRequest{
+	obj, err := cli.CreateUptimeCheckConfig(ctx, &monitoringpb.CreateUptimeCheckConfigRequest{
 		Parent:            fmt.Sprintf("projects/%s", projectID),
 		UptimeCheckConfig: o.createUptimeCheckConfig(false),
 	})
@@ -198,30 +198,30 @@ func (o *UptimeCheckConfig) Create(ctx context.Context, meta interface{}) error 
 	return err
 }
 
-func (o *UptimeCheckConfig) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeCheckConfig) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringUptimeCheckClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = cli.UpdateUptimeCheckConfig(ctx, &monitoring.UpdateUptimeCheckConfigRequest{
+	_, err = cli.UpdateUptimeCheckConfig(ctx, &monitoringpb.UpdateUptimeCheckConfigRequest{
 		UptimeCheckConfig: o.createUptimeCheckConfig(true),
 	})
 
 	return err
 }
 
-func (o *UptimeCheckConfig) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeCheckConfig) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringUptimeCheckClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = cli.DeleteUptimeCheckConfig(ctx, &monitoring.DeleteUptimeCheckConfigRequest{
+	err = cli.DeleteUptimeCheckConfig(ctx, &monitoringpb.DeleteUptimeCheckConfigRequest{
 		Name: o.ID.Current(),
 	})
 

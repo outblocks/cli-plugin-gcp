@@ -26,12 +26,14 @@ func WaitForSocket(ctx context.Context, scheme, addr string, timeout time.Durati
 
 			if ctx.Err() == context.Canceled {
 				done <- false
+
 				close(done)
 			}
 
 			if err != nil {
 				if time.Since(now) > timeout {
 					done <- false
+
 					close(done)
 
 					return
@@ -44,6 +46,7 @@ func WaitForSocket(ctx context.Context, scheme, addr string, timeout time.Durati
 
 			if conn != nil {
 				done <- true
+
 				close(done)
 
 				return

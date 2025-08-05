@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -35,8 +36,8 @@ func (o *BucketObject) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *BucketObject) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -45,14 +46,14 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 
 	bucket := o.BucketName.Any()
 
-	files, err := pctx.FuncCache(fmt.Sprintf("BucketObject:list:%s", bucket), func() (interface{}, error) {
+	files, err := pctx.FuncCache(fmt.Sprintf("BucketObject:list:%s", bucket), func() (any, error) {
 		iter := cli.Bucket(bucket).Objects(ctx, nil)
 
 		ret := make(map[string]*storage.ObjectAttrs)
 
 		for {
 			attrs, err := iter.Next()
-			if err == iterator.Done {
+			if errors.Is(err, iterator.Done) {
 				break
 			}
 
@@ -65,7 +66,7 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 
 		return ret, nil
 	})
-	if err == storage.ErrBucketNotExist {
+	if errors.Is(err, storage.ErrBucketNotExist) {
 		o.MarkAsNew()
 
 		return nil
@@ -75,7 +76,7 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 		return fmt.Errorf("error fetching bucket object status: %w", err)
 	}
 
-	attrs, ok := files.(map[string]*storage.ObjectAttrs)[o.Name.Any()]
+	attrs, ok := files.(map[string]*storage.ObjectAttrs)[o.Name.Any()] //nolint:errcheck
 	if !ok {
 		o.MarkAsNew()
 
@@ -100,8 +101,8 @@ func (o *BucketObject) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *BucketObject) uploadFile(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {
@@ -137,16 +138,16 @@ func (o *BucketObject) uploadFile(ctx context.Context, meta interface{}) error {
 	return w.Close()
 }
 
-func (o *BucketObject) Create(ctx context.Context, meta interface{}) error {
+func (o *BucketObject) Create(ctx context.Context, meta any) error {
 	return o.uploadFile(ctx, meta)
 }
 
-func (o *BucketObject) Update(ctx context.Context, meta interface{}) error {
+func (o *BucketObject) Update(ctx context.Context, meta any) error {
 	return o.uploadFile(ctx, meta)
 }
 
-func (o *BucketObject) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *BucketObject) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPStorageClient(ctx)
 	if err != nil {

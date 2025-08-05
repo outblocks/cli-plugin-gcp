@@ -32,7 +32,7 @@ type FunctionAppArgs struct {
 	ProjectID string
 	Region    string
 	Env       map[string]string
-	Vars      map[string]interface{}
+	Vars      map[string]any
 	Databases []*DatabaseDep
 }
 
@@ -40,7 +40,7 @@ type FunctionAppDeployOptions struct {
 	types.FunctionAppDeployOptions
 }
 
-func NewFunctionAppDeployOptions(in map[string]interface{}) (*FunctionAppDeployOptions, error) {
+func NewFunctionAppDeployOptions(in map[string]any) (*FunctionAppDeployOptions, error) {
 	o := &FunctionAppDeployOptions{}
 
 	err := plugin_util.MapstructureJSONDecode(in, o)

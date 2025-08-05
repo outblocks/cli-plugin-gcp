@@ -31,8 +31,8 @@ func (o *SelfManagedSSL) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 
-func (o *SelfManagedSSL) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *SelfManagedSSL) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -62,8 +62,8 @@ func (o *SelfManagedSSL) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *SelfManagedSSL) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *SelfManagedSSL) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -88,12 +88,12 @@ func (o *SelfManagedSSL) Create(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *SelfManagedSSL) Update(_ context.Context, _ interface{}) error {
+func (o *SelfManagedSSL) Update(_ context.Context, _ any) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *SelfManagedSSL) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *SelfManagedSSL) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

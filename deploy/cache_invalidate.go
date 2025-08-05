@@ -41,7 +41,7 @@ func anyFileChanged(files ...*gcp.BucketObject) bool {
 	return false
 }
 
-func (o *CacheInvalidate) CalculateDiff(context.Context, interface{}) (registry.DiffType, error) {
+func (o *CacheInvalidate) CalculateDiff(context.Context, any) (registry.DiffType, error) {
 	for _, app := range o.StaticApps {
 		if app.Props.CDN.Enabled && anyFileChanged(app.Files...) {
 			o.changedURLs = append(o.changedURLs, app.App.Url)
@@ -67,8 +67,8 @@ func (o *CacheInvalidate) CalculateDiff(context.Context, interface{}) (registry.
 	return registry.DiffTypeProcess, nil
 }
 
-func (o *CacheInvalidate) FieldDependencies() []interface{} {
-	ret := make([]interface{}, 0)
+func (o *CacheInvalidate) FieldDependencies() []any {
+	ret := make([]any, 0)
 
 	for _, app := range o.StaticApps {
 		for _, f := range app.Files {
@@ -79,8 +79,8 @@ func (o *CacheInvalidate) FieldDependencies() []interface{} {
 	return ret
 }
 
-func (o *CacheInvalidate) Process(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CacheInvalidate) Process(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

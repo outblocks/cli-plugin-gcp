@@ -32,7 +32,7 @@ func (o *ManagedSSL) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/sslCertificates/%s", o.ProjectID, o.Name)
 }
 
-func (o *ManagedSSL) Init(ctx context.Context, meta interface{}, opts *registry.Options) error {
+func (o *ManagedSSL) Init(ctx context.Context, meta any, opts *registry.Options) error {
 	// Make sure managed ssl status is read always if ssl already exists.
 	if opts.Read || !o.IsExisting() {
 		return nil
@@ -41,8 +41,8 @@ func (o *ManagedSSL) Init(ctx context.Context, meta interface{}, opts *registry.
 	return o.Read(ctx, meta)
 }
 
-func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *ManagedSSL) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -68,7 +68,7 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 	o.Name.SetCurrent(name)
 
 	if cert.Managed != nil {
-		domains := make([]interface{}, len(cert.Managed.Domains))
+		domains := make([]any, len(cert.Managed.Domains))
 		for i, v := range cert.Managed.Domains {
 			domains[i] = v
 		}
@@ -76,7 +76,7 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 		o.Domains.SetCurrent(domains)
 		o.Status.SetCurrent(cert.Managed.Status)
 
-		domainStatus := make(map[string]interface{})
+		domainStatus := make(map[string]any)
 		for k, v := range cert.Managed.DomainStatus {
 			domainStatus[k] = v
 		}
@@ -87,8 +87,8 @@ func (o *ManagedSSL) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *ManagedSSL) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -101,7 +101,7 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 	domainsStr := make([]string, len(domains))
 
 	for i, v := range domains {
-		domainsStr[i] = v.(string)
+		domainsStr[i] = v.(string) //nolint:errcheck
 	}
 
 	oper, err := cli.SslCertificates.Insert(projectID, &compute.SslCertificate{
@@ -127,7 +127,7 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 
 	o.Status.SetCurrent(cert.Managed.Status)
 
-	domainStatus := make(map[string]interface{})
+	domainStatus := make(map[string]any)
 	for k, v := range cert.Managed.DomainStatus {
 		domainStatus[k] = v
 	}
@@ -137,12 +137,12 @@ func (o *ManagedSSL) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *ManagedSSL) Update(_ context.Context, _ interface{}) error {
+func (o *ManagedSSL) Update(_ context.Context, _ any) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *ManagedSSL) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *ManagedSSL) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

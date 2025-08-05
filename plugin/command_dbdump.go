@@ -94,7 +94,7 @@ func databaseDockerImage(version string) string {
 	return ""
 }
 
-func databaseDockerPostgresDumpArgs(port int, database, user, password string, tables, excludeTables []interface{}, verbose, override bool, additionalArgs []string) (args, env []string) {
+func databaseDockerPostgresDumpArgs(port int, database, user, password string, tables, excludeTables []any, verbose, override bool, additionalArgs []string) (args, env []string) {
 	env = []string{
 		"PGHOST=host.docker.internal",
 		fmt.Sprintf("PGPORT=%d", port),
@@ -126,7 +126,7 @@ func databaseDockerPostgresDumpArgs(port int, database, user, password string, t
 	return args, env
 }
 
-func databaseDockerMySQLDumpArgs(port int, database, user, password string, tables, excludeTables []interface{}, verbose, override bool, additionalArgs []string) (args, env []string) {
+func databaseDockerMySQLDumpArgs(port int, database, user, password string, tables, excludeTables []any, verbose, override bool, additionalArgs []string) (args, env []string) {
 	env = []string{
 		"MYSQL_HOST=host.docker.internal",
 		fmt.Sprintf("MYSQL_TCP_PORT=%d", port),
@@ -172,7 +172,7 @@ func hasHelpParam(args []string) bool {
 	return false
 }
 
-func databaseDockerDumpArgs(dbVersion string, port int, database, user, password string, tables, excludeTables []interface{}, verbose, override bool, additionalArgs []string) (args, env []string) {
+func databaseDockerDumpArgs(dbVersion string, port int, database, user, password string, tables, excludeTables []any, verbose, override bool, additionalArgs []string) (args, env []string) {
 	switch {
 	case strings.HasPrefix(dbVersion, "POSTGRES_"):
 		args, env = databaseDockerPostgresDumpArgs(port, database, user, password, tables, excludeTables, verbose, override, additionalArgs)
@@ -187,14 +187,14 @@ func databaseDockerDumpArgs(dbVersion string, port int, database, user, password
 
 func (p *Plugin) DBDump(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
-	name := flags["name"].(string)
-	user := flags["user"].(string)
-	file := flags["file"].(string)
-	database := flags["database"].(string)
-	verbose := flags["verbose"].(bool)
-	override := flags["override"].(bool)
-	tables := flags["tables"].([]interface{})
-	excludeTables := flags["exclude-tables"].([]interface{})
+	name := flags["name"].(string)                   //nolint:errcheck
+	user := flags["user"].(string)                   //nolint:errcheck
+	file := flags["file"].(string)                   //nolint:errcheck
+	database := flags["database"].(string)           //nolint:errcheck
+	verbose := flags["verbose"].(bool)               //nolint:errcheck
+	override := flags["override"].(bool)             //nolint:errcheck
+	tables := flags["tables"].([]any)                //nolint:errcheck
+	excludeTables := flags["exclude-tables"].([]any) //nolint:errcheck
 	isHelp := hasHelpParam(req.Args.Positional)
 
 	dep, err := filterDepByName(name, req.DependencyStates)
@@ -251,7 +251,7 @@ func (p *Plugin) DBDump(ctx context.Context, req *apiv1.CommandRequest) error {
 		runArgs = append(runArgs, dockerImage)
 
 		cmd, err := command.New(
-			exec.Command("docker", append(runArgs, args...)...),
+			exec.Command("docker", append(runArgs, args...)...), //nolint:gosec,noctx
 		)
 		if err != nil {
 			return err

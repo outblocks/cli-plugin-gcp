@@ -1,92 +1,150 @@
+version: "2"
 run:
-  timeout: 2m
   tests: false
-
-issues:
-  exclude-rules:
-    - text: declaration of "err" shadows declaration
-      linters:
-        - govet
-  exclude-dirs:
-    - assets
-    - proto
-    - mocks
-    - example*
-
-linters-settings:
-  govet:
-    disable:
-      - structtag
-  gocyclo:
-    min-complexity: 20
-  dupl:
-    threshold: 200
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  misspell:
-    locale: US
-  revive:
-    rules:
-      - name: "unused-parameter"
-        disabled: true
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - whyNoLint
-      - commentedOutCode
-      - octalLiteral
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    # - bodyclose
-    # - depguard
+    - asasalint
+    - bodyclose
+    - copyloopvar
     - dogsled
-    - dupl
     - errcheck
+    - errorlint
     - exhaustive
+    # - exhaustruct
+    - fatcontext
+    - forbidigo
+    - gocheckcompilerdirectives
     - goconst
-    - godot
     - gocritic
     - gocyclo
+    - godot
+    - gomoddirectives
+    - goprintffuncname
+    - gosec
+    - govet
+    - iface
+    - intrange
+    - ineffassign
+    - nakedret
+    - noctx
+    - nolintlint
+    - reassign
+    - revive
+    - staticcheck
+    - testifylint
+    - testpackage
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+    - wsl_v5
+  settings:
+    gocyclo:
+      min-complexity: 30
+
+    errcheck:
+      check-type-assertions: true
+
+    govet:
+      # Enable all analyzers.
+      # Default: false
+      enable-all: true
+      # Disable analyzers by name.
+      # Run `go tool vet help` to see all analyzers.
+      # Default: []
+      disable:
+        - fieldalignment # too strict
+      # Settings per analyzer.
+
+    loggercheck:
+      slog: true
+
+    dupl:
+      threshold: 200
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+
+    wsl:
+      allow-separated-leading-comment: true
+      allow-trailing-comment: true
+    misspell:
+      locale: US
+    errorlint:
+      asserts: false
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+        - commentedOutCode
+        - octalLiteral
+
+    perfsprint:
+      strconcat: false
+
+    revive:
+      rules:
+        - name: "var-naming"
+          arguments:
+            - [] # AllowList
+            - [] # DenyList
+            - - skip-package-name-checks: true
+
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+    staticcheck:
+      checks:
+        - all
+        - "-QF1008" # Ignore: Omit embedded fields from selector expression
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - govet
+        text: declaration of "err" shadows declaration
+    paths:
+      - assets
+      - proto
+      - mocks
+      - example*
+      - data
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-    - goprintffuncname
-    - gosimple
-    - govet
-    - ineffassign
-    - misspell
-    - nakedret
-    # - noctx
-    - nolintlint
-    - revive
-    # - rowserrcheck
-    - staticcheck
-    # - structcheck
-    - stylecheck
-    - typecheck
-    - unconvert
-    # - unparam
-    - unused
-    - whitespace
-    - wsl
-
-    # don't enable:
-    # - funlen
-    # - gochecknoglobals
-    # - gochecknoinits
-    # - gocognit
-    # - godox
-    # - golint
-    # - gomnd
-    # - gosec
-    # - lll
-    # - maligned
-    # - nestif
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+  exclusions:
+    generated: lax
+    paths:
+      - assets
+      - proto
+      - mocks
+      - example*
+      - data
+      - third_party$
+      - builtin$
+      - examples$

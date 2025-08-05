@@ -8,7 +8,7 @@ import (
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
-func computeAppDeploymentState(app interface{}) *apiv1.DeploymentState {
+func computeAppDeploymentState(app any) *apiv1.DeploymentState {
 	var (
 		ok, ready bool
 		message   string
@@ -36,7 +36,7 @@ func computeAppDeploymentState(app interface{}) *apiv1.DeploymentState {
 	}
 }
 
-func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
+func computeDependencyDNSState(dep any) *apiv1.DNSState {
 	var dns *apiv1.DNSState
 
 	switch depDeploy := dep.(type) {
@@ -54,7 +54,7 @@ func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
 			connInfo = fmt.Sprintf("%s (%s)", connInfo, depDeploy.CloudSQL.ConnectionName.Current())
 		}
 
-		props := plugin_util.MustNewStruct(map[string]interface{}{
+		props := plugin_util.MustNewStruct(map[string]any{
 			"connection_name": depDeploy.CloudSQL.ConnectionName.Current(),
 		})
 
@@ -70,7 +70,7 @@ func computeDependencyDNSState(dep interface{}) *apiv1.DNSState {
 			return nil
 		}
 
-		props := plugin_util.MustNewStruct(map[string]interface{}{
+		props := plugin_util.MustNewStruct(map[string]any{
 			"name":     depDeploy.Bucket.Name.Current(),
 			"location": depDeploy.Bucket.Location.Current(),
 		})

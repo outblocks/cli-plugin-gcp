@@ -26,7 +26,7 @@ func (p *Plugin) defaultBucket(gcpProject, suffix string) string {
 func getBucket(ctx context.Context, b *storage.BucketHandle, project string, attrs *storage.BucketAttrs, create bool) (created, exists bool, err error) {
 	_, err = b.Attrs(ctx)
 
-	if err == storage.ErrBucketNotExist {
+	if errors.Is(err, storage.ErrBucketNotExist) {
 		if !create {
 			return false, false, nil
 		}
@@ -121,7 +121,7 @@ func releaseLock(ctx context.Context, o *storage.ObjectHandle, lockID string) er
 
 	err = o.If(storage.Conditions{GenerationMatch: gen}).Delete(ctx)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if errors.Is(err, storage.ErrObjectNotExist) {
 			return errReleaseLockFailed
 		}
 
@@ -177,8 +177,8 @@ func (p *Plugin) lockState(ctx context.Context, cli *storage.Client, project, lo
 			break
 		}
 
-		if err != nil && (lockWait == 0 || time.Since(start) > lockWait) {
-			if err == errAcquireLockFailed {
+		if lockWait == 0 || time.Since(start) > lockWait {
+			if errors.Is(err, errAcquireLockFailed) {
 				return "", types.NewStatusStateLockError(lockInfo, owner, createdAt)
 			}
 
@@ -288,7 +288,7 @@ func (p *Plugin) GetState(r *apiv1.GetStateRequest, stream apiv1.StatePluginServ
 
 	state, err := readBucketFile(ctx, b, p.statefile())
 	if err != nil {
-		if err != storage.ErrObjectNotExist {
+		if !errors.Is(err, storage.ErrObjectNotExist) {
 			return err
 		}
 

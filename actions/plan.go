@@ -21,11 +21,11 @@ type PlanAction struct {
 	apiRegistry    *registry.Registry
 	registry       *registry.Registry
 	appIDMap       map[string]*apiv1.App
-	appDeployIDMap map[string]interface{}
+	appDeployIDMap map[string]any
 	appEnvVars     types.AppVars
 
 	depIDMap       map[string]*apiv1.Dependency
-	depDeployIDMap map[string]interface{}
+	depDeployIDMap map[string]any
 
 	staticApps   map[string]*deploy.StaticApp
 	serviceApps  map[string]*deploy.ServiceApp
@@ -60,10 +60,10 @@ func NewPlan(pctx *config.PluginContext, logger log.Logger, state *apiv1.PluginS
 		}),
 		registry:       reg,
 		appIDMap:       make(map[string]*apiv1.App),
-		appDeployIDMap: make(map[string]interface{}),
+		appDeployIDMap: make(map[string]any),
 
 		depIDMap:       make(map[string]*apiv1.Dependency),
-		depDeployIDMap: make(map[string]interface{}),
+		depDeployIDMap: make(map[string]any),
 		dnsRecordsMap:  make(map[string]*apiv1.DNSRecord),
 
 		State:            state,
@@ -289,9 +289,9 @@ func (p *PlanAction) getOrCreateDependencyState(dep *apiv1.Dependency) *apiv1.De
 	return state
 }
 
-func (p *PlanAction) saveAppSSLStates(curMapping, wantedMapping map[string]interface{}) {
+func (p *PlanAction) saveAppSSLStates(curMapping, wantedMapping map[string]any) {
 	for mapURL, appID := range wantedMapping {
-		id := appID.(string)
+		id := appID.(string) //nolint:errcheck
 		app := p.appIDMap[id]
 
 		if app == nil {
@@ -309,7 +309,7 @@ func (p *PlanAction) saveAppSSLStates(curMapping, wantedMapping map[string]inter
 	}
 
 	for mapURL, appID := range curMapping {
-		id := appID.(string)
+		id := appID.(string) //nolint:errcheck
 		app := p.appIDMap[id]
 
 		if app == nil {
@@ -337,7 +337,7 @@ func (p *PlanAction) saveAppSSLStates(curMapping, wantedMapping map[string]inter
 			}
 
 			if v, ok := ssl.DomainStatus.Current()[domain]; ok {
-				sslStatusInfo = v.(string)
+				sslStatusInfo = v.(string) //nolint:errcheck
 			}
 		}
 
@@ -366,7 +366,7 @@ func (p *PlanAction) save() error {
 		return nil
 	}
 
-	var curMapping, wantedMapping map[string]interface{}
+	var curMapping, wantedMapping map[string]any
 	if len(p.loadBalancer.URLMaps) > 0 {
 		curMapping = p.loadBalancer.URLMaps[0].AppMapping.Current()
 		wantedMapping = p.loadBalancer.URLMaps[0].AppMapping.Wanted()

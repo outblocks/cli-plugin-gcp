@@ -59,7 +59,7 @@ type DatabaseDepOptions struct {
 	DatabaseVersion string `json:"-"`
 }
 
-func NewDatabaseDepOptions(in map[string]interface{}, typ string) (*DatabaseDepOptions, error) {
+func NewDatabaseDepOptions(in map[string]any, typ string) (*DatabaseDepOptions, error) {
 	o := &DatabaseDepOptions{}
 
 	err := plugin_util.MapstructureJSONDecode(in, o)

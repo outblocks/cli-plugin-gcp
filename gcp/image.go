@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
@@ -54,8 +55,8 @@ func (o *Image) ImageName() fields.StringInputField {
 	return fields.Sprintf("%s-docker.pkg.dev/%s/%s@%s", o.Region, o.ProjectID, o.Name, o.Digest)
 }
 
-func (o *Image) readImage(ctx context.Context, meta interface{}) (*string, error) {
-	pctx := meta.(*config.PluginContext)
+func (o *Image) readImage(ctx context.Context, meta any) (*string, error) {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	region := o.Region.Any()
 	projectID := o.ProjectID.Any()
@@ -90,7 +91,7 @@ func (o *Image) readImage(ctx context.Context, meta interface{}) (*string, error
 	return &digest, nil
 }
 
-func (o *Image) Read(ctx context.Context, meta interface{}) error {
+func (o *Image) Read(ctx context.Context, meta any) error {
 	digest, err := o.readImage(ctx, meta)
 	if ErrIs404(err) {
 		o.Digest.Invalidate()
@@ -112,7 +113,7 @@ func (o *Image) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Image) BeforeDiff(context.Context, interface{}) error {
+func (o *Image) BeforeDiff(context.Context, any) error {
 	if o.Source.IsChanged() || o.SourceHash.IsChanged() {
 		o.Digest.Invalidate()
 	}
@@ -120,11 +121,11 @@ func (o *Image) BeforeDiff(context.Context, interface{}) error {
 	return nil
 }
 
-func (o *Image) Create(ctx context.Context, meta interface{}) error {
+func (o *Image) Create(ctx context.Context, meta any) error {
 	return o.push(ctx, meta)
 }
 
-func (o *Image) Update(ctx context.Context, meta interface{}) error {
+func (o *Image) Update(ctx context.Context, meta any) error {
 	oldDigest := o.Digest.Current()
 
 	err := o.push(ctx, meta)
@@ -139,15 +140,15 @@ func (o *Image) Update(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:gocyclo
-	pctx := meta.(*config.PluginContext)
+func (o *Image) push(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	token, err := pctx.GoogleCredentials().TokenSource.Token()
 	if err != nil {
 		return fmt.Errorf("error getting google credentials token: %w", err)
 	}
 
-	authConfig := dockertypes.AuthConfig{
+	authConfig := dockerregistry.AuthConfig{
 		Username: "oauth2accesstoken",
 		Password: token.AccessToken,
 	}
@@ -171,7 +172,7 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 
 	if o.Pull {
 		// Pull image from source.
-		pullOpts := dockertypes.ImagePullOptions{}
+		pullOpts := image.PullOptions{}
 		if o.PullAuth {
 			pullOpts.RegistryAuth = authStr
 		}
@@ -243,10 +244,10 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 		}
 	}
 
-	var insp dockertypes.ImageInspect
+	var insp image.InspectResponse
 
-	for try := 0; try < 3; try++ {
-		reader, err := dockerCli.ImagePush(ctx, imageName, dockertypes.ImagePushOptions{
+	for range 3 {
+		reader, err := dockerCli.ImagePush(ctx, imageName, image.PushOptions{
 			RegistryAuth: authStr,
 		})
 		if err != nil {
@@ -284,7 +285,7 @@ func (o *Image) push(ctx context.Context, meta interface{}) error { //nolint:goc
 	return nil
 }
 
-func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, digest string) error {
+func (o *Image) delete(ctx context.Context, meta any, deleteTag bool, digest string) error {
 	if digest == "" && !deleteTag {
 		return nil
 	}
@@ -293,7 +294,7 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, di
 		return nil
 	}
 
-	pctx := meta.(*config.PluginContext)
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPArtifactRegistryClient(ctx)
 	if err != nil {
@@ -339,6 +340,6 @@ func (o *Image) delete(ctx context.Context, meta interface{}, deleteTag bool, di
 	return nil
 }
 
-func (o *Image) Delete(ctx context.Context, meta interface{}) error {
+func (o *Image) Delete(ctx context.Context, meta any) error {
 	return o.delete(ctx, meta, true, o.Digest.Current())
 }

@@ -15,7 +15,7 @@ func DownloadFile(ctx context.Context, url, target string) error {
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func DownloadFile(ctx context.Context, url, target string) error {
 		return err
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to fetch %s : %s", url, resp.Status)
 	}
 

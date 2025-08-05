@@ -49,8 +49,8 @@ func (o *CloudRun) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint: gocyclo
-	pctx := meta.(*config.PluginContext)
+func (o *CloudRun) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
 	region := o.Region.Any()
@@ -105,12 +105,12 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint:
 		o.StatusMessage.SetCurrent(cond.Message)
 	}
 
-	args := make([]interface{}, len(svc.Spec.Template.Spec.Containers[0].Args))
+	args := make([]any, len(svc.Spec.Template.Spec.Containers[0].Args))
 	for i, v := range svc.Spec.Template.Spec.Containers[0].Args {
 		args[i] = v
 	}
 
-	command := make([]interface{}, len(svc.Spec.Template.Spec.Containers[0].Command))
+	command := make([]any, len(svc.Spec.Template.Spec.Containers[0].Command))
 	for i, v := range svc.Spec.Template.Spec.Containers[0].Command {
 		command[i] = v
 	}
@@ -135,7 +135,7 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint:
 	v, _ = strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/maxScale"])
 	o.MaxScale.SetCurrent(v)
 
-	envVars := make(map[string]interface{})
+	envVars := make(map[string]any)
 
 	for _, e := range svc.Spec.Template.Spec.Containers[0].Env {
 		envVars[e.Name] = e.Value
@@ -157,8 +157,8 @@ func (o *CloudRun) Read(ctx context.Context, meta interface{}) error { //nolint:
 	return nil
 }
 
-func (o *CloudRun) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudRun) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Wanted()
 	region := o.Region.Wanted()
@@ -187,8 +187,8 @@ func (o *CloudRun) Create(ctx context.Context, meta interface{}) error {
 	return setRunServiceIAMPolicy(cli, projectID, region, name, isPublic)
 }
 
-func (o *CloudRun) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudRun) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Wanted()
 	region := o.Region.Wanted()
@@ -220,8 +220,8 @@ func (o *CloudRun) Update(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudRun) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudRun) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Current()
 	region := o.Region.Current()
@@ -243,21 +243,21 @@ func (o *CloudRun) Delete(ctx context.Context, meta interface{}) error {
 func (o *CloudRun) makeRunService() *run.Service {
 	var envVars []*run.EnvVar
 	for k, v := range o.EnvVars.Wanted() {
-		envVars = append(envVars, &run.EnvVar{Name: k, Value: v.(string)})
+		envVars = append(envVars, &run.EnvVar{Name: k, Value: v.(string)}) //nolint:errcheck
 	}
 
 	command := o.Command.Wanted()
 	commandStr := make([]string, len(command))
 
 	for i, v := range command {
-		commandStr[i] = v.(string)
+		commandStr[i] = v.(string) //nolint:errcheck
 	}
 
 	args := o.Args.Wanted()
 	argsStr := make([]string, len(args))
 
 	for i, v := range args {
-		argsStr[i] = v.(string)
+		argsStr[i] = v.(string) //nolint:errcheck
 	}
 
 	cpuThrottling := "false"

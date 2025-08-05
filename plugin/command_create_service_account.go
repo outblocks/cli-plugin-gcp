@@ -61,7 +61,6 @@ func addServiceAccountRoles(crmCli *cloudresourcemanager.Service, projectID, ser
 	_, err = crmCli.Projects.SetIamPolicy(projectID, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}).Do()
-
 	if err != nil {
 		return fmt.Errorf("error setting project iam policy: %w", err)
 	}
@@ -102,7 +101,6 @@ func (p *Plugin) setupOutblocksServiceAccountPermissions(ctx context.Context, na
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -115,7 +113,7 @@ func (p *Plugin) setupOutblocksServiceAccountPermissions(ctx context.Context, na
 func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandRequest) error {
 	flags := req.Args.Flags.AsMap()
 
-	name := flags["name"].(string)
+	name := flags["name"].(string) //nolint:errcheck
 
 	if name == "" {
 		name = "outblocks-ci"
@@ -132,9 +130,9 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 
 	err = p.runAndEnsureAPI(ctx, func() error {
 		_, err := iamCli.Projects.ServiceAccounts.Get(accountID).Do()
+
 		return err
 	})
-
 	if err != nil {
 		if !gcp.ErrIs404(err) {
 			return fmt.Errorf("error checking if service account exists: %w", err)
@@ -185,7 +183,7 @@ func (p *Plugin) CreateServiceAccount(ctx context.Context, req *apiv1.CommandReq
 		return fmt.Errorf("could not decode service account key: %w", err)
 	}
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 
 	err = json.Unmarshal(data, &m)
 	if err != nil {

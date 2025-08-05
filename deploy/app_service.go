@@ -53,7 +53,7 @@ type ServiceAppArgs struct {
 	ProjectID string
 	Region    string
 	Env       map[string]string
-	Vars      map[string]interface{}
+	Vars      map[string]any
 	Databases []*DatabaseDep
 	Settings  *CloudRunSettings
 }
@@ -66,7 +66,7 @@ type ServiceAppDeployOptions struct {
 	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
 }
 
-func NewServiceAppDeployOptions(in map[string]interface{}) (*ServiceAppDeployOptions, error) {
+func NewServiceAppDeployOptions(in map[string]any) (*ServiceAppDeployOptions, error) {
 	o := &ServiceAppDeployOptions{}
 
 	err := plugin_util.MapstructureJSONDecode(in, o)
@@ -197,13 +197,13 @@ ENTRYPOINT ["%s"]
 
 		dockerfile := filepath.Join(dir, "Dockerfile")
 
-		err = os.WriteFile(dockerfile, []byte(dockerfileContent), 0o644)
+		err = os.WriteFile(dockerfile, []byte(dockerfileContent), 0o600)
 		if err != nil {
 			return err
 		}
 
 		cmd, err := command.New(
-			exec.Command("docker", "build", "--platform=linux/amd64", "--tag", runsdImage, "."),
+			exec.Command("docker", "build", "--platform=linux/amd64", "--tag", runsdImage, "."), //nolint:noctx
 			command.WithDir(dir),
 			command.WithEnv([]string{"DOCKER_BUILDKIT=1"}),
 		)
@@ -255,7 +255,7 @@ ENTRYPOINT ["%s"]
 	return nil
 }
 
-func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error { //nolint: gocyclo
+func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *registry.Registry, c *ServiceAppArgs, apply bool) error {
 	// Add GCR docker image.
 	o.Image = &gcp.Image{
 		Name:      fields.String(gcp.ImageID(pctx.Env(), o.App.Id)),
@@ -316,7 +316,7 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 
 	// Add cloud run service.
 	cloudSQLconnFmt := make([]string, len(c.Databases))
-	cloudSQLconnNames := make([]interface{}, len(c.Databases))
+	cloudSQLconnNames := make([]any, len(c.Databases))
 
 	for i, db := range c.Databases {
 		cloudSQLconnFmt[i] = "%s"

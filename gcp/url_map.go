@@ -34,8 +34,8 @@ func (o *URLMap) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/urlMaps/%s", o.ProjectID, o.Name)
 }
 
-func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *URLMap) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -59,7 +59,7 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 	o.Name.SetCurrent(name)
 
 	// Read URL mapping.
-	urlMap := make(map[string]interface{})
+	urlMap := make(map[string]any)
 	pathMatchersMap := make(map[string]*compute.PathMatcher, len(obj.PathMatchers))
 
 	for _, pm := range obj.PathMatchers {
@@ -75,7 +75,7 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 				pathRedirect = pm.DefaultRouteAction.UrlRewrite.PathPrefixRewrite
 			}
 
-			urlMap[host+"/*"] = map[string]interface{}{
+			urlMap[host+"/*"] = map[string]any{
 				URLPathMatcherServiceIDKey:         pm.DefaultService,
 				URLPathMatcherPathPrefixRewriteKey: pathRedirect,
 			}
@@ -87,7 +87,7 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 						pathRedirect = pr.RouteAction.UrlRewrite.PathPrefixRewrite
 					}
 
-					urlMap[host+p] = map[string]interface{}{
+					urlMap[host+p] = map[string]any{
 						URLPathMatcherServiceIDKey:         pr.Service,
 						URLPathMatcherPathPrefixRewriteKey: pathRedirect,
 					}
@@ -102,8 +102,8 @@ func (o *URLMap) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *URLMap) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *URLMap) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -120,8 +120,8 @@ func (o *URLMap) Create(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *URLMap) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *URLMap) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -149,8 +149,8 @@ func (o *URLMap) Update(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *URLMap) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *URLMap) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -188,12 +188,12 @@ func (o *URLMap) cleanupURLMapping() []*URLMapping {
 
 	for k, v := range m {
 		host, path := SplitURL(k)
-		valMap := v.(map[string]interface{})
+		valMap := v.(map[string]any) //nolint:errcheck
 
 		hmap[host] = append(hmap[host], &URLPathMatcher{
 			Paths:             []string{path},
-			ServiceID:         valMap[URLPathMatcherServiceIDKey].(string),
-			PathPrefixRewrite: valMap[URLPathMatcherPathPrefixRewriteKey].(string),
+			ServiceID:         valMap[URLPathMatcherServiceIDKey].(string),         //nolint:errcheck
+			PathPrefixRewrite: valMap[URLPathMatcherPathPrefixRewriteKey].(string), //nolint:errcheck
 		})
 	}
 

@@ -26,8 +26,8 @@ func (o *Address) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *Address) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Address) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -54,8 +54,8 @@ func (o *Address) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Address) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Address) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -87,12 +87,12 @@ func (o *Address) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *Address) Update(_ context.Context, _ interface{}) error {
+func (o *Address) Update(_ context.Context, _ any) error {
 	return fmt.Errorf("unimplemented")
 }
 
-func (o *Address) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *Address) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

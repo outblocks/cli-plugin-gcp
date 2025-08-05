@@ -1,7 +1,7 @@
 package deploy
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -18,9 +18,7 @@ import (
 	plugin_util "github.com/outblocks/outblocks-plugin-go/util"
 )
 
-var (
-	_ registry.ResourceDiffCalculator = (*CacheInvalidate)(nil)
-)
+var _ registry.ResourceDiffCalculator = (*CacheInvalidate)(nil)
 
 func hashFile(f string) (string, error) {
 	file, err := os.Open(f)
@@ -30,7 +28,7 @@ func hashFile(f string) (string, error) {
 	defer file.Close()
 
 	buf := make([]byte, 30*1024)
-	hash := md5.New()
+	hash := md5.New() //nolint:gosec
 
 	for {
 		n, err := file.Read(buf)

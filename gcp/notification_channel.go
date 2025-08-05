@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
-	"google.golang.org/genproto/googleapis/monitoring/v3"
 )
 
 type NotificationChannel struct {
@@ -28,8 +28,8 @@ func (o *NotificationChannel) GetName() string {
 	return fields.VerboseString(o.DisplayName)
 }
 
-func (o *NotificationChannel) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *NotificationChannel) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringNotificationChannelClient(ctx)
 	if err != nil {
@@ -43,7 +43,7 @@ func (o *NotificationChannel) Read(ctx context.Context, meta interface{}) error 
 		return nil
 	}
 
-	obj, err := cli.GetNotificationChannel(ctx, &monitoring.GetNotificationChannelRequest{
+	obj, err := cli.GetNotificationChannel(ctx, &monitoringpb.GetNotificationChannelRequest{
 		Name: id,
 	})
 	if ErrIs404(err) {
@@ -59,7 +59,7 @@ func (o *NotificationChannel) Read(ctx context.Context, meta interface{}) error 
 	o.DisplayName.SetCurrent(obj.DisplayName)
 	o.Type.SetCurrent(obj.Type)
 
-	labels := make(map[string]interface{}, len(obj.Labels))
+	labels := make(map[string]any, len(obj.Labels))
 
 	for k, v := range obj.Labels {
 		labels[k] = v
@@ -70,7 +70,7 @@ func (o *NotificationChannel) Read(ctx context.Context, meta interface{}) error 
 	return nil
 }
 
-func (o *NotificationChannel) createNotificationChannel(update bool) *monitoring.NotificationChannel {
+func (o *NotificationChannel) createNotificationChannel(update bool) *monitoringpb.NotificationChannel {
 	displayName := o.DisplayName.Wanted()
 	typ := o.Type.Wanted()
 
@@ -78,10 +78,10 @@ func (o *NotificationChannel) createNotificationChannel(update bool) *monitoring
 	labelsMap := make(map[string]string, len(labels))
 
 	for k, v := range labels {
-		labelsMap[k] = v.(string)
+		labelsMap[k] = v.(string) //nolint:errcheck
 	}
 
-	cfg := &monitoring.NotificationChannel{
+	cfg := &monitoringpb.NotificationChannel{
 		DisplayName: displayName,
 		Type:        typ,
 		Labels:      labelsMap,
@@ -94,8 +94,8 @@ func (o *NotificationChannel) createNotificationChannel(update bool) *monitoring
 	return cfg
 }
 
-func (o *NotificationChannel) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *NotificationChannel) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringNotificationChannelClient(ctx)
 	if err != nil {
@@ -104,7 +104,7 @@ func (o *NotificationChannel) Create(ctx context.Context, meta interface{}) erro
 
 	projectID := o.ProjectID.Wanted()
 
-	obj, err := cli.CreateNotificationChannel(ctx, &monitoring.CreateNotificationChannelRequest{
+	obj, err := cli.CreateNotificationChannel(ctx, &monitoringpb.CreateNotificationChannelRequest{
 		Name:                fmt.Sprintf("projects/%s", projectID),
 		NotificationChannel: o.createNotificationChannel(false),
 	})
@@ -117,30 +117,30 @@ func (o *NotificationChannel) Create(ctx context.Context, meta interface{}) erro
 	return err
 }
 
-func (o *NotificationChannel) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *NotificationChannel) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringNotificationChannelClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = cli.UpdateNotificationChannel(ctx, &monitoring.UpdateNotificationChannelRequest{
+	_, err = cli.UpdateNotificationChannel(ctx, &monitoringpb.UpdateNotificationChannelRequest{
 		NotificationChannel: o.createNotificationChannel(true),
 	})
 
 	return err
 }
 
-func (o *NotificationChannel) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *NotificationChannel) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringNotificationChannelClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = cli.DeleteNotificationChannel(ctx, &monitoring.DeleteNotificationChannelRequest{
+	err = cli.DeleteNotificationChannel(ctx, &monitoringpb.DeleteNotificationChannelRequest{
 		Name: o.ID.Current(),
 	})
 

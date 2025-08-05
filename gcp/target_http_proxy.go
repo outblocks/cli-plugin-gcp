@@ -31,8 +31,8 @@ func (o *TargetHTTPProxy) RefField() fields.StringInputField {
 	return fields.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/global/targetHttpProxies/%s", o.ProjectID, o.Name)
 }
 
-func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPProxy) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -61,8 +61,8 @@ func (o *TargetHTTPProxy) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPProxy) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -83,8 +83,8 @@ func (o *TargetHTTPProxy) Create(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPProxy) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {
@@ -116,8 +116,8 @@ func (o *TargetHTTPProxy) Update(ctx context.Context, meta interface{}) error {
 	return WaitForGlobalComputeOperation(cli, projectID, oper.Name)
 }
 
-func (o *TargetHTTPProxy) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *TargetHTTPProxy) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPComputeClient(ctx)
 	if err != nil {

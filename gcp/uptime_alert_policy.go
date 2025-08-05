@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
 	"github.com/outblocks/outblocks-plugin-go/registry"
 	"github.com/outblocks/outblocks-plugin-go/registry/fields"
-	"google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -31,8 +31,8 @@ func (o *UptimeAlertPolicy) GetName() string {
 	return fields.VerboseString(o.DisplayName)
 }
 
-func (o *UptimeAlertPolicy) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeAlertPolicy) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringAlertPolicyClient(ctx)
 	if err != nil {
@@ -46,7 +46,7 @@ func (o *UptimeAlertPolicy) Read(ctx context.Context, meta interface{}) error {
 		return nil
 	}
 
-	obj, err := cli.GetAlertPolicy(ctx, &monitoring.GetAlertPolicyRequest{
+	obj, err := cli.GetAlertPolicy(ctx, &monitoringpb.GetAlertPolicyRequest{
 		Name: id,
 	})
 	if ErrIs404(err) {
@@ -61,7 +61,7 @@ func (o *UptimeAlertPolicy) Read(ctx context.Context, meta interface{}) error {
 	o.ProjectID.SetCurrent(projectID)
 	o.DisplayName.SetCurrent(obj.DisplayName)
 
-	channels := make([]interface{}, len(obj.NotificationChannels))
+	channels := make([]any, len(obj.NotificationChannels))
 	for i, v := range obj.NotificationChannels {
 		channels[i] = v
 	}
@@ -84,33 +84,33 @@ func (o *UptimeAlertPolicy) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *UptimeAlertPolicy) createAlertPolicy(update bool) *monitoring.AlertPolicy {
+func (o *UptimeAlertPolicy) createAlertPolicy(update bool) *monitoringpb.AlertPolicy {
 	displayName := o.DisplayName.Wanted()
 	checkID := o.CheckID.Wanted()
 	channels := o.NotificationChannelIDs.Wanted()
 	channelsStr := make([]string, len(channels))
 
 	for i, v := range channels {
-		channelsStr[i] = v.(string)
+		channelsStr[i] = v.(string) //nolint:errcheck
 	}
 
-	cfg := &monitoring.AlertPolicy{
+	cfg := &monitoringpb.AlertPolicy{
 		DisplayName: displayName,
-		Conditions: []*monitoring.AlertPolicy_Condition{
+		Conditions: []*monitoringpb.AlertPolicy_Condition{
 			{
 				DisplayName: "uptime check",
-				Condition: &monitoring.AlertPolicy_Condition_ConditionThreshold{
-					ConditionThreshold: &monitoring.AlertPolicy_Condition_MetricThreshold{
-						Filter:         fmt.Sprintf("resource.type = \"uptime_url\" AND metric.type = \"monitoring.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"%s\"", checkID), //nolint:gocritic
+				Condition: &monitoringpb.AlertPolicy_Condition_ConditionThreshold{
+					ConditionThreshold: &monitoringpb.AlertPolicy_Condition_MetricThreshold{
+						Filter:         fmt.Sprintf("resource.type = \"uptime_url\" AND metric.type = \"monitoringpb.googleapis.com/uptime_check/check_passed\" AND metric.labels.check_id = \"%s\"", checkID), //nolint:gocritic
 						Duration:       durationpb.New(60 * time.Second),
-						Comparison:     monitoring.ComparisonType_COMPARISON_GT,
+						Comparison:     monitoringpb.ComparisonType_COMPARISON_GT,
 						ThresholdValue: 2,
 
-						Aggregations: []*monitoring.Aggregation{
+						Aggregations: []*monitoringpb.Aggregation{
 							{
 								AlignmentPeriod:    durationpb.New(1200 * time.Second),
-								CrossSeriesReducer: monitoring.Aggregation_REDUCE_COUNT_FALSE,
-								PerSeriesAligner:   monitoring.Aggregation_ALIGN_NEXT_OLDER,
+								CrossSeriesReducer: monitoringpb.Aggregation_REDUCE_COUNT_FALSE,
+								PerSeriesAligner:   monitoringpb.Aggregation_ALIGN_NEXT_OLDER,
 								GroupByFields:      []string{"resource.*"},
 							},
 						},
@@ -118,7 +118,7 @@ func (o *UptimeAlertPolicy) createAlertPolicy(update bool) *monitoring.AlertPoli
 				},
 			},
 		},
-		Combiner:             monitoring.AlertPolicy_OR,
+		Combiner:             monitoringpb.AlertPolicy_OR,
 		NotificationChannels: channelsStr,
 	}
 
@@ -129,8 +129,8 @@ func (o *UptimeAlertPolicy) createAlertPolicy(update bool) *monitoring.AlertPoli
 	return cfg
 }
 
-func (o *UptimeAlertPolicy) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeAlertPolicy) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringAlertPolicyClient(ctx)
 	if err != nil {
@@ -139,7 +139,7 @@ func (o *UptimeAlertPolicy) Create(ctx context.Context, meta interface{}) error 
 
 	projectID := o.ProjectID.Wanted()
 
-	obj, err := cli.CreateAlertPolicy(ctx, &monitoring.CreateAlertPolicyRequest{
+	obj, err := cli.CreateAlertPolicy(ctx, &monitoringpb.CreateAlertPolicyRequest{
 		Name:        fmt.Sprintf("projects/%s", projectID),
 		AlertPolicy: o.createAlertPolicy(false),
 	})
@@ -152,30 +152,30 @@ func (o *UptimeAlertPolicy) Create(ctx context.Context, meta interface{}) error 
 	return err
 }
 
-func (o *UptimeAlertPolicy) Update(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeAlertPolicy) Update(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringAlertPolicyClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = cli.UpdateAlertPolicy(ctx, &monitoring.UpdateAlertPolicyRequest{
+	_, err = cli.UpdateAlertPolicy(ctx, &monitoringpb.UpdateAlertPolicyRequest{
 		AlertPolicy: o.createAlertPolicy(true),
 	})
 
 	return err
 }
 
-func (o *UptimeAlertPolicy) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *UptimeAlertPolicy) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPMonitoringAlertPolicyClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = cli.DeleteAlertPolicy(ctx, &monitoring.DeleteAlertPolicyRequest{
+	err = cli.DeleteAlertPolicy(ctx, &monitoringpb.DeleteAlertPolicyRequest{
 		Name: o.ID.Current(),
 	})
 

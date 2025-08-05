@@ -303,8 +303,6 @@ func (p *Plugin) GetSecrets(ctx context.Context, _ *apiv1.GetSecretsRequest) (*a
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 	for _, v := range secrets {
-		v := v
-
 		g.Go(func() error {
 			val, _, err := accessSecretValue(cli, p.settings.ProjectID, v)
 			if err != nil {
@@ -312,7 +310,9 @@ func (p *Plugin) GetSecrets(ctx context.Context, _ *apiv1.GetSecretsRequest) (*a
 			}
 
 			mu.Lock()
+
 			values[v[len(prefix):]] = val
+
 			mu.Unlock()
 
 			return nil
@@ -360,8 +360,6 @@ func (p *Plugin) ReplaceSecrets(ctx context.Context, req *apiv1.ReplaceSecretsRe
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 	for _, cur := range secrets {
-		cur := cur
-
 		val, ok := values[cur]
 		if !ok {
 			g.Go(func() error {
@@ -393,9 +391,6 @@ func (p *Plugin) ReplaceSecrets(ctx context.Context, req *apiv1.ReplaceSecretsRe
 	}
 
 	for k, v := range values {
-		k := k
-		v := v
-
 		g.Go(func() error {
 			err := createSecret(cli, p.env, p.settings.ProjectID, k)
 			if err != nil {
@@ -437,8 +432,6 @@ func (p *Plugin) DeleteSecrets(ctx context.Context, _ *apiv1.DeleteSecretsReques
 	g, _ := errgroup.WithConcurrency(ctx, gcp.DefaultConcurrency)
 
 	for _, cur := range secrets {
-		cur := cur
-
 		g.Go(func() error {
 			_, err = deleteSecret(cli, p.settings.ProjectID, cur)
 

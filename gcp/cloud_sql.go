@@ -52,8 +52,8 @@ func (o *CloudSQL) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSQL) Read(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
 	name := o.Name.Any()
@@ -89,7 +89,7 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	o.BackupConfiguration.StartTime.SetCurrent(inst.Settings.BackupConfiguration.StartTime)
 	o.InsightsConfiguration.Enabled.SetCurrent(inst.Settings.InsightsConfig.QueryInsightsEnabled)
 
-	flags := make(map[string]interface{}, len(inst.Settings.DatabaseFlags))
+	flags := make(map[string]any, len(inst.Settings.DatabaseFlags))
 	for _, v := range inst.Settings.DatabaseFlags {
 		flags[v.Name] = v.Value
 	}
@@ -100,8 +100,8 @@ func (o *CloudSQL) Read(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSQL) Create(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSQL) Create(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
@@ -131,12 +131,13 @@ func (o *CloudSQL) Create(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSQL) Update(ctx context.Context, meta interface{}) error {
+func (o *CloudSQL) Update(ctx context.Context, meta any) error {
 	key := instanceMutexKey(o.ProjectID.Wanted(), o.Name.Wanted())
+
 	o.Lock(key)
 	defer o.Unlock(key)
 
-	pctx := meta.(*config.PluginContext)
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
@@ -176,8 +177,8 @@ func (o *CloudSQL) Update(ctx context.Context, meta interface{}) error {
 	return nil
 }
 
-func (o *CloudSQL) Delete(ctx context.Context, meta interface{}) error {
-	pctx := meta.(*config.PluginContext)
+func (o *CloudSQL) Delete(ctx context.Context, meta any) error {
+	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	cli, err := pctx.GCPSQLAdminClient(ctx)
 	if err != nil {
@@ -198,7 +199,7 @@ func (o *CloudSQL) makeDatabaseInstance() *sqladmin.DatabaseInstance {
 	flags := []*sqladmin.DatabaseFlags{}
 
 	for k, v := range o.DatabaseFlags.Wanted() {
-		flags = append(flags, &sqladmin.DatabaseFlags{Name: k, Value: v.(string)})
+		flags = append(flags, &sqladmin.DatabaseFlags{Name: k, Value: v.(string)}) //nolint:errcheck
 	}
 
 	return &sqladmin.DatabaseInstance{
