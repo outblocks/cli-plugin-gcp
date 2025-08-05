@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.118](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.117...v0.1.118)
+
+> 2025-08-05
+
+### FEATURES
+
+[`12c11f2`](https://github.com/outblocks/cli-plugin-gcp/commit/12c11f2a4258b6e624125adb3a704ccb673dee33) support newer versions postgres and mysql
+
 ## [v0.1.117](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.116...v0.1.117)
 
 > 2025-03-20
