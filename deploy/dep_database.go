@@ -98,19 +98,23 @@ func (o *DatabaseDepOptions) databaseVersion(typ string) (string, error) {
 			return "POSTGRES_13", nil
 		case "14":
 			return "POSTGRES_14", nil
+		case "15":
+			return "POSTGRES_15", nil
+		case "16":
+			return "POSTGRES_16", nil
+		case "17":
+			return "POSTGRES_17", nil
 		}
 	case "MYSQL":
 		switch version {
-		case "5.1", "5_1":
-			return "MYSQL_5_1", nil
-		case "5.5", "5_5":
-			return "MYSQL_5_5", nil
 		case "5.6", "5_6":
 			return "MYSQL_5_6", nil
 		case "5.7", "5_7", "":
 			return "MYSQL_5_7", nil
 		case "8.0", "8":
 			return "MYSQL_8_0", nil
+		case "8.4":
+			return "MYSQL_8_4", nil
 		}
 	}
 
