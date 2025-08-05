@@ -144,7 +144,7 @@ func (o *ServiceApp) addRunsd(ctx context.Context, pctx *config.PluginContext, a
 	var runsdImageSHA string
 
 	if !apply {
-		inspect, _, err := dockerCli.ImageInspectWithRaw(ctx, o.Build.LocalDockerImage)
+		inspect, err := dockerCli.ImageInspect(ctx, o.Build.LocalDockerImage)
 		if err != nil {
 			return err
 		}
@@ -242,7 +242,7 @@ ENTRYPOINT ["%s"]
 		}
 	}
 
-	inspect, _, err := dockerCli.ImageInspectWithRaw(ctx, runsdImage)
+	inspect, err := dockerCli.ImageInspect(ctx, runsdImage)
 	if err != nil {
 		return err
 	}

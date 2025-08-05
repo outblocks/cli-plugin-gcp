@@ -264,7 +264,7 @@ func (o *Image) push(ctx context.Context, meta any) error {
 			return err
 		}
 
-		insp, _, err = dockerCli.ImageInspectWithRaw(ctx, imageName)
+		insp, err = dockerCli.ImageInspect(ctx, imageName)
 		if err != nil {
 			return err
 		}
