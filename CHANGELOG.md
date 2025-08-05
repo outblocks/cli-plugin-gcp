@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.120](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.119...v0.1.120)
+
+> 2025-08-05
+
+### BUG FIXES
+
+[`b07bc8b`](https://github.com/outblocks/cli-plugin-gcp/commit/b07bc8b1a51ffe7a100c61eea60d97aac9f917af) attempt to always use enterprise db
+
 ## [v0.1.119](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.118...v0.1.119)
 
 > 2025-08-05
