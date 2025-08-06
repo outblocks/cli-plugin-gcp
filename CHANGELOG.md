@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.121](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.120...v0.1.121)
+
+> 2025-08-06
+
+### FEATURES
+
+[`9ed4255`](https://github.com/outblocks/cli-plugin-gcp/commit/9ed42552ecc330739c1940dd91eb10ac3c80150d) runsd bump, fix secrets pagination/filtering
+
 ## [v0.1.120](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.119...v0.1.120)
 
 > 2025-08-05
