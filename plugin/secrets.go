@@ -77,7 +77,10 @@ func accessSecretValue(cli *secretmanager.Service, project, name string) (val st
 }
 
 func listSecrets(cli *secretmanager.Service, project, prefix string) ([]string, error) {
-	ret, err := cli.Projects.Secrets.List(fmt.Sprintf("projects/%s", project)).Do()
+	ret, err := cli.Projects.Secrets.List(fmt.Sprintf("projects/%s", project)).
+		PageSize(25000).
+		Filter(prefix).
+		Do()
 	if err != nil {
 		return nil, fmt.Errorf("error listing secrets: %w", err)
 	}
