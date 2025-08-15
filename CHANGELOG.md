@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.122](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.121...v0.1.122)
+
+> 2025-08-15
+
+### BUG FIXES
+
+[`472bd13`](https://github.com/outblocks/cli-plugin-gcp/commit/472bd13ab366f2b098de3b9292f5feaaf7610e24) pull image in correct platform
+
 ## [v0.1.121](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.120...v0.1.121)
 
 > 2025-08-06
