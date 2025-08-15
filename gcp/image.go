@@ -172,7 +172,9 @@ func (o *Image) push(ctx context.Context, meta any) error {
 
 	if o.Pull {
 		// Pull image from source.
-		pullOpts := image.PullOptions{}
+		pullOpts := image.PullOptions{
+			Platform: "linux/amd64",
+		}
 		if o.PullAuth {
 			pullOpts.RegistryAuth = authStr
 		}
