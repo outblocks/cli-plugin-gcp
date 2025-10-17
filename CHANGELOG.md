@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.123](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.122...v0.1.123)
+
+> 2025-10-17
+
+### BUG FIXES
+
+[`912a4f7`](https://github.com/outblocks/cli-plugin-gcp/commit/912a4f74d99c3eba8246aff985ef3f0954da7245) old cloudsql without insights import
+
 ## [v0.1.122](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.121...v0.1.122)
 
 > 2025-08-15
