@@ -74,6 +74,10 @@ func (o *CloudSQL) Read(ctx context.Context, meta any) error {
 		return fmt.Errorf("error fetching cloud sql instance status: %w", err)
 	}
 
+	if inst.Settings.InsightsConfig == nil {
+		inst.Settings.InsightsConfig = &sqladmin.InsightsConfig{}
+	}
+
 	o.MarkAsExisting()
 	o.ProjectID.SetCurrent(projectID)
 	o.Name.SetCurrent(name)
