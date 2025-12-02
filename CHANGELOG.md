@@ -1,5 +1,15 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.124](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.123...v0.1.124)
+
+> 2025-12-02
+
+### FEATURES
+
+[`cb0bcd2`](https://github.com/outblocks/cli-plugin-gcp/commit/cb0bcd2f7d51a4d11bb9c910efa631f07807b9d7) upgraded plugin-go
+
+[`0f94ca3`](https://github.com/outblocks/cli-plugin-gcp/commit/0f94ca3f9144ef5bf58f3ac0d72d296d893e19ab) new deployment options: startup cpu boost, liveness/startup probes
+
 ## [v0.1.123](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.122...v0.1.123)
 
 > 2025-10-17
