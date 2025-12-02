@@ -39,6 +39,23 @@ type CloudRun struct {
 	Ingress              fields.StringInputField `default:"all"`  // options: internal-and-cloud-load-balancing
 	ExecutionEnvironment fields.StringInputField `default:"gen1"` // options: gen2
 	CPUThrottling        fields.BoolInputField   `default:"true"`
+	StartupCPUBoost      fields.BoolInputField   `default:"false"`
+
+	LivenessProbeHTTPPath            fields.StringInputField
+	LivenessProbeGRPCService         fields.StringInputField
+	LivenessProbePort                fields.IntInputField
+	LivenessProbeInitialDelaySeconds fields.IntInputField `default:"0"`
+	LivenessProbePeriodSeconds       fields.IntInputField `default:"10"`
+	LivenessProbeTimeoutSeconds      fields.IntInputField `default:"1"`
+	LivenessProbeFailureThreshold    fields.IntInputField `default:"3"`
+
+	StartupProbeHTTPPath            fields.StringInputField
+	StartupProbeGRPCService         fields.StringInputField
+	StartupProbePort                fields.IntInputField
+	StartupProbeInitialDelaySeconds fields.IntInputField `default:"0"`
+	StartupProbePeriodSeconds       fields.IntInputField `default:"10"`
+	StartupProbeTimeoutSeconds      fields.IntInputField `default:"1"`
+	StartupProbeFailureThreshold    fields.IntInputField `default:"3"`
 }
 
 func (o *CloudRun) ReferenceID() string {
@@ -91,7 +108,24 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 		o.EnvVars.UnsetCurrent()
 		o.Ingress.UnsetCurrent()
 		o.CPUThrottling.UnsetCurrent()
+		o.StartupCPUBoost.UnsetCurrent()
 		o.ExecutionEnvironment.UnsetCurrent()
+
+		o.LivenessProbeHTTPPath.UnsetCurrent()
+		o.LivenessProbeGRPCService.UnsetCurrent()
+		o.LivenessProbePort.UnsetCurrent()
+		o.LivenessProbeInitialDelaySeconds.UnsetCurrent()
+		o.LivenessProbePeriodSeconds.UnsetCurrent()
+		o.LivenessProbeTimeoutSeconds.UnsetCurrent()
+		o.LivenessProbeFailureThreshold.UnsetCurrent()
+
+		o.StartupProbeHTTPPath.UnsetCurrent()
+		o.StartupProbeGRPCService.UnsetCurrent()
+		o.StartupProbePort.UnsetCurrent()
+		o.StartupProbeInitialDelaySeconds.UnsetCurrent()
+		o.StartupProbePeriodSeconds.UnsetCurrent()
+		o.StartupProbeTimeoutSeconds.UnsetCurrent()
+		o.StartupProbeFailureThreshold.UnsetCurrent()
 
 		return nil
 	}
@@ -127,6 +161,7 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
 	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
 	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == "true")
+	o.StartupCPUBoost.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/startup-cpu-boost"] == "true")
 	o.ExecutionEnvironment.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/execution-environment"])
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
@@ -142,6 +177,56 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 	}
 
 	o.EnvVars.SetCurrent(envVars)
+
+	if svc.Spec.Template.Spec.Containers[0].LivenessProbe != nil {
+		if svc.Spec.Template.Spec.Containers[0].LivenessProbe.HttpGet != nil {
+			o.LivenessProbeHTTPPath.SetCurrent(svc.Spec.Template.Spec.Containers[0].LivenessProbe.HttpGet.Path)
+			o.LivenessProbePort.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.HttpGet.Port))
+		}
+
+		if svc.Spec.Template.Spec.Containers[0].LivenessProbe.Grpc != nil {
+			o.LivenessProbeGRPCService.SetCurrent(svc.Spec.Template.Spec.Containers[0].LivenessProbe.Grpc.Service)
+			o.LivenessProbePort.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.Grpc.Port))
+		}
+
+		o.LivenessProbeInitialDelaySeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds))
+		o.LivenessProbePeriodSeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds))
+		o.LivenessProbeTimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds))
+		o.LivenessProbeFailureThreshold.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold))
+	} else {
+		o.LivenessProbeHTTPPath.UnsetCurrent()
+		o.LivenessProbeGRPCService.UnsetCurrent()
+		o.LivenessProbeInitialDelaySeconds.UnsetCurrent()
+		o.LivenessProbePeriodSeconds.UnsetCurrent()
+		o.LivenessProbeTimeoutSeconds.UnsetCurrent()
+		o.LivenessProbeFailureThreshold.UnsetCurrent()
+	}
+
+	if svc.Spec.Template.Spec.Containers[0].StartupProbe != nil {
+		if svc.Spec.Template.Spec.Containers[0].StartupProbe.HttpGet != nil {
+			o.StartupProbeHTTPPath.SetCurrent(svc.Spec.Template.Spec.Containers[0].StartupProbe.HttpGet.Path)
+			o.StartupProbePort.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.HttpGet.Port))
+		}
+
+		if svc.Spec.Template.Spec.Containers[0].StartupProbe.Grpc != nil {
+			o.StartupProbeGRPCService.SetCurrent(svc.Spec.Template.Spec.Containers[0].StartupProbe.Grpc.Service)
+			o.StartupProbePort.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.Grpc.Port))
+		}
+
+		o.StartupProbeInitialDelaySeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.InitialDelaySeconds))
+		o.StartupProbePeriodSeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.PeriodSeconds))
+		o.StartupProbeTimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.TimeoutSeconds))
+		o.StartupProbeFailureThreshold.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].StartupProbe.FailureThreshold))
+	} else {
+		o.StartupProbeHTTPPath.UnsetCurrent()
+		o.StartupProbeGRPCService.UnsetCurrent()
+		o.StartupProbeInitialDelaySeconds.UnsetCurrent()
+		o.StartupProbePeriodSeconds.UnsetCurrent()
+		o.StartupProbeTimeoutSeconds.UnsetCurrent()
+		o.StartupProbeFailureThreshold.UnsetCurrent()
+	}
+
+	// Check IAM policy.
 
 	pol, err := cli.Projects.Locations.Services.GetIamPolicy(fmt.Sprintf("projects/%s/locations/%s/services/%s", projectID, region, name)).Do()
 	if err != nil && !ErrIs404(err) {
@@ -265,6 +350,69 @@ func (o *CloudRun) makeRunService() *run.Service {
 		cpuThrottling = "true"
 	}
 
+	startupCpuBoost := "false"
+	if o.StartupCPUBoost.Wanted() {
+		startupCpuBoost = "true"
+	}
+
+	var startupProbe, livenessProbe *run.Probe
+
+	if o.StartupProbeHTTPPath.Wanted() != "" || o.StartupProbeGRPCService.Wanted() != "" {
+		startupProbe = &run.Probe{}
+
+		port := o.Port.Wanted()
+		if o.StartupProbePort.Wanted() != 0 {
+			port = o.StartupProbePort.Wanted()
+		}
+
+		if o.StartupProbeHTTPPath.Wanted() != "" {
+			startupProbe.HttpGet = &run.HTTPGetAction{
+				Port: int64(port),
+				Path: o.StartupProbeHTTPPath.Wanted(),
+			}
+		}
+
+		if o.StartupProbeGRPCService.Wanted() != "" {
+			startupProbe.Grpc = &run.GRPCAction{
+				Port:    int64(port),
+				Service: o.StartupProbeGRPCService.Wanted(),
+			}
+		}
+
+		startupProbe.InitialDelaySeconds = int64(o.StartupProbeInitialDelaySeconds.Wanted())
+		startupProbe.PeriodSeconds = int64(o.StartupProbePeriodSeconds.Wanted())
+		startupProbe.TimeoutSeconds = int64(o.StartupProbeTimeoutSeconds.Wanted())
+		startupProbe.FailureThreshold = int64(o.StartupProbeFailureThreshold.Wanted())
+	}
+
+	if o.LivenessProbeHTTPPath.Wanted() != "" || o.LivenessProbeGRPCService.Wanted() != "" {
+		livenessProbe = &run.Probe{}
+
+		port := o.Port.Wanted()
+		if o.LivenessProbePort.Wanted() != 0 {
+			port = o.LivenessProbePort.Wanted()
+		}
+
+		if o.LivenessProbeHTTPPath.Wanted() != "" {
+			livenessProbe.HttpGet = &run.HTTPGetAction{
+				Path: o.LivenessProbeHTTPPath.Wanted(),
+				Port: int64(port),
+			}
+		}
+
+		if o.LivenessProbeGRPCService.Wanted() != "" {
+			livenessProbe.Grpc = &run.GRPCAction{
+				Service: o.LivenessProbeGRPCService.Wanted(),
+				Port:    int64(port),
+			}
+		}
+
+		livenessProbe.InitialDelaySeconds = int64(o.LivenessProbeInitialDelaySeconds.Wanted())
+		livenessProbe.PeriodSeconds = int64(o.LivenessProbePeriodSeconds.Wanted())
+		livenessProbe.TimeoutSeconds = int64(o.LivenessProbeTimeoutSeconds.Wanted())
+		livenessProbe.FailureThreshold = int64(o.LivenessProbeFailureThreshold.Wanted())
+	}
+
 	svc := &run.Service{
 		ApiVersion: "serving.knative.dev/v1",
 		Kind:       "Service",
@@ -284,6 +432,7 @@ func (o *CloudRun) makeRunService() *run.Service {
 						"run.googleapis.com/cloudsql-instances":    o.CloudSQLInstances.Wanted(),
 						"run.googleapis.com/execution-environment": o.ExecutionEnvironment.Wanted(),
 						"run.googleapis.com/cpu-throttling":        cpuThrottling,
+						"run.googleapis.com/startup-cpu-boost":     startupCpuBoost,
 					},
 				},
 				Spec: &run.RevisionSpec{
@@ -291,11 +440,13 @@ func (o *CloudRun) makeRunService() *run.Service {
 					TimeoutSeconds:       int64(o.TimeoutSeconds.Wanted()),
 					Containers: []*run.Container{
 						{
-							Command: commandStr,
-							Args:    argsStr,
-							Image:   o.Image.Wanted(),
-							Env:     envVars,
-							Ports:   []*run.ContainerPort{{ContainerPort: int64(o.Port.Wanted())}},
+							StartupProbe:  startupProbe,
+							LivenessProbe: livenessProbe,
+							Command:       commandStr,
+							Args:          argsStr,
+							Image:         o.Image.Wanted(),
+							Env:           envVars,
+							Ports:         []*run.ContainerPort{{ContainerPort: int64(o.Port.Wanted())}},
 							Resources: &run.ResourceRequirements{
 								Limits: map[string]string{
 									"cpu":    o.CPULimit.Wanted(),

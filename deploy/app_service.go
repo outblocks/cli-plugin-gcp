@@ -63,6 +63,7 @@ type ServiceAppDeployOptions struct {
 
 	SkipRunsd            bool   `json:"skip_runsd"`
 	CPUThrottling        *bool  `json:"cpu_throttling" default:"true"`
+	StartupCPUBoost      *bool  `json:"startup_cpu_boost" default:"false"`
 	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
 }
 
@@ -351,7 +352,24 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		CPULimit:             fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
 		ExecutionEnvironment: fields.String(o.DeployOpts.ExecutionEnvironment),
 		CPUThrottling:        fields.Bool(*o.DeployOpts.CPUThrottling),
+		StartupCPUBoost:      fields.Bool(*o.DeployOpts.StartupCPUBoost),
 		TimeoutSeconds:       fields.Int(o.DeployOpts.Timeout),
+
+		LivenessProbeHTTPPath:            fields.String(o.Props.Container.LivenessProbe.HTTPPath),
+		LivenessProbeGRPCService:         fields.String(o.Props.Container.LivenessProbe.GRPCService),
+		LivenessProbePort:                fields.Int(o.Props.Container.LivenessProbe.Port),
+		LivenessProbeInitialDelaySeconds: fields.Int(o.Props.Container.LivenessProbe.InitialDelaySeconds),
+		LivenessProbePeriodSeconds:       fields.Int(o.Props.Container.LivenessProbe.PeriodSeconds),
+		LivenessProbeTimeoutSeconds:      fields.Int(o.Props.Container.LivenessProbe.TimeoutSeconds),
+		LivenessProbeFailureThreshold:    fields.Int(o.Props.Container.LivenessProbe.FailureThreshold),
+
+		StartupProbeHTTPPath:            fields.String(o.Props.Container.StartupProbe.HTTPPath),
+		StartupProbeGRPCService:         fields.String(o.Props.Container.StartupProbe.GRPCService),
+		StartupProbePort:                fields.Int(o.Props.Container.StartupProbe.Port),
+		StartupProbeInitialDelaySeconds: fields.Int(o.Props.Container.StartupProbe.InitialDelaySeconds),
+		StartupProbePeriodSeconds:       fields.Int(o.Props.Container.StartupProbe.PeriodSeconds),
+		StartupProbeTimeoutSeconds:      fields.Int(o.Props.Container.StartupProbe.TimeoutSeconds),
+		StartupProbeFailureThreshold:    fields.Int(o.Props.Container.StartupProbe.FailureThreshold),
 	}
 
 	_, err = r.RegisterAppResource(o.App, "cloud_run", o.CloudRun)

@@ -73,7 +73,7 @@ func (p *Plugin) runFuncOnDBConnection(ctx context.Context, dep *apiv1.Dependenc
 
 func databaseDockerImage(version string) string {
 	if strings.HasPrefix(version, "MYSQL_") {
-		return "schnitzler/mysqldump:3.9"
+		return "schnitzler/mysqldump:3.18"
 	}
 
 	switch version {
@@ -89,6 +89,12 @@ func databaseDockerImage(version string) string {
 		return "postgres:13-alpine"
 	case "POSTGRES_14":
 		return "postgres:14-alpine"
+	case "POSTGRES_15":
+		return "postgres:15-alpine"
+	case "POSTGRES_16":
+		return "postgres:16-alpine"
+	case "POSTGRES_17":
+		return "postgres:17-alpine"
 	}
 
 	return ""

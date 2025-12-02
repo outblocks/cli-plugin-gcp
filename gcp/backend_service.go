@@ -122,6 +122,7 @@ func (o *BackendService) Create(ctx context.Context, meta any) error {
 				Group: o.NEG.Wanted(),
 			},
 		},
+		LoadBalancingScheme: "EXTERNAL_MANAGED",
 	}).Do()
 	if err != nil {
 		return err
@@ -170,6 +171,7 @@ func (o *BackendService) Update(ctx context.Context, meta any) error {
 			},
 		},
 		Fingerprint: o.Fingerprint,
+		// LoadBalancingScheme: "EXTERNAL_MANAGED",
 	}).Do()
 	if err != nil {
 		return err

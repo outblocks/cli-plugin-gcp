@@ -73,10 +73,11 @@ func (o *ForwardingRule) Create(ctx context.Context, meta any) error {
 	name := o.Name.Wanted()
 
 	oper, err := cli.GlobalForwardingRules.Insert(projectID, &compute.ForwardingRule{
-		Name:      name,
-		IPAddress: o.IPAddress.Wanted(),
-		Target:    o.Target.Wanted(),
-		PortRange: o.PortRange.Wanted(),
+		Name:                name,
+		IPAddress:           o.IPAddress.Wanted(),
+		Target:              o.Target.Wanted(),
+		PortRange:           o.PortRange.Wanted(),
+		LoadBalancingScheme: "EXTERNAL_MANAGED",
 	}).Do()
 	if err != nil {
 		return err
@@ -112,6 +113,7 @@ func (o *ForwardingRule) Update(ctx context.Context, meta any) error {
 		Target:      o.Target.Wanted(),
 		PortRange:   o.PortRange.Wanted(),
 		Fingerprint: o.Fingerprint,
+		// LoadBalancingScheme: "EXTERNAL_MANAGED",
 	}).Do()
 	if err != nil {
 		return err
