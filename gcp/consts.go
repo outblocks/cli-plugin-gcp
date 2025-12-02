@@ -15,6 +15,9 @@ const (
 	CloudRunStatusTrue  = "True"
 	CloudRunStatusFalse = "False"
 
+	CloudRunAnnotationTrue  = "true"
+	CloudRunAnnotationFalse = "false"
+
 	CloudFunctionReady   = "ACTIVE"
 	CloudFunctionOffline = "OFFLINE"
 

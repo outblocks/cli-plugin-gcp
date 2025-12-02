@@ -160,8 +160,8 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 	o.TimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.TimeoutSeconds))
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
 	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
-	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == "true")
-	o.StartupCPUBoost.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/startup-cpu-boost"] == "true")
+	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == CloudRunAnnotationTrue)
+	o.StartupCPUBoost.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/startup-cpu-boost"] == CloudRunAnnotationTrue)
 	o.ExecutionEnvironment.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/execution-environment"])
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
@@ -345,14 +345,14 @@ func (o *CloudRun) makeRunService() *run.Service {
 		argsStr[i] = v.(string) //nolint:errcheck
 	}
 
-	cpuThrottling := "false"
+	cpuThrottling := CloudRunAnnotationFalse
 	if o.CPUThrottling.Wanted() {
-		cpuThrottling = "true"
+		cpuThrottling = CloudRunAnnotationTrue
 	}
 
-	startupCpuBoost := "false"
+	startupCPUBoost := CloudRunAnnotationFalse
 	if o.StartupCPUBoost.Wanted() {
-		startupCpuBoost = "true"
+		startupCPUBoost = CloudRunAnnotationTrue
 	}
 
 	var startupProbe, livenessProbe *run.Probe
@@ -432,7 +432,7 @@ func (o *CloudRun) makeRunService() *run.Service {
 						"run.googleapis.com/cloudsql-instances":    o.CloudSQLInstances.Wanted(),
 						"run.googleapis.com/execution-environment": o.ExecutionEnvironment.Wanted(),
 						"run.googleapis.com/cpu-throttling":        cpuThrottling,
-						"run.googleapis.com/startup-cpu-boost":     startupCpuBoost,
+						"run.googleapis.com/startup-cpu-boost":     startupCPUBoost,
 					},
 				},
 				Spec: &run.RevisionSpec{
