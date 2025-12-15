@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.125](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.124...v0.1.125)
+
+> 2025-12-15
+
+### FEATURES
+
+[`6b19ce9`](https://github.com/outblocks/cli-plugin-gcp/commit/6b19ce9ac2a93c8ee7043f1f0104ecd9aea930f3) service account and container concurrency support, docker update
+
 ## [v0.1.124](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.123...v0.1.124)
 
 > 2025-12-02
