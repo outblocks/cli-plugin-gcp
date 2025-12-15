@@ -61,10 +61,13 @@ type ServiceAppArgs struct {
 type ServiceAppDeployOptions struct {
 	types.ServiceAppDeployOptions
 
-	SkipRunsd            bool   `json:"skip_runsd"`
+	SkipRunsd bool `json:"skip_runsd"`
+
+	ContainerConcurrency int    `json:"container_concurrency" default:"250"`
+	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
 	CPUThrottling        *bool  `json:"cpu_throttling" default:"true"`
 	StartupCPUBoost      *bool  `json:"startup_cpu_boost" default:"false"`
-	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
+	ServiceAccountName   string `json:"service_account_name"`
 }
 
 func NewServiceAppDeployOptions(in map[string]any) (*ServiceAppDeployOptions, error) {
@@ -97,11 +100,17 @@ func NewServiceAppDeployOptions(in map[string]any) (*ServiceAppDeployOptions, er
 		o.Timeout = 300
 	}
 
+	if o.MinScale > o.MaxScale {
+		o.MinScale = o.MaxScale
+	}
+
 	return o, validation.ValidateStruct(o,
-		validation.Field(&o.CPULimit, validation.In(1.0, 2.0, 4.0)),
-		validation.Field(&o.MemoryLimit, validation.Min(128), validation.Max(8192)),
-		validation.Field(&o.MinScale, validation.Min(0), validation.Max(100)),
-		validation.Field(&o.MaxScale, validation.Min(1)),
+		validation.Field(&o.CPULimit, validation.In(1.0, 2.0, 4.0, 6.0, 8.0)),
+		validation.Field(&o.MemoryLimit, validation.Min(128), validation.Max(32768)),
+		validation.Field(&o.MinScale, validation.Min(0), validation.Max(20_000)),
+		validation.Field(&o.MaxScale, validation.Min(1), validation.Max(20_000)),
+		validation.Field(&o.Timeout, validation.Min(1), validation.Max(3600)),
+		validation.Field(&o.ContainerConcurrency, validation.Min(1), validation.Max(1000)),
 	)
 }
 
@@ -336,24 +345,27 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 
 	o.CloudRun = &gcp.CloudRun{
 		Name:      fields.String(o.ID(pctx)),
-		Command:   fields.Array(cmd),
-		Args:      fields.Array(args),
-		Port:      fields.Int(o.Props.Container.Port),
 		ProjectID: fields.String(c.ProjectID),
 		Region:    fields.String(c.Region),
+		Command:   fields.Array(cmd),
+		Args:      fields.Array(args),
 		Image:     o.Image.ImageName(),
 		IsPublic:  fields.Bool(!o.Props.Private),
-		EnvVars:   fields.Map(envVars),
 
 		CloudSQLInstances:    fields.Sprintf(strings.Join(cloudSQLconnFmt, ","), cloudSQLconnNames...),
 		MinScale:             fields.Int(o.DeployOpts.MinScale),
 		MaxScale:             fields.Int(o.DeployOpts.MaxScale),
-		MemoryLimit:          fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
 		CPULimit:             fields.String(fmt.Sprintf("%dm", int(o.DeployOpts.CPULimit*1000))),
+		MemoryLimit:          fields.String(fmt.Sprintf("%dMi", o.DeployOpts.MemoryLimit)),
+		ContainerConcurrency: fields.Int(o.DeployOpts.ContainerConcurrency),
+		TimeoutSeconds:       fields.Int(o.DeployOpts.Timeout),
+		Port:                 fields.Int(o.Props.Container.Port),
+		EnvVars:              fields.Map(envVars),
+		// Ingress
 		ExecutionEnvironment: fields.String(o.DeployOpts.ExecutionEnvironment),
 		CPUThrottling:        fields.Bool(*o.DeployOpts.CPUThrottling),
 		StartupCPUBoost:      fields.Bool(*o.DeployOpts.StartupCPUBoost),
-		TimeoutSeconds:       fields.Int(o.DeployOpts.Timeout),
+		ServiceAccountName:   fields.String(o.DeployOpts.ServiceAccountName),
 
 		LivenessProbeHTTPPath:            fields.String(o.Props.Container.LivenessProbe.HTTPPath),
 		LivenessProbeGRPCService:         fields.String(o.Props.Container.LivenessProbe.GRPCService),

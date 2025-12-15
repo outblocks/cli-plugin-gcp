@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/outblocks/cli-plugin-gcp/internal/config"
@@ -23,10 +24,6 @@ type CloudRun struct {
 	Image     fields.StringInputField
 	IsPublic  fields.BoolInputField
 
-	URL           fields.StringOutputField
-	Ready         fields.BoolOutputField
-	StatusMessage fields.StringOutputField
-
 	CloudSQLInstances    fields.StringInputField
 	MinScale             fields.IntInputField    `default:"0"`
 	MaxScale             fields.IntInputField    `default:"100"`
@@ -40,6 +37,7 @@ type CloudRun struct {
 	ExecutionEnvironment fields.StringInputField `default:"gen1"` // options: gen2
 	CPUThrottling        fields.BoolInputField   `default:"true"`
 	StartupCPUBoost      fields.BoolInputField   `default:"false"`
+	ServiceAccountName   fields.StringInputField `default:""`
 
 	LivenessProbeHTTPPath            fields.StringInputField
 	LivenessProbeGRPCService         fields.StringInputField
@@ -56,6 +54,11 @@ type CloudRun struct {
 	StartupProbePeriodSeconds       fields.IntInputField `default:"10"`
 	StartupProbeTimeoutSeconds      fields.IntInputField `default:"1"`
 	StartupProbeFailureThreshold    fields.IntInputField `default:"3"`
+
+	// Outputs
+	URL           fields.StringOutputField
+	Ready         fields.BoolOutputField
+	StatusMessage fields.StringOutputField
 }
 
 func (o *CloudRun) ReferenceID() string {
@@ -66,7 +69,7 @@ func (o *CloudRun) GetName() string {
 	return fields.VerboseString(o.Name)
 }
 
-func (o *CloudRun) Read(ctx context.Context, meta any) error {
+func (o *CloudRun) Read(ctx context.Context, meta any) error { //nolint:gocyclo
 	pctx := meta.(*config.PluginContext) //nolint:errcheck
 
 	projectID := o.ProjectID.Any()
@@ -107,9 +110,10 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 		o.MaxScale.UnsetCurrent()
 		o.EnvVars.UnsetCurrent()
 		o.Ingress.UnsetCurrent()
+		o.ExecutionEnvironment.UnsetCurrent()
 		o.CPUThrottling.UnsetCurrent()
 		o.StartupCPUBoost.UnsetCurrent()
-		o.ExecutionEnvironment.UnsetCurrent()
+		o.ServiceAccountName.UnsetCurrent()
 
 		o.LivenessProbeHTTPPath.UnsetCurrent()
 		o.LivenessProbeGRPCService.UnsetCurrent()
@@ -160,9 +164,15 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error {
 	o.TimeoutSeconds.SetCurrent(int(svc.Spec.Template.Spec.TimeoutSeconds))
 	o.Port.SetCurrent(int(svc.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort))
 	o.Ingress.SetCurrent(svc.Metadata.Annotations["run.googleapis.com/ingress"])
+	o.ExecutionEnvironment.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/execution-environment"])
 	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == CloudRunAnnotationTrue)
 	o.StartupCPUBoost.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/startup-cpu-boost"] == CloudRunAnnotationTrue)
-	o.ExecutionEnvironment.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/execution-environment"])
+	o.ServiceAccountName.SetCurrent(svc.Spec.Template.Spec.ServiceAccountName)
+
+	// If service account is default compute service account and user did not specify anything, unset it.
+	if o.ServiceAccountName.Wanted() == "" && strings.HasSuffix(svc.Spec.Template.Spec.ServiceAccountName, "-compute@developer.gserviceaccount.com") {
+		o.ServiceAccountName.SetCurrent("")
+	}
 
 	v, _ := strconv.Atoi(svc.Spec.Template.Metadata.Annotations["autoscaling.knative.dev/minScale"])
 	o.MinScale.SetCurrent(v)
@@ -436,6 +446,7 @@ func (o *CloudRun) makeRunService() *run.Service {
 					},
 				},
 				Spec: &run.RevisionSpec{
+					ServiceAccountName:   o.ServiceAccountName.Wanted(),
 					ContainerConcurrency: int64(o.ContainerConcurrency.Wanted()),
 					TimeoutSeconds:       int64(o.TimeoutSeconds.Wanted()),
 					Containers: []*run.Container{
