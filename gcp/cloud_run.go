@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -38,6 +39,9 @@ type CloudRun struct {
 	CPUThrottling        fields.BoolInputField   `default:"true"`
 	StartupCPUBoost      fields.BoolInputField   `default:"false"`
 	ServiceAccountName   fields.StringInputField `default:""`
+	EgressNetwork        fields.StringInputField `default:""` // VPC egress network name
+	EgressSubnet         fields.StringInputField `default:""` // VPC egress subnet name
+	EgressMode           fields.StringInputField `default:"private-ranges-only"`
 
 	LivenessProbeHTTPPath            fields.StringInputField
 	LivenessProbeGRPCService         fields.StringInputField
@@ -114,6 +118,9 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error { //nolint:gocyclo
 		o.CPUThrottling.UnsetCurrent()
 		o.StartupCPUBoost.UnsetCurrent()
 		o.ServiceAccountName.UnsetCurrent()
+		o.EgressNetwork.UnsetCurrent()
+		o.EgressSubnet.UnsetCurrent()
+		o.EgressMode.UnsetCurrent()
 
 		o.LivenessProbeHTTPPath.UnsetCurrent()
 		o.LivenessProbeGRPCService.UnsetCurrent()
@@ -168,6 +175,22 @@ func (o *CloudRun) Read(ctx context.Context, meta any) error { //nolint:gocyclo
 	o.CPUThrottling.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/cpu-throttling"] == CloudRunAnnotationTrue)
 	o.StartupCPUBoost.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/startup-cpu-boost"] == CloudRunAnnotationTrue)
 	o.ServiceAccountName.SetCurrent(svc.Spec.Template.Spec.ServiceAccountName)
+
+	existingNetworkInterfaces := svc.Spec.Template.Metadata.Annotations["run.googleapis.com/network-interfaces"]
+	if existingNetworkInterfaces != "" {
+		var interfaces []CloudRunNetworkInterface
+
+		err = json.Unmarshal([]byte(existingNetworkInterfaces), &interfaces)
+		if err == nil && len(interfaces) > 0 {
+			o.EgressNetwork.SetCurrent(interfaces[0].Network)
+			o.EgressSubnet.SetCurrent(interfaces[0].Subnetwork)
+		}
+	} else {
+		o.EgressNetwork.UnsetCurrent()
+		o.EgressSubnet.UnsetCurrent()
+	}
+
+	o.EgressMode.SetCurrent(svc.Spec.Template.Metadata.Annotations["run.googleapis.com/vpc-access-egress"])
 
 	// If service account is default compute service account and user did not specify anything, unset it.
 	if o.ServiceAccountName.Wanted() == "" && strings.HasSuffix(svc.Spec.Template.Spec.ServiceAccountName, "-compute@developer.gserviceaccount.com") {
@@ -423,6 +446,28 @@ func (o *CloudRun) makeRunService() *run.Service {
 		livenessProbe.FailureThreshold = int64(o.LivenessProbeFailureThreshold.Wanted())
 	}
 
+	annotations := map[string]string{
+		"run.googleapis.com/client-name":           "outblocks",
+		"autoscaling.knative.dev/minScale":         strconv.Itoa(o.MinScale.Wanted()),
+		"autoscaling.knative.dev/maxScale":         strconv.Itoa(o.MaxScale.Wanted()),
+		"run.googleapis.com/cloudsql-instances":    o.CloudSQLInstances.Wanted(),
+		"run.googleapis.com/execution-environment": o.ExecutionEnvironment.Wanted(),
+		"run.googleapis.com/cpu-throttling":        cpuThrottling,
+		"run.googleapis.com/startup-cpu-boost":     startupCPUBoost,
+	}
+
+	if o.EgressNetwork.Wanted() != "" && o.EgressSubnet.Wanted() != "" {
+		ifaces := []CloudRunNetworkInterface{{
+			Network:    o.EgressNetwork.Wanted(),
+			Subnetwork: o.EgressSubnet.Wanted(),
+		}}
+
+		ifacesJSON, _ := json.Marshal(ifaces)
+
+		annotations["run.googleapis.com/network-interfaces"] = string(ifacesJSON)
+		annotations["run.googleapis.com/vpc-access-egress"] = o.EgressMode.Wanted()
+	}
+
 	svc := &run.Service{
 		ApiVersion: "serving.knative.dev/v1",
 		Kind:       "Service",
@@ -435,15 +480,7 @@ func (o *CloudRun) makeRunService() *run.Service {
 		Spec: &run.ServiceSpec{
 			Template: &run.RevisionTemplate{
 				Metadata: &run.ObjectMeta{
-					Annotations: map[string]string{
-						"run.googleapis.com/client-name":           "outblocks",
-						"autoscaling.knative.dev/minScale":         strconv.Itoa(o.MinScale.Wanted()),
-						"autoscaling.knative.dev/maxScale":         strconv.Itoa(o.MaxScale.Wanted()),
-						"run.googleapis.com/cloudsql-instances":    o.CloudSQLInstances.Wanted(),
-						"run.googleapis.com/execution-environment": o.ExecutionEnvironment.Wanted(),
-						"run.googleapis.com/cpu-throttling":        cpuThrottling,
-						"run.googleapis.com/startup-cpu-boost":     startupCPUBoost,
-					},
+					Annotations: annotations,
 				},
 				Spec: &run.RevisionSpec{
 					ServiceAccountName:   o.ServiceAccountName.Wanted(),

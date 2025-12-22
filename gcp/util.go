@@ -379,3 +379,8 @@ func SplitURL(url string) (host, path string) {
 
 	return urlSplit[0], path
 }
+
+type CloudRunNetworkInterface struct {
+	Network    string `json:"network"`
+	Subnetwork string `json:"subnetwork"`
+}

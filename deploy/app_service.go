@@ -68,6 +68,9 @@ type ServiceAppDeployOptions struct {
 	CPUThrottling        *bool  `json:"cpu_throttling" default:"true"`
 	StartupCPUBoost      *bool  `json:"startup_cpu_boost" default:"false"`
 	ServiceAccountName   string `json:"service_account_name"`
+	EgressNetwork        string `json:"egress_network"`
+	EgressSubnet         string `json:"egress_subnet"`
+	EgressMode           string `json:"egress_mode" default:"private-ranges-only"`
 }
 
 func NewServiceAppDeployOptions(in map[string]any) (*ServiceAppDeployOptions, error) {
@@ -366,6 +369,9 @@ func (o *ServiceApp) Plan(ctx context.Context, pctx *config.PluginContext, r *re
 		CPUThrottling:        fields.Bool(*o.DeployOpts.CPUThrottling),
 		StartupCPUBoost:      fields.Bool(*o.DeployOpts.StartupCPUBoost),
 		ServiceAccountName:   fields.String(o.DeployOpts.ServiceAccountName),
+		EgressNetwork:        fields.String(o.DeployOpts.EgressNetwork),
+		EgressSubnet:         fields.String(o.DeployOpts.EgressSubnet),
+		EgressMode:           fields.String(o.DeployOpts.EgressMode),
 
 		LivenessProbeHTTPPath:            fields.String(o.Props.Container.LivenessProbe.HTTPPath),
 		LivenessProbeGRPCService:         fields.String(o.Props.Container.LivenessProbe.GRPCService),
