@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.126](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.125...v0.1.126)
+
+> 2025-12-22
+
+### FEATURES
+
+[`c927fdc`](https://github.com/outblocks/cli-plugin-gcp/commit/c927fdcf21109e2ac69932a39bd15abf230a4329) support for egress networks
+
 ## [v0.1.125](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.124...v0.1.125)
 
 > 2025-12-15
