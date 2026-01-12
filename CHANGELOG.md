@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.127](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.126...v0.1.127)
+
+> 2026-01-12
+
+### FEATURES
+
+[`167d091`](https://github.com/outblocks/cli-plugin-gcp/commit/167d0914543db9e4cf4fbe8f6b69452aba3f963c) skip runsd default to true
+
 ## [v0.1.126](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.125...v0.1.126)
 
 > 2025-12-22
