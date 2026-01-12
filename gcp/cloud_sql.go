@@ -17,7 +17,7 @@ type CloudSQL struct {
 	Name            fields.StringInputField `state:"force_new"`
 	ProjectID       fields.StringInputField `state:"force_new"`
 	Region          fields.StringInputField `state:"force_new"`
-	DatabaseVersion fields.StringInputField `state:"force_new"`
+	DatabaseVersion fields.StringInputField
 
 	PublicIP       fields.StringOutputField
 	PrivateIP      fields.StringOutputField
