@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.128](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.127...v0.1.128)
+
+> 2026-01-12
+
+### BUG FIXES
+
+[`f62ae90`](https://github.com/outblocks/cli-plugin-gcp/commit/f62ae90f3876804b7a69743b7ed534105e2c9f1b) database version change should not force new
+
 ## [v0.1.127](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.126...v0.1.127)
 
 > 2026-01-12
