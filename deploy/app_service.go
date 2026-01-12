@@ -61,7 +61,7 @@ type ServiceAppArgs struct {
 type ServiceAppDeployOptions struct {
 	types.ServiceAppDeployOptions
 
-	SkipRunsd bool `json:"skip_runsd"`
+	SkipRunsd bool `json:"skip_runsd" default:"true"`
 
 	ContainerConcurrency int    `json:"container_concurrency" default:"250"`
 	ExecutionEnvironment string `json:"execution_environment" default:"gen1"`
