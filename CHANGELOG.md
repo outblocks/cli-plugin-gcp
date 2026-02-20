@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.129](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.128...v0.1.129)
+
+> 2026-02-20
+
+### BUG FIXES
+
+[`381eaae`](https://github.com/outblocks/cli-plugin-gcp/commit/381eaae2eeb4e67c4eedc4519da0957ea6870e93) key decrypter role
+
 ## [v0.1.128](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.127...v0.1.128)
 
 > 2026-01-12
