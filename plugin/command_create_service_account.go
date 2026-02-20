@@ -97,6 +97,7 @@ func (p *Plugin) setupOutblocksServiceAccountPermissions(ctx context.Context, na
 			"roles/secretmanager.secretAccessor",
 			"roles/cloudfunctions.admin",
 			"roles/run.admin",
+			"roles/cloudkms.cryptoKeyDecrypter",
 		)
 
 		return err
