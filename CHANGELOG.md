@@ -1,5 +1,13 @@
 # Outblocks GCP Plugin Changelog
 
+## [v0.1.130](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.129...v0.1.130)
+
+> 2026-03-12
+
+### BUG FIXES
+
+[`7cebee5`](https://github.com/outblocks/cli-plugin-gcp/commit/7cebee5ba949426df940ef32c0a7e802ac565a9a) public storage role
+
 ## [v0.1.129](https://github.com/outblocks/cli-plugin-gcp/compare/v0.1.128...v0.1.129)
 
 > 2026-02-20
