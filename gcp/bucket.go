@@ -108,7 +108,7 @@ func (o *Bucket) Read(ctx context.Context, meta any) error {
 		return fmt.Errorf("error fetching bucket policy: %w", err)
 	}
 
-	o.Public.SetCurrent(policy.HasRole(ACLAllUsers, "roles/storage.objectViewer"))
+	o.Public.SetCurrent(policy.HasRole(ACLAllUsers, "roles/storage.legacyObjectReader"))
 
 	return nil
 }
@@ -176,7 +176,7 @@ func (o *Bucket) Create(ctx context.Context, meta any) error {
 		return fmt.Errorf("error fetching bucket policy: %w", err)
 	}
 
-	policy.Add(ACLAllUsers, "roles/storage.objectViewer")
+	policy.Add(ACLAllUsers, "roles/storage.legacyObjectReader")
 
 	err = b.IAM().SetPolicy(ctx, policy)
 	if err != nil {
@@ -255,9 +255,9 @@ func (o *Bucket) Update(ctx context.Context, meta any) error {
 	}
 
 	if o.Public.Wanted() {
-		policy.Add(ACLAllUsers, "roles/storage.objectViewer")
+		policy.Add(ACLAllUsers, "roles/storage.legacyObjectReader")
 	} else {
-		policy.Remove(ACLAllUsers, "roles/storage.objectViewer")
+		policy.Remove(ACLAllUsers, "roles/storage.legacyObjectReader")
 	}
 
 	err = b.IAM().SetPolicy(ctx, policy)
